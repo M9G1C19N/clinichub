@@ -1,0 +1,5 @@
+const Ziggy = {"url":"http:\/\/localhost","port":null,"defaults":{},"routes":{"login":{"uri":"login","methods":["GET","HEAD"]},"login.post":{"uri":"login","methods":["POST"]},"logout":{"uri":"logout","methods":["POST"]},"password.change":{"uri":"change-password","methods":["GET","HEAD"]},"password.update":{"uri":"change-password","methods":["POST"]},"dashboard":{"uri":"dashboard","methods":["GET","HEAD"]},"admin.users.index":{"uri":"admin\/users","methods":["GET","HEAD"]},"reception.index":{"uri":"reception","methods":["GET","HEAD"]},"lab.index":{"uri":"laboratory","methods":["GET","HEAD"]},"xray.index":{"uri":"xray","methods":["GET","HEAD"]},"drug_test.index":{"uri":"drug-test","methods":["GET","HEAD"]},"storage.local":{"uri":"storage\/{path}","methods":["GET","HEAD"],"wheres":{"path":".*"},"parameters":["path"]},"storage.local.upload":{"uri":"storage\/{path}","methods":["PUT"],"wheres":{"path":".*"},"parameters":["path"]}}};
+if (typeof window !== 'undefined' && typeof window.Ziggy !== 'undefined') {
+  Object.assign(Ziggy.routes, window.Ziggy.routes);
+}
+export { Ziggy };
