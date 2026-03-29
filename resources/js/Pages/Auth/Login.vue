@@ -1,5 +1,6 @@
 <script setup>
 import { useForm } from '@inertiajs/vue3'
+import ProgressBar from '@/Components/Layout/ProgressBar.vue'
 
 const form = useForm({
     email: '',
@@ -16,6 +17,7 @@ const submit = () => {
 
 <template>
     <div class="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+          <ProgressBar />
         <div class="w-full max-w-md">
             <!-- Logo / Clinic Name -->
             <div class="text-center mb-8">

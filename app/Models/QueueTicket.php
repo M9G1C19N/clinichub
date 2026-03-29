@@ -1,0 +1,125 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use App\Models\QueueRoomAssignment;
+class QueueTicket extends Model
+{
+    protected $fillable = [
+        'ticket_number',
+        'patient_id',
+        'patient_visit_id',
+        'queue_counter_id',
+        'visit_type',
+        'priority',
+        'status',
+        'services_requested',
+        'issued_at',
+        'called_at',
+        'completed_at',
+        'issued_by',
+    ];
+
+    protected $casts = [
+        'services_requested' => 'array',
+        'issued_at'          => 'datetime',
+        'called_at'          => 'datetime',
+        'completed_at'       => 'datetime',
+    ];
+
+    // ── Relationships ──────────────────────────────────
+
+    public function patient()
+    {
+        return $this->belongsTo(Patient::class);
+    }
+
+    public function visit()
+    {
+        return $this->belongsTo(PatientVisit::class, 'patient_visit_id');
+    }
+
+    public function counter()
+    {
+        return $this->belongsTo(QueueCounter::class, 'queue_counter_id');
+    }
+
+    public function issuedBy()
+    {
+        return $this->belongsTo(User::class, 'issued_by');
+    }
+
+    public function roomAssignments()
+    {
+        return $this->hasMany(QueueRoomAssignment::class)
+                    ->orderBy('routing_sequence');
+    }
+
+    public function currentRoom()
+    {
+        return $this->hasOne(QueueRoomAssignment::class)
+                    ->whereIn('status', ['waiting', 'directing', 'calling', 'serving'])
+                    ->orderBy('routing_sequence');
+    }
+
+    // ── Auto-generate ticket number ────────────────────
+
+    protected static function booted(): void
+    {
+        static::creating(function (QueueTicket $ticket) {
+            if (empty($ticket->ticket_number)) {
+                $ticket->ticket_number = static::generateTicketNumber($ticket->queue_counter_id);
+            }
+        });
+    }
+
+    public static function generateTicketNumber(?int $counterId): string
+    {
+        $counter = $counterId
+            ? QueueCounter::find($counterId)
+            : null;
+
+        $prefix = $counter ? $counter->counter_code : 'T';
+
+        // Count tickets today with this prefix
+        $count = static::whereDate('created_at', today())
+            ->where('ticket_number', 'like', $prefix . '-%')
+            ->count() + 1;
+
+        return $prefix . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
+    }
+
+    // ── Scopes ─────────────────────────────────────────
+
+    public function scopeToday($query)
+    {
+        return $query->whereDate('created_at', today());
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->whereIn('status', ['waiting', 'routing', 'in_progress']);
+    }
+
+    public function scopeForRoom($query, string $room)
+    {
+        return $query->whereHas('roomAssignments', fn($q) =>
+            $q->where('room', $room)
+              ->whereIn('status', ['waiting', 'calling', 'serving'])
+        );
+    }
+
+    // ── Helpers ────────────────────────────────────────
+
+    public function getPriorityWeightAttribute(): int
+    {
+        return match($this->priority) {
+            'urgent'   => 5,
+            'pwd'      => 4,
+            'pregnant' => 4,
+            'senior'   => 3,
+            default    => 1,
+        };
+    }
+}

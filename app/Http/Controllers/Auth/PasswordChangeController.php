@@ -16,7 +16,7 @@ class PasswordChangeController extends Controller
     public function update(Request $request)
     {
         $request->validate([
-            'password' => ['required', 'min:8', 'confirmed'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
         $request->user()->update([
@@ -25,6 +25,6 @@ class PasswordChangeController extends Controller
         ]);
 
         return redirect()->route('dashboard')
-            ->with('success', 'Password updated successfully!');
+            ->with('success', 'Password updated! Welcome to ClinicHub.');
     }
 }
