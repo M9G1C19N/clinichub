@@ -103,7 +103,7 @@ class LaboratoryController extends Controller
             'CBC'          => ['hematology'],
             'UA'           => ['urinalysis'],
             'FECALYSIS'    => ['stool'],
-            'BLOODTYPING'  => ['hematology'],
+            'BLOODTYPING'  => ['hematology'],  // ← keep only ONE entry
             'FBS'          => ['chemistry'],
             'RBS'          => ['chemistry'],
             'BUN'          => ['chemistry'],
@@ -120,7 +120,6 @@ class LaboratoryController extends Controller
             'DENGUE'       => ['serology'],
             'THYROID'      => ['thyroid'],
             'PSA'          => ['serology'],
-            'BLOODTYPING'  => ['hematology', 'serology'],
         ];
 
         // Get ordered lab services from invoice
@@ -138,13 +137,13 @@ class LaboratoryController extends Controller
                 }
             }
         }
-        if (in_array('PSA', $orderedServices)) $specificTestCodes[] = 'PSA';
         // Get tests for needed categories + specific codes
         $specificTestCodes = [];
         if (in_array('BLOODTYPING', $orderedServices)) $specificTestCodes[] = 'BTYPE';
         if (in_array('HBSAG',       $orderedServices)) $specificTestCodes[] = 'HBSAG';
         if (in_array('VDRL',        $orderedServices)) $specificTestCodes[] = 'VDRL';
         if (in_array('PREGNANCY',   $orderedServices)) $specificTestCodes[] = 'PREG';
+        if (in_array('PSA',         $orderedServices)) $specificTestCodes[] = 'PSA';
 
         $tests = LabTest::active()
             ->where(function($q) use ($neededCategories, $specificTestCodes) {
@@ -225,13 +224,12 @@ class LaboratoryController extends Controller
                 'noted_by_name'       => $labRequest->noted_by_name,
                 'noted_by_license'    => $labRequest->noted_by_license,
             ] : null,
-            'tests'  => $testData,
-        'currentUser' => [
-                    'name'       => $currentUser->name,
-                    'prc_number' => $currentUser->prc_number ?? '',
+            'tests'      => $testData,
+            'allTests'   => $allTests,
+            'currentUser' => [
+                'name'       => $currentUser->name,
+                'prc_number' => $currentUser->prc_number ?? '',
             ],
-            'tests'   => $testData,
-            'allTests'  => $allTests,
         ]);
     }
 
