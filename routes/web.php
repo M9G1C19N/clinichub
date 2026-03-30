@@ -110,4 +110,13 @@ Route::middleware('auth')->group(function () {
             Route::get('/print/{visit}',  [\App\Http\Controllers\XRayController::class, 'print'])->name('print');
         });
 
+    // ── Drug Test ─────────────────────────────────────
+    Route::middleware('role:admin|drug_test_staff|doctor')
+        ->prefix('drug-test')->name('drug-test.')->group(function () {
+            Route::get('/',               [\App\Http\Controllers\DrugTestController::class, 'index'])->name('index');
+            Route::get('/enter/{visit}',  [\App\Http\Controllers\DrugTestController::class, 'enter'])->name('enter');
+            Route::post('/enter/{visit}', [\App\Http\Controllers\DrugTestController::class, 'save'])->name('save');
+            Route::get('/print/{visit}',  [\App\Http\Controllers\DrugTestController::class, 'print'])->name('print');
+        });
+
 });
