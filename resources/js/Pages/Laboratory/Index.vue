@@ -1,42 +1,77 @@
 <script setup>
-import { onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
-    FlaskConical, CheckCircle2, AlertTriangle,
-    Clock, Activity, Users,
+    FlaskConical, CheckCircle2, Clock,
+    Activity, AlertTriangle, Search,
+    Calendar, FileText, ChevronRight,
+    Loader2,
 } from 'lucide-vue-next'
 
 const props = defineProps({
-    queue:    Array,
-    released: Array,
-    summary:  Object,
+    todayQueue: Array,
+    pending:    Object,
+    history:    Object,
+    filters:    Object,
+    summary:    Object,
 })
+
+const activeTab = ref('today')
+const search    = ref(props.filters?.search ?? '')
+const date      = ref(props.filters?.date ?? '')
 
 let refreshTimer = null
 onMounted(() => {
     refreshTimer = setInterval(() => {
-        router.reload({ only: ['queue', 'released', 'summary'], preserveScroll: true })
-    }, 10000)
+        router.reload({
+            only: ['todayQueue','pending','history','summary'],
+            preserveScroll: true,
+        })
+    }, 15000)
 })
 onUnmounted(() => clearInterval(refreshTimer))
 
-const priorityConfig = {
-    urgent:   { class: 'bg-red-500 text-white',       label: 'URGENT'   },
-    pregnant: { class: 'bg-pink-100 text-pink-700',   label: 'PREGNANT' },
-    pwd:      { class: 'bg-blue-100 text-blue-700',   label: 'PWD'      },
-    senior:   { class: 'bg-amber-100 text-amber-700', label: 'SENIOR'   },
+function applyFilters() {
+    router.get(route('laboratory.index'), {
+        search: search.value,
+        date:   date.value,
+    }, { preserveState: true, replace: true })
+}
+
+function clearFilters() {
+    search.value = ''
+    date.value   = ''
+    router.get(route('laboratory.index'), {}, { preserveState: true, replace: true })
+}
+
+// Lab result status
+const labStatusConfig = {
+    none:       { dot: '#94a3b8', label: 'No Results',  bg: '#f1f5f9', color: '#64748b' },
+    pending:    { dot: '#f59e0b', label: 'Pending',     bg: '#fffbeb', color: '#b45309' },
+    processing: { dot: '#3b82f6', label: 'In Progress', bg: '#eff6ff', color: '#1d4ed8' },
+    released:   { dot: '#10b981', label: 'Released',    bg: '#f0fdf4', color: '#047857' },
+}
+
+// Queue status
+const queueStatusConfig = {
+    waiting:   { label: 'Waiting',   bg: '#fffbeb', color: '#92400e', dot: '#f59e0b' },
+    calling:   { label: 'Calling',   bg: '#eff6ff', color: '#1e40af', dot: '#3b82f6' },
+    serving:   { label: 'Serving',   bg: '#ecfdf5', color: '#065f46', dot: '#10b981' },
+    completed: { label: 'Completed', bg: '#f8fafc', color: '#475569', dot: '#94a3b8' },
 }
 
 const visitTypeBadge = {
-    opd:            'bg-blue-100 text-blue-700',
-    pre_employment: 'bg-purple-100 text-purple-700',
+    opd:            { bg: '#eff6ff', color: '#1d4ed8', label: 'OPD' },
+    pre_employment: { bg: '#faf5ff', color: '#7c3aed', label: 'Pre-Employment' },
+    follow_up:      { bg: '#fffbeb', color: '#b45309', label: 'Follow-up' },
 }
 
-const visitTypeLabel = {
-    opd:            'OPD',
-    pre_employment: 'Pre-Employment',
+function getLabStatus(visit) {
+    if (!visit) return 'none'
+    return visit.lab_status ?? (visit.has_results ? 'processing' : 'none')
 }
 </script>
 
@@ -45,22 +80,24 @@ const visitTypeLabel = {
         <template #header>
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-xl font-bold text-slate-800">Laboratory</h1>
-                    <p class="text-slate-400 text-xs mt-0.5">
-                        {{ queue.length }} patient(s) in queue today
-                    </p>
+                    <h1 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <FlaskConical class="w-5 h-5 text-blue-600"/>
+                        Laboratory
+                    </h1>
+                    <p class="text-slate-400 text-xs mt-0.5">Results entry and management</p>
                 </div>
                 <div class="flex items-center gap-2">
-                    <div class="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl">
-                        <span class="relative flex h-2 w-2">
+                    <!-- Live indicator -->
+                    <div class="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">
+                        <span class="relative flex h-1.5 w-1.5">
                             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"/>
-                            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"/>
+                            <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"/>
                         </span>
-                        <span class="text-xs text-emerald-600 font-medium">Live · 10s</span>
+                        Live · 15s
                     </div>
                     <a :href="route('queue.room', 'laboratory')" target="_blank">
-                        <Button variant="outline" size="sm" class="gap-2">
-                            <Activity class="w-4 h-4"/>
+                        <Button variant="outline" size="sm" class="gap-1.5 text-xs h-7">
+                            <Activity class="w-3.5 h-3.5"/>
                             Room Screen
                         </Button>
                     </a>
@@ -68,183 +105,402 @@ const visitTypeLabel = {
             </div>
         </template>
 
-        <!-- Stats -->
-        <div class="grid grid-cols-3 gap-4 mb-5">
-            <div class="bg-card rounded-xl border shadow-sm p-4 flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
-                    <Users class="w-5 h-5 text-amber-600"/>
-                </div>
-                <div>
-                    <p class="text-xs text-muted-foreground">Waiting</p>
-                    <p class="text-2xl font-black text-slate-800">{{ summary.waiting }}</p>
-                </div>
-            </div>
-            <div class="bg-card rounded-xl border shadow-sm p-4 flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-                    <FlaskConical class="w-5 h-5 text-blue-600"/>
-                </div>
-                <div>
-                    <p class="text-xs text-muted-foreground">Processing</p>
-                    <p class="text-2xl font-black text-slate-800">{{ summary.serving }}</p>
-                </div>
-            </div>
-            <div class="bg-card rounded-xl border shadow-sm p-4 flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
-                    <CheckCircle2 class="w-5 h-5 text-emerald-600"/>
-                </div>
-                <div>
-                    <p class="text-xs text-muted-foreground">Released Today</p>
-                    <p class="text-2xl font-black text-slate-800">{{ summary.released }}</p>
-                </div>
-            </div>
+        <!-- ── TAB NAV + SUMMARY ──────────────────────── -->
+        <div class="flex items-center gap-1 mb-5 bg-slate-100 p-1 rounded-xl w-fit">
+            <button v-for="tab in [
+                { key: 'today',   label: 'Today\'s Queue', count: summary.today,         icon: 'queue'   },
+                { key: 'pending', label: 'Pending Release', count: summary.pending,       icon: 'pending' },
+                { key: 'history', label: 'History',         count: summary.released_today, icon: 'history' },
+            ]" :key="tab.key"
+                @click="activeTab = tab.key"
+                :class="[
+                    'flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all',
+                    activeTab === tab.key
+                        ? 'bg-white shadow-sm text-slate-800'
+                        : 'text-slate-500 hover:text-slate-700'
+                ]">
+                <!-- Tab icon -->
+                <FlaskConical v-if="tab.key === 'today'" class="w-3.5 h-3.5"/>
+                <Clock v-if="tab.key === 'pending'" class="w-3.5 h-3.5"/>
+                <FileText v-if="tab.key === 'history'" class="w-3.5 h-3.5"/>
+                {{ tab.label }}
+                <!-- Count badge -->
+                <span :class="[
+                    'px-1.5 py-0.5 rounded-md text-xs font-black min-w-[20px] text-center',
+                    activeTab === tab.key ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-600'
+                ]">
+                    {{ tab.count }}
+                </span>
+            </button>
         </div>
 
-        <!-- Queue -->
-        <div class="space-y-3 mb-6">
-            <div class="flex items-center gap-2 px-1">
-                <span class="w-1 h-4 rounded-full inline-block bg-blue-500"></span>
-                <h3 class="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                    Today's Lab Queue
-                </h3>
-            </div>
+        <!-- ══════════════════════════════════════════════ -->
+        <!-- TAB 1: TODAY'S QUEUE                           -->
+        <!-- ══════════════════════════════════════════════ -->
+        <div v-if="activeTab === 'today'">
 
-            <div v-if="queue.length === 0"
-                class="bg-card rounded-2xl border shadow-sm py-16 text-center">
-                <div class="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-3">
-                    <FlaskConical class="w-7 h-7 text-blue-300"/>
-                </div>
-                <p class="text-sm font-semibold text-slate-500">No patients in lab queue</p>
-            </div>
-
-            <div v-for="(a, i) in queue" :key="a.id"
-                class="bg-card rounded-2xl border shadow-sm overflow-hidden"
-                :class="a.status === 'serving' ? 'ring-2 ring-blue-400' : ''">
-
-                <div class="h-1 w-full"
-                    :style="{ background: a.status === 'serving' ? '#3B82F6' :
-                                          a.status === 'calling' ? '#60A5FA' : '#E2E8F0' }"/>
-
-                <div class="flex items-center p-5 gap-0">
-
-                    <!-- Number -->
-                    <div class="flex flex-col items-center justify-center w-24 flex-shrink-0 pr-5 border-r border-slate-100">
-                        <p class="text-xs text-muted-foreground mb-1">#{{ i + 1 }}</p>
-                        <p class="text-3xl font-black font-mono leading-none text-blue-600">
-                            {{ a.queue_number }}
-                        </p>
-                        <span :class="['mt-2 text-xs font-semibold px-2 py-0.5 rounded-full',
-                            a.status === 'serving' ? 'bg-blue-100 text-blue-700' :
-                            a.status === 'calling' ? 'bg-sky-100 text-sky-700' :
-                                                     'bg-slate-100 text-slate-600']">
-                            {{ a.status }}
-                        </span>
-                    </div>
-
-                    <!-- Patient -->
-                    <div class="flex-1 min-w-0 px-5">
-                        <div class="flex items-center gap-2 mb-1">
-                            <p class="text-base font-bold text-slate-800">{{ a.patient.full_name }}</p>
-                            <span v-if="priorityConfig[a.priority]"
-                                :class="['text-xs font-bold px-2 py-0.5 rounded-full',
-                                    priorityConfig[a.priority].class]">
-                                {{ priorityConfig[a.priority].label }}
-                            </span>
-                        </div>
-                        <p class="text-xs text-muted-foreground mb-2">
-                            {{ a.patient.patient_code }} · {{ a.patient.age_sex }}
-                        </p>
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <span v-if="a.visit"
-                                :class="['text-xs font-semibold px-2.5 py-1 rounded-full',
-                                    visitTypeBadge[a.visit.visit_type]]">
-                                {{ visitTypeLabel[a.visit.visit_type] }}
-                            </span>
-                            <span v-if="a.visit?.employer_company"
-                                class="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                                {{ a.visit.employer_company }}
-                            </span>
-                            <!-- Services chips -->
-                            <span v-for="svc in (a.visit?.services ?? [])" :key="svc.code"
-                                class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
-                                {{ svc.code }}
-                            </span>
-                            <!-- Result status -->
-                            <span v-if="a.visit?.is_released"
-                                class="flex items-center gap-1 text-xs text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full font-semibold">
-                                <CheckCircle2 class="w-3 h-3"/> Released
-                            </span>
-                            <span v-else-if="a.visit?.has_results"
-                                class="flex items-center gap-1 text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full font-semibold">
-                                <Clock class="w-3 h-3"/> Results Pending Release
-                            </span>
-                        </div>
-                    </div>
-
-                    <!-- Action -->
-                    <div class="flex-shrink-0 pl-5">
-                        <Link v-if="a.visit?.id"
-                            :href="route('laboratory.enter', a.visit.id)">
-                            <Button class="gap-2 text-white"
-                                :style="{ backgroundColor:
-                                    a.visit?.is_released ? '#10B981' : '#3B82F6' }">
-                                <FlaskConical class="w-4 h-4"/>
-                                {{ a.visit?.is_released ? 'View Results' :
-                                   a.visit?.has_results ? 'Update Results' : 'Enter Results' }}
-                            </Button>
-                        </Link>
-                    </div>
+            <!-- Legend -->
+            <div class="flex items-center gap-4 mb-3 px-1">
+                <span class="text-xs text-slate-400 font-medium">Result Status:</span>
+                <div v-for="(cfg, key) in labStatusConfig" :key="key"
+                    class="flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full" :style="{ background: cfg.dot }"/>
+                    <span class="text-xs text-slate-500">{{ cfg.label }}</span>
                 </div>
             </div>
-        </div>
 
-        <!-- Released Today -->
-        <div v-if="released.length > 0">
-            <div class="flex items-center gap-2 px-1 mb-3">
-                <span class="w-1 h-4 rounded-full inline-block bg-emerald-500"></span>
-                <h3 class="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                    Released Today ({{ released.length }})
-                </h3>
+            <!-- Empty state -->
+            <div v-if="!todayQueue.length"
+                class="bg-white rounded-xl border border-slate-200 py-20 text-center">
+                <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mx-auto mb-3">
+                    <FlaskConical class="w-6 h-6 text-blue-400"/>
+                </div>
+                <p class="text-sm font-semibold text-slate-500">No patients routed to laboratory today</p>
             </div>
-            <div class="bg-card rounded-xl border shadow-sm overflow-hidden">
+
+            <!-- Queue Table -->
+            <div v-else class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
                 <table class="w-full">
                     <thead>
-                        <tr style="background-color:#0F2044">
-                            <th class="text-left px-5 py-3 text-xs font-semibold text-white/70 uppercase">Patient</th>
-                            <th class="text-left px-4 py-3 text-xs font-semibold text-white/70 uppercase">Request No.</th>
-                            <th class="text-left px-4 py-3 text-xs font-semibold text-white/70 uppercase">Released</th>
-                            <th class="px-4 py-3"></th>
+                        <tr class="border-b border-slate-100 bg-slate-50/80">
+                            <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider w-20">Queue</th>
+                            <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Patient</th>
+                            <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Services Ordered</th>
+                            <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider w-32">Queue Status</th>
+                            <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider w-32">Result Status</th>
+                            <th class="px-4 py-2.5 w-32"></th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100">
-                        <tr v-for="r in released" :key="r.id"
-                            class="hover:bg-slate-50 transition-colors group">
-                            <td class="px-5 py-3.5">
-                                <p class="text-sm font-semibold text-slate-800">{{ r.patient_name }}</p>
-                                <p class="text-xs text-muted-foreground font-mono">{{ r.patient_code }}</p>
-                            </td>
-                            <td class="px-4 py-3.5">
-                                <span class="text-xs font-mono font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                                    {{ r.request_number }}
-                                </span>
-                            </td>
-                            <td class="px-4 py-3.5">
-                                <div class="flex items-center gap-1.5 text-xs text-emerald-700">
-                                    <CheckCircle2 class="w-3.5 h-3.5"/>
-                                    {{ r.released_at }}
+                    <tbody class="divide-y divide-slate-50">
+                        <tr v-for="item in todayQueue" :key="item.id"
+                            class="hover:bg-slate-50/60 transition-colors group">
+
+                            <!-- Queue Number -->
+                            <td class="px-4 py-3">
+                                <div class="flex flex-col items-start">
+                                    <span class="text-base font-black font-mono text-slate-700 leading-none">
+                                        {{ item.queue_number }}
+                                    </span>
                                 </div>
                             </td>
-                            <td class="px-4 py-3.5">
-                                <Link :href="route('laboratory.enter', r.visit_id)"
-                                    class="opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Button variant="outline" size="sm" class="text-xs gap-1.5">
-                                        <FlaskConical class="w-3.5 h-3.5"/>
-                                        View / Print
+
+                            <!-- Patient Info -->
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-2.5">
+                                    <!-- Avatar -->
+                                    <div class="w-7 h-7 rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
+                                        style="background-color:#1B4F9B">
+                                        {{ item.patient.full_name?.charAt(0) }}
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-semibold text-slate-800 leading-tight">{{ item.patient.full_name }}</p>
+                                        <p class="text-xs text-slate-400 font-mono">{{ item.patient.patient_code }} · {{ item.patient.age_sex }}</p>
+                                    </div>
+                                </div>
+                                <!-- Visit type + company inline -->
+                                <div class="flex items-center gap-1.5 mt-1.5 ml-9">
+                                    <span v-if="item.visit"
+                                        class="text-xs font-semibold px-1.5 py-0.5 rounded"
+                                        :style="{
+                                            background: visitTypeBadge[item.visit.visit_type]?.bg,
+                                            color: visitTypeBadge[item.visit.visit_type]?.color
+                                        }">
+                                        {{ visitTypeBadge[item.visit.visit_type]?.label }}
+                                    </span>
+                                    <span v-if="item.visit?.employer_company"
+                                        class="text-xs text-slate-400">
+                                        · {{ item.visit.employer_company }}
+                                    </span>
+                                </div>
+                            </td>
+
+                            <!-- Services -->
+                            <td class="px-4 py-3">
+                                <div class="flex flex-wrap gap-1">
+                                    <span v-for="svc in (item.visit?.services ?? [])" :key="svc.code"
+                                        class="text-xs font-mono font-bold px-1.5 py-0.5 rounded border"
+                                        style="background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe;">
+                                        {{ svc.code }}
+                                    </span>
+                                    <span v-if="!item.visit?.services?.length"
+                                        class="text-xs text-slate-300">—</span>
+                                </div>
+                            </td>
+
+                            <!-- Queue Status -->
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-1.5"
+                                    :style="{ color: queueStatusConfig[item.status]?.color }">
+                                    <span class="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                        :style="{ background: queueStatusConfig[item.status]?.dot }"/>
+                                    <span class="text-xs font-semibold">
+                                        {{ queueStatusConfig[item.status]?.label ?? item.status }}
+                                    </span>
+                                </div>
+                                <!-- Warning if queue done but no results -->
+                                <div v-if="item.status === 'completed' && !item.visit?.is_released"
+                                    class="flex items-center gap-1 mt-1">
+                                    <AlertTriangle class="w-3 h-3 text-amber-500"/>
+                                    <span class="text-xs text-amber-600">Awaiting results</span>
+                                </div>
+                            </td>
+
+                            <!-- Result Status -->
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                        :style="{ background: labStatusConfig[getLabStatus(item.visit)]?.dot }"/>
+                                    <span class="text-xs font-semibold"
+                                        :style="{ color: labStatusConfig[getLabStatus(item.visit)]?.color }">
+                                        {{ labStatusConfig[getLabStatus(item.visit)]?.label }}
+                                    </span>
+                                </div>
+                            </td>
+
+                            <!-- Action -->
+                            <td class="px-4 py-3 text-right">
+                                <Link v-if="item.visit?.id"
+                                    :href="route('laboratory.enter', item.visit.id)">
+                                    <Button size="sm"
+                                        class="text-xs h-7 gap-1.5 text-white opacity-80 group-hover:opacity-100 transition-opacity"
+                                        :style="{
+                                            backgroundColor:
+                                                item.visit?.is_released ? '#10b981' :
+                                                item.visit?.has_results  ? '#f59e0b' : '#3b82f6'
+                                        }">
+                                        {{ item.visit?.is_released ? 'View'   :
+                                           item.visit?.has_results  ? 'Update' : 'Enter' }}
+                                        <ChevronRight class="w-3 h-3"/>
                                     </Button>
                                 </Link>
                             </td>
                         </tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════ -->
+        <!-- TAB 2: PENDING RELEASE                         -->
+        <!-- ══════════════════════════════════════════════ -->
+        <div v-if="activeTab === 'pending'">
+
+            <!-- Search bar -->
+            <div class="flex items-center gap-2 mb-4">
+                <div class="relative flex-1 max-w-sm">
+                    <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400"/>
+                    <Input v-model="search"
+                        placeholder="Search patient name or code..."
+                        class="pl-9 h-8 text-xs"
+                        @keyup.enter="applyFilters"/>
+                </div>
+                <Button size="sm" class="h-8 text-xs gap-1.5"
+                    style="background-color:#1B4F9B; color:white;"
+                    @click="applyFilters">
+                    <Search class="w-3.5 h-3.5"/> Search
+                </Button>
+                <Button v-if="search" size="sm" variant="outline" class="h-8 text-xs"
+                    @click="clearFilters">Clear</Button>
+            </div>
+
+            <div v-if="!pending.data?.length"
+                class="bg-white rounded-xl border border-slate-200 py-20 text-center">
+                <CheckCircle2 class="w-10 h-10 text-emerald-400 mx-auto mb-3"/>
+                <p class="text-sm font-semibold text-slate-500">No pending lab results</p>
+                <p class="text-xs text-slate-400 mt-1">All results have been released</p>
+            </div>
+
+            <div v-else class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-slate-100 bg-slate-50/80">
+                            <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Patient</th>
+                            <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider w-36">Request No.</th>
+                            <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider w-28">Date</th>
+                            <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider w-28">Status</th>
+                            <th class="px-4 py-2.5 w-24"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        <tr v-for="r in pending.data" :key="r.id"
+                            class="hover:bg-amber-50/40 transition-colors group">
+                            <td class="px-4 py-3">
+                                <p class="text-sm font-semibold text-slate-800">{{ r.patient_name }}</p>
+                                <p class="text-xs text-slate-400 font-mono">{{ r.patient_code }} · {{ r.age_sex }}</p>
+                                <div class="flex items-center gap-1.5 mt-1">
+                                    <span class="text-xs font-semibold px-1.5 py-0.5 rounded"
+                                        :style="{
+                                            background: visitTypeBadge[r.visit_type]?.bg,
+                                            color: visitTypeBadge[r.visit_type]?.color
+                                        }">
+                                        {{ visitTypeBadge[r.visit_type]?.label }}
+                                    </span>
+                                    <span v-if="r.employer" class="text-xs text-slate-400">{{ r.employer }}</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="text-xs font-mono font-bold px-2 py-1 rounded"
+                                    style="background:#eff6ff; color:#1d4ed8;">
+                                    {{ r.request_number }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-xs text-slate-500">{{ r.visit_date }}</td>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-1.5">
+                                    <Loader2 v-if="r.status === 'processing'" class="w-3 h-3 text-blue-500 animate-spin"/>
+                                    <Clock v-else class="w-3 h-3 text-amber-500"/>
+                                    <span class="text-xs font-semibold"
+                                        :class="r.status === 'processing' ? 'text-blue-600' : 'text-amber-600'">
+                                        {{ r.status === 'processing' ? 'In Progress' : 'Pending' }}
+                                    </span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                <Link :href="route('laboratory.enter', r.visit_id)">
+                                    <Button size="sm"
+                                        class="text-xs h-7 gap-1 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                        style="background-color:#3b82f6;">
+                                        {{ r.status === 'processing' ? 'Continue' : 'Enter' }}
+                                        <ChevronRight class="w-3 h-3"/>
+                                    </Button>
+                                </Link>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- Pagination -->
+                <div class="px-4 py-3 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <p class="text-xs text-slate-400">
+                        {{ pending.from }}–{{ pending.to }} of {{ pending.total }} records
+                    </p>
+                    <div class="flex items-center gap-0.5">
+                        <template v-for="link in pending.links" :key="link.label">
+                            <Link v-if="link.url" :href="link.url" preserve-state
+                                class="px-2.5 py-1 text-xs rounded transition-colors"
+                                :class="link.active
+                                    ? 'text-white font-semibold'
+                                    : 'text-slate-500 hover:bg-slate-100'"
+                                :style="link.active ? 'background-color:#1B4F9B' : ''"
+                                v-html="link.label"/>
+                            <span v-else class="px-2.5 py-1 text-xs text-slate-300" v-html="link.label"/>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════ -->
+        <!-- TAB 3: HISTORY                                 -->
+        <!-- ══════════════════════════════════════════════ -->
+        <div v-if="activeTab === 'history'">
+
+            <!-- Search + Date filter -->
+            <div class="flex items-center gap-2 mb-4">
+                <div class="relative flex-1 max-w-sm">
+                    <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400"/>
+                    <Input v-model="search"
+                        placeholder="Search patient name or code..."
+                        class="pl-9 h-8 text-xs"
+                        @keyup.enter="applyFilters"/>
+                </div>
+                <div class="flex items-center gap-1.5 border border-slate-200 rounded-lg px-2.5 h-8 bg-white">
+                    <Calendar class="w-3.5 h-3.5 text-slate-400"/>
+                    <Input v-model="date" type="date"
+                        class="border-0 shadow-none p-0 h-auto focus-visible:ring-0 text-xs w-32"
+                        @change="applyFilters"/>
+                </div>
+                <Button size="sm" class="h-8 text-xs gap-1.5"
+                    style="background-color:#1B4F9B; color:white;"
+                    @click="applyFilters">
+                    <Search class="w-3.5 h-3.5"/> Search
+                </Button>
+                <Button v-if="search || date" size="sm" variant="outline" class="h-8 text-xs"
+                    @click="clearFilters">Clear</Button>
+            </div>
+
+            <div v-if="!history.data?.length"
+                class="bg-white rounded-xl border border-slate-200 py-20 text-center">
+                <FileText class="w-10 h-10 text-slate-300 mx-auto mb-3"/>
+                <p class="text-sm font-semibold text-slate-500">No results found</p>
+                <p class="text-xs text-slate-400 mt-1">Try a different name or date</p>
+            </div>
+
+            <div v-else class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-slate-100 bg-slate-50/80">
+                            <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Patient</th>
+                            <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider w-36">Request No.</th>
+                            <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider w-44">Released</th>
+                            <th class="px-4 py-2.5 w-28"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        <tr v-for="r in history.data" :key="r.id"
+                            class="hover:bg-slate-50/60 transition-colors group">
+                            <td class="px-4 py-3">
+                                <p class="text-sm font-semibold text-slate-800">{{ r.patient_name }}</p>
+                                <p class="text-xs text-slate-400 font-mono">{{ r.patient_code }} · {{ r.age_sex }}</p>
+                                <div class="flex items-center gap-1.5 mt-1">
+                                    <span class="text-xs font-semibold px-1.5 py-0.5 rounded"
+                                        :style="{
+                                            background: visitTypeBadge[r.visit_type]?.bg,
+                                            color: visitTypeBadge[r.visit_type]?.color
+                                        }">
+                                        {{ visitTypeBadge[r.visit_type]?.label }}
+                                    </span>
+                                    <span v-if="r.employer" class="text-xs text-slate-400">{{ r.employer }}</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="text-xs font-mono font-bold px-2 py-1 rounded"
+                                    style="background:#f0fdf4; color:#047857; border:1px solid #bbf7d0;">
+                                    {{ r.request_number }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-1.5 text-emerald-600">
+                                    <CheckCircle2 class="w-3.5 h-3.5"/>
+                                    <span class="text-xs font-medium">{{ r.released_at }}</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                <div class="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Link :href="route('laboratory.enter', r.visit_id)">
+                                        <Button variant="outline" size="sm" class="text-xs h-7 gap-1">
+                                            <FlaskConical class="w-3 h-3"/> View
+                                        </Button>
+                                    </Link>
+                                    <a :href="route('laboratory.print', r.visit_id)" target="_blank">
+                                        <Button variant="outline" size="sm" class="text-xs h-7">
+                                            Print
+                                        </Button>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- Pagination -->
+                <div class="px-4 py-3 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <p class="text-xs text-slate-400">
+                        {{ history.from }}–{{ history.to }} of {{ history.total }} records
+                    </p>
+                    <div class="flex items-center gap-0.5">
+                        <template v-for="link in history.links" :key="link.label">
+                            <Link v-if="link.url" :href="link.url" preserve-state
+                                class="px-2.5 py-1 text-xs rounded transition-colors"
+                                :class="link.active
+                                    ? 'text-white font-semibold'
+                                    : 'text-slate-500 hover:bg-slate-100'"
+                                :style="link.active ? 'background-color:#1B4F9B' : ''"
+                                v-html="link.label"/>
+                            <span v-else class="px-2.5 py-1 text-xs text-slate-300" v-html="link.label"/>
+                        </template>
+                    </div>
+                </div>
             </div>
         </div>
 

@@ -10,16 +10,21 @@ use Illuminate\Support\Facades\Auth;
 
 class NurseController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $queue = QueueRoomAssignment::with([
+        $search = $request->get('search', '');
+        $date   = $request->get('date', '');
+
+        // ── TODAY'S QUEUE — include completed so patients
+        // don't disappear after queue is marked done ──────
+        $todayQueue = QueueRoomAssignment::with([
             'ticket.patient',
-            'ticket.visit',
+            'ticket.visit.vitals',
         ])
         ->today()
         ->forRoom('interview_room')
-        ->whereIn('status', ['waiting', 'calling', 'serving'])
-        ->orderByRaw("FIELD(status, 'serving', 'calling', 'waiting')")
+        ->whereNotIn('status', ['no_show', 'skipped', 'cancelled'])
+        ->orderByRaw("FIELD(status, 'serving', 'calling', 'waiting', 'completed')")
         ->orderBy('routing_sequence')
         ->orderBy('created_at')
         ->get()
@@ -28,23 +33,103 @@ class NurseController extends Controller
             'queue_number' => $a->queue_number,
             'status'       => $a->status,
             'priority'     => $a->ticket?->priority ?? 'regular',
-            'patient'      => [
+            'patient' => [
                 'id'           => $a->ticket?->patient?->id,
                 'full_name'    => $a->ticket?->patient?->full_name ?? '—',
                 'patient_code' => $a->ticket?->patient?->patient_code ?? '—',
                 'age_sex'      => $a->ticket?->patient?->age_sex ?? '—',
             ],
             'visit' => $a->ticket?->patient_visit_id ? [
-                'id'         => $a->ticket->visit?->id,
-                'visit_type' => $a->ticket->visit?->visit_type,
-                'has_vitals' => $a->ticket->patient_visit_id
-                    ? PatientVital::where('patient_visit_id', $a->ticket->patient_visit_id)->exists()
-                    : false,
+                'id'               => $a->ticket->visit?->id,
+                'visit_type'       => $a->ticket->visit?->visit_type,
+                'employer_company' => $a->ticket->visit?->employer_company,
+                'has_vitals'       => $a->ticket->visit?->vitals !== null,
             ] : null,
         ]);
 
+        // ── PENDING — visits with no vitals (any date) ───
+        $pendingQuery = PatientVisit::with(['patient'])
+            ->whereDoesntHave('vitals')
+            ->where('status', '!=', 'cancelled')
+            ->whereIn('visit_type', ['opd', 'pre_employment', 'follow_up'])
+            ->when($search, fn($q) =>
+                $q->whereHas('patient', fn($p) =>
+                    $p->where('first_name', 'like', "%{$search}%")
+                      ->orWhere('last_name', 'like', "%{$search}%")
+                      ->orWhere('patient_code', 'like', "%{$search}%")
+                )
+            )
+            ->latest('visit_date')
+            ->paginate(10, ['*'], 'pending_page')
+            ->withQueryString();
+
+        $pending = $pendingQuery->getCollection()->map(fn($v) => [
+            'id'           => $v->id,
+            'visit_id'     => $v->id,
+            'visit_type'   => $v->visit_type,
+            'visit_date'   => $v->visit_date->format('M d, Y'),
+            'employer'     => $v->employer_company,
+            'patient_name' => $v->patient->full_name,
+            'patient_code' => $v->patient->patient_code,
+            'age_sex'      => $v->patient->age_sex,
+        ]);
+        $pendingQuery->setCollection($pending);
+
+        // ── HISTORY — visits with vitals (searchable) ───
+        $historyQuery = PatientVital::with(['visit.patient', 'visit'])
+            ->when($search, fn($q) =>
+                $q->whereHas('visit.patient', fn($p) =>
+                    $p->where('first_name', 'like', "%{$search}%")
+                      ->orWhere('last_name', 'like', "%{$search}%")
+                      ->orWhere('patient_code', 'like', "%{$search}%")
+                )
+            )
+            ->when($date, fn($q) =>
+                $q->whereHas('visit', fn($v) =>
+                    $v->whereDate('visit_date', $date)
+                )
+            )
+            ->latest()
+            ->paginate(10, ['*'], 'history_page')
+            ->withQueryString();
+
+        $history = $historyQuery->getCollection()->map(fn($v) => [
+            'id'                 => $v->id,
+            'visit_id'           => $v->patient_visit_id,
+            'visit_type'         => $v->visit?->visit_type,
+            'visit_date'         => $v->visit?->visit_date?->format('M d, Y'),
+            'employer'           => $v->visit?->employer_company,
+            'patient_name'       => $v->visit?->patient?->full_name ?? '—',
+            'patient_code'       => $v->visit?->patient?->patient_code ?? '—',
+            'age_sex'            => $v->visit?->patient?->age_sex ?? '—',
+            // Key vitals for snapshot display
+            'weight_kg'          => $v->weight_kg,
+            'bmi'                => $v->bmi,
+            'bmi_category'       => $v->bmi_category,
+            'temperature_celsius'=> $v->temperature_celsius,
+            'pulse_rate'         => $v->pulse_rate,
+            'bp'                 => $v->blood_pressure_systolic && $v->blood_pressure_diastolic
+                                    ? "{$v->blood_pressure_systolic}/{$v->blood_pressure_diastolic}"
+                                    : null,
+            'recorded_at'        => $v->updated_at->format('h:i A'),
+        ]);
+        $historyQuery->setCollection($history);
+
         return inertia('Nurse/Index', [
-            'queue' => $queue,
+            'todayQueue' => $todayQueue,
+            'pending'    => $pendingQuery,
+            'history'    => $historyQuery,
+            'filters'    => ['search' => $search, 'date' => $date],
+            'summary'    => [
+                'today'      => count($todayQueue),
+                'pending'    => PatientVisit::whereDoesntHave('vitals')
+                                ->where('status', '!=', 'cancelled')
+                                ->whereIn('visit_type', ['opd','pre_employment','follow_up'])
+                                ->count(),
+                'done_today' => PatientVital::whereHas('visit', fn($q) =>
+                                    $q->whereDate('visit_date', today())
+                                )->count(),
+            ],
         ]);
     }
 
@@ -58,6 +143,7 @@ class NurseController extends Controller
                 'id'         => $visit->id,
                 'visit_type' => $visit->visit_type,
                 'visit_date' => $visit->visit_date->format('M d, Y h:i A'),
+                'employer_company' => $visit->employer_company,
             ],
             'patient' => [
                 'id'           => $visit->patient->id,

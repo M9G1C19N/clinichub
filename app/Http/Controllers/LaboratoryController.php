@@ -15,18 +15,24 @@ class LaboratoryController extends Controller
 {
     // ── LAB DASHBOARD ─────────────────────────────────
 
-    public function index()
+    public function index(Request $request)
     {
-        // Today's lab queue from room assignments
-        $queue = QueueRoomAssignment::with([
+        $search = $request->get('search', '');
+        $dateFilter = $request->get('date', '');
+        $statusFilter = $request->get('status', 'all');
+
+        // ── TODAY'S QUEUE ─────────────────────────────
+        // Show patients whose queue assignment was for lab TODAY
+        // regardless of queue status — they still need results entered
+        $todayQueue = QueueRoomAssignment::with([
             'ticket.patient',
             'ticket.visit.labRequest',
             'ticket.visit.invoice.items',
         ])
         ->today()
         ->forRoom('laboratory')
-        ->whereIn('status', ['waiting', 'calling', 'serving'])
-        ->orderByRaw("FIELD(status, 'serving', 'calling', 'waiting')")
+        ->whereNotIn('status', ['no_show', 'skipped', 'cancelled'])
+        ->orderByRaw("FIELD(status, 'serving', 'calling', 'waiting', 'completed')")
         ->orderBy('routing_sequence')
         ->orderBy('created_at')
         ->get()
@@ -47,40 +53,89 @@ class LaboratoryController extends Controller
                 'visit_type'       => $a->ticket->visit?->visit_type,
                 'employer_company' => $a->ticket->visit?->employer_company,
                 'has_results'      => $a->ticket->visit?->labRequest !== null,
+                'lab_status'       => $a->ticket->visit?->labRequest?->status ?? 'none',
                 'is_released'      => $a->ticket->visit?->labRequest?->status === 'released',
                 'services'         => collect($a->ticket->visit?->invoice?->items ?? [])
                     ->filter(fn($i) => in_array($i->service_code, [
                         'CBC','UA','FECALYSIS','BLOODTYPING','FBS','RBS','BUN',
                         'CREATININE','URICACID','CHOLESTEROL','TRIGLYCERIDES',
-                        'HDLLDL','SGOT','SGPT','HBSAG','VDRL','PREGNANCY','DENGUE','THYROID'
+                        'HDLLDL','SGOT','SGPT','HBSAG','VDRL','PREGNANCY','DENGUE',
+                        'THYROID','PSA'
                     ]))
                     ->map(fn($i) => ['code' => $i->service_code, 'name' => $i->service_name])
                     ->values()->toArray(),
             ] : null,
         ]);
 
-        // Pending results — released today
-        $released = LaboratoryRequest::with(['patient', 'visit'])
-            ->whereDate('released_at', today())
+        // ── PENDING — Not yet released (any date) ─────
+        // Lab requests that are pending or processing — need attention
+        $pendingQuery = LaboratoryRequest::with(['patient', 'visit'])
+            ->whereIn('status', ['pending', 'processing'])
+            ->when($search, fn($q) =>
+                $q->whereHas('patient', fn($p) =>
+                    $p->where('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('patient_code', 'like', "%{$search}%")
+                )
+            )
+            ->latest()
+            ->paginate(10, ['*'], 'pending_page')
+            ->withQueryString();
+
+        $pending = $pendingQuery->getCollection()->map(fn($r) => [
+            'id'             => $r->id,
+            'request_number' => $r->request_number,
+            'status'         => $r->status,
+            'patient_name'   => $r->patient->full_name,
+            'patient_code'   => $r->patient->patient_code,
+            'age_sex'        => $r->patient->age_sex,
+            'visit_id'       => $r->patient_visit_id,
+            'visit_type'     => $r->visit?->visit_type,
+            'visit_date'     => $r->created_at->format('M d, Y'),
+            'employer'       => $r->visit?->employer_company,
+        ]);
+        $pendingQuery->setCollection($pending);
+
+        // ── HISTORY — Released results (searchable) ───
+        $historyQuery = LaboratoryRequest::with(['patient', 'visit'])
             ->where('status', 'released')
+            ->when($search, fn($q) =>
+                $q->whereHas('patient', fn($p) =>
+                    $p->where('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('patient_code', 'like', "%{$search}%")
+                )
+            )
+            ->when($dateFilter, fn($q) =>
+                $q->whereDate('released_at', $dateFilter)
+            )
             ->latest('released_at')
-            ->get()
-            ->map(fn($r) => [
-                'id'             => $r->id,
-                'request_number' => $r->request_number,
-                'patient_name'   => $r->patient->full_name,
-                'patient_code'   => $r->patient->patient_code,
-                'released_at'    => $r->released_at->format('h:i A'),
-                'visit_id'       => $r->patient_visit_id,
-            ]);
+            ->paginate(10, ['*'], 'history_page')
+            ->withQueryString();
+
+        $history = $historyQuery->getCollection()->map(fn($r) => [
+            'id'             => $r->id,
+            'request_number' => $r->request_number,
+            'patient_name'   => $r->patient->full_name,
+            'patient_code'   => $r->patient->patient_code,
+            'age_sex'        => $r->patient->age_sex,
+            'visit_id'       => $r->patient_visit_id,
+            'visit_type'     => $r->visit?->visit_type,
+            'released_at'    => $r->released_at?->format('M d, Y h:i A'),
+            'employer'       => $r->visit?->employer_company,
+        ]);
+        $historyQuery->setCollection($history);
 
         return inertia('Laboratory/Index', [
-            'queue'    => $queue,
-            'released' => $released,
-            'summary'  => [
-                'waiting'  => collect($queue)->where('status', 'waiting')->count(),
-                'serving'  => collect($queue)->where('status', 'serving')->count(),
-                'released' => count($released),
+            'todayQueue' => $todayQueue,
+            'pending'    => $pendingQuery,
+            'history'    => $historyQuery,
+            'filters'    => ['search' => $search, 'date' => $dateFilter],
+            'summary' => [
+                'today'    => count($todayQueue),
+                'pending'  => LaboratoryRequest::whereIn('status', ['pending','processing'])->count(),
+                'released_today' => LaboratoryRequest::where('status','released')
+                                    ->whereDate('released_at', today())->count(),
             ],
         ]);
     }

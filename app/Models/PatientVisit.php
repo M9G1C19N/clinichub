@@ -69,4 +69,13 @@ class PatientVisit extends Model
     {
         return $this->hasOne(LaboratoryRequest::class, 'patient_visit_id');
     }
+    public function imagingRequests()
+    {
+        return $this->hasMany(ImagingRequest::class, 'patient_visit_id');
+    }
+
+    public function imagingRequest()
+    {
+        return $this->hasOne(ImagingRequest::class, 'patient_visit_id');
+    }
 }

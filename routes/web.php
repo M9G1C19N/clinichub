@@ -101,4 +101,13 @@ Route::middleware('auth')->group(function () {
         Route::get('/audit', fn() => inertia('Admin/Audit'))->name('audit');
     });
 
+    // ── X-Ray & Ultrasound ────────────────────────────
+    Route::middleware('role:admin|xray_tech|doctor')
+        ->prefix('xray')->name('xray.')->group(function () {
+            Route::get('/',               [\App\Http\Controllers\XRayController::class, 'index'])->name('index');
+            Route::get('/enter/{visit}',  [\App\Http\Controllers\XRayController::class, 'enter'])->name('enter');
+            Route::post('/enter/{visit}', [\App\Http\Controllers\XRayController::class, 'saveFindings'])->name('save');
+            Route::get('/print/{visit}',  [\App\Http\Controllers\XRayController::class, 'print'])->name('print');
+        });
+
 });

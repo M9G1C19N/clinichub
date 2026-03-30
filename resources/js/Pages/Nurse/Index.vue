@@ -1,70 +1,70 @@
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import {
-    Activity, Clock, CheckCircle2,
-    ClipboardList, AlertTriangle, User,
+    HeartPulse, CheckCircle2, Clock,
+    Activity, AlertTriangle, Search,
+    Calendar, FileText, ChevronRight,
+    ClipboardList, User,
 } from 'lucide-vue-next'
 
-defineProps({
-    queue: Array,
+const props = defineProps({
+    todayQueue: Array,
+    pending:    Object,
+    history:    Object,
+    filters:    Object,
+    summary:    Object,
 })
 
-const priorityConfig = {
-    urgent:   { class: 'bg-red-500 text-white',       label: 'URGENT' },
-    pregnant: { class: 'bg-pink-100 text-pink-700',   label: 'PREGNANT' },
-    pwd:      { class: 'bg-blue-100 text-blue-700',   label: 'PWD' },
-    senior:   { class: 'bg-amber-100 text-amber-700', label: 'SENIOR' },
-}
+const activeTab = ref('today')
+const search    = ref(props.filters?.search ?? '')
+const date      = ref(props.filters?.date ?? '')
 
-const visitTypeLabel = {
-    opd:            'OPD',
-    pre_employment: 'Pre-Employment',
-    follow_up:      'Follow-up',
-    lab_only:       'Lab Only',
-}
-
-const visitTypeBadge = {
-    opd:            'bg-blue-100 text-blue-700',
-    pre_employment: 'bg-purple-100 text-purple-700',
-    follow_up:      'bg-amber-100 text-amber-700',
-    lab_only:       'bg-teal-100 text-teal-700',
-}
-
-
-// ── Auto-refresh every 10 seconds ─────────────────
 let refreshTimer = null
-const lastRefreshed = ref(new Date())
-
 onMounted(() => {
     refreshTimer = setInterval(() => {
         router.reload({
-            only: ['queue'],
+            only: ['todayQueue','pending','history','summary'],
             preserveScroll: true,
-            onSuccess: () => { lastRefreshed.value = new Date() }
         })
     }, 10000)
 })
+onUnmounted(() => clearInterval(refreshTimer))
 
-onUnmounted(() => {
-    clearInterval(refreshTimer)
-})
-
-const timeAgo = () => {
-    const secs = Math.floor((new Date() - lastRefreshed.value) / 1000)
-    if (secs < 5)  return 'just now'
-    if (secs < 60) return `${secs}s ago`
-    return 'over a minute ago'
+function applyFilters() {
+    router.get(route('nurse.index'), {
+        search: search.value,
+        date:   date.value,
+    }, { preserveState: true, replace: true })
 }
-function refresh() {
-    router.reload({
-        only: ['queue'],
-        preserveScroll: true,
-        onSuccess: () => { lastRefreshed.value = new Date() }
-    })
+
+function clearFilters() {
+    search.value = ''
+    date.value   = ''
+    router.get(route('nurse.index'), {}, { preserveState: true, replace: true })
+}
+
+const queueStatusConfig = {
+    waiting:   { label: 'Waiting',   dot: '#f59e0b', color: '#92400e' },
+    calling:   { label: 'Calling',   dot: '#3b82f6', color: '#1e40af' },
+    serving:   { label: 'Serving',   dot: '#10b981', color: '#065f46' },
+    completed: { label: 'Completed', dot: '#94a3b8', color: '#475569' },
+}
+
+const priorityConfig = {
+    urgent:   { label: 'URGENT',   bg: '#fef2f2', color: '#dc2626' },
+    pregnant: { label: 'PREGNANT', bg: '#fdf2f8', color: '#be185d' },
+    pwd:      { label: 'PWD',      bg: '#eff6ff', color: '#1d4ed8' },
+    senior:   { label: 'SENIOR',   bg: '#fffbeb', color: '#b45309' },
+}
+
+const visitTypeBadge = {
+    opd:            { bg: '#eff6ff', color: '#1d4ed8', label: 'OPD' },
+    pre_employment: { bg: '#faf5ff', color: '#7c3aed', label: 'Pre-Employment' },
+    follow_up:      { bg: '#fffbeb', color: '#b45309', label: 'Follow-up' },
 }
 </script>
 
@@ -73,138 +73,411 @@ function refresh() {
         <template #header>
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-xl font-bold text-slate-800">Nurse Intake</h1>
-                    <p class="text-slate-400 text-xs mt-0.5">
-                        Interview Room · {{ queue.length }} patient(s) in queue
-                    </p>
+                    <h1 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <HeartPulse class="w-5 h-5 text-emerald-600"/>
+                        Nurse Intake
+                    </h1>
+                    <p class="text-slate-400 text-xs mt-0.5">Interview Room · Vitals & Patient Assessment</p>
                 </div>
                 <div class="flex items-center gap-2">
-                    <!-- Live indicator with pulse animation -->
-                    <div class="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl">
-                        <span class="relative flex h-2 w-2">
-                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    <div class="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">
+                        <span class="relative flex h-1.5 w-1.5">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"/>
+                            <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"/>
                         </span>
-                        <span class="text-xs text-emerald-600 font-medium">
-                            Live · refreshes every 10s
-                        </span>
+                        Live · 10s
                     </div>
-                    <Button variant="outline" size="sm" class="gap-2" @click="refresh">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                        </svg>
-                        Refresh Now
-                    </Button>
+                    <a :href="route('queue.room', 'interview_room')" target="_blank">
+                        <Button variant="outline" size="sm" class="gap-1.5 text-xs h-7">
+                            <Activity class="w-3.5 h-3.5"/>
+                            Room Screen
+                        </Button>
+                    </a>
                 </div>
             </div>
         </template>
 
-        <!-- Empty -->
-        <div v-if="queue.length === 0"
-            class="bg-card rounded-2xl border shadow-sm py-20 text-center">
-            <div class="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center bg-emerald-50">
-                <CheckCircle2 class="w-8 h-8 text-emerald-400"/>
-            </div>
-            <p class="text-lg font-semibold text-slate-500">No patients waiting</p>
-            <p class="text-sm text-slate-400 mt-1">Interview Room queue is clear</p>
+        <!-- ── TAB NAV ────────────────────────────────── -->
+        <div class="flex items-center gap-1 mb-5 bg-slate-100 p-1 rounded-xl w-fit">
+            <button v-for="tab in [
+                { key: 'today',   label: 'Today\'s Queue', count: summary.today         },
+                { key: 'pending', label: 'No Vitals Yet',  count: summary.pending       },
+                { key: 'history', label: 'History',         count: summary.done_today   },
+            ]" :key="tab.key"
+                @click="activeTab = tab.key"
+                :class="[
+                    'flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all',
+                    activeTab === tab.key
+                        ? 'bg-white shadow-sm text-slate-800'
+                        : 'text-slate-500 hover:text-slate-700'
+                ]">
+                <HeartPulse v-if="tab.key === 'today'"   class="w-3.5 h-3.5"/>
+                <AlertTriangle v-if="tab.key === 'pending'" class="w-3.5 h-3.5"/>
+                <FileText v-if="tab.key === 'history'" class="w-3.5 h-3.5"/>
+                {{ tab.label }}
+                <span :class="[
+                    'px-1.5 py-0.5 rounded-md text-xs font-black min-w-[20px] text-center',
+                    activeTab === tab.key
+                        ? tab.key === 'pending'
+                            ? 'bg-amber-500 text-white'
+                            : 'bg-emerald-600 text-white'
+                        : 'bg-slate-200 text-slate-600'
+                ]">{{ tab.count }}</span>
+            </button>
         </div>
 
-        <!-- Queue Cards -->
-        <div v-else class="space-y-3">
-            <div v-for="(assignment, i) in queue" :key="assignment.id"
-                class="bg-card rounded-2xl border shadow-sm overflow-hidden transition-all"
-                :class="assignment.status === 'serving' ? 'ring-2 ring-emerald-400' :
-                        assignment.status === 'calling' ? 'ring-2 ring-blue-400' : ''">
+        <!-- ══════════════════════════════════════════════ -->
+        <!-- TAB 1: TODAY'S QUEUE                           -->
+        <!-- ══════════════════════════════════════════════ -->
+        <div v-if="activeTab === 'today'">
 
-                <!-- Status bar -->
-                <div class="h-1 w-full"
-                    :style="{
-                        background:
-                            assignment.status === 'serving' ? '#10B981' :
-                            assignment.status === 'calling' ? '#3B82F6' : '#E2E8F0'
-                    }"/>
+            <div v-if="!todayQueue.length"
+                class="bg-white rounded-xl border border-slate-200 py-20 text-center">
+                <div class="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center mx-auto mb-3">
+                    <CheckCircle2 class="w-6 h-6 text-emerald-400"/>
+                </div>
+                <p class="text-sm font-semibold text-slate-500">No patients in interview room today</p>
+                <p class="text-xs text-slate-400 mt-1">Queue is clear</p>
+            </div>
 
-                <div class="flex items-center gap-0 p-5">
+            <div v-else class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-slate-100 bg-slate-50/80">
+                            <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider w-20">Queue</th>
+                            <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Patient</th>
+                            <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider w-32">Queue Status</th>
+                            <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider w-36">Vitals Status</th>
+                            <th class="px-4 py-2.5 w-36"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        <tr v-for="item in todayQueue" :key="item.id"
+                            class="hover:bg-slate-50/60 transition-colors group"
+                            :class="item.status === 'serving' ? 'bg-emerald-50/30' : ''">
 
-                    <!-- Queue Number -->
-                    <div class="flex flex-col items-center justify-center w-24 flex-shrink-0 pr-5 border-r border-slate-100">
-                        <p class="text-xs text-muted-foreground mb-1"># {{ i + 1 }}</p>
-                        <p class="text-3xl font-black font-mono text-emerald-600 leading-none">
-                            {{ assignment.queue_number }}
-                        </p>
-                        <span :class="[
-                            'mt-2 text-xs font-semibold px-2 py-0.5 rounded-full',
-                            assignment.status === 'serving'  ? 'bg-emerald-100 text-emerald-700' :
-                            assignment.status === 'calling'  ? 'bg-blue-100 text-blue-700' :
-                                                               'bg-slate-100 text-slate-600'
-                        ]">
-                            {{ assignment.status }}
-                        </span>
-                    </div>
+                            <!-- Queue Number -->
+                            <td class="px-4 py-3">
+                                <span class="text-base font-black font-mono text-slate-700">
+                                    {{ item.queue_number }}
+                                </span>
+                            </td>
 
-                    <!-- Patient Info -->
-                    <div class="flex-1 min-w-0 px-5">
-                        <div class="flex items-center gap-2 mb-1.5">
-                            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
-                                style="background:#1B4F9B">
-                                {{ assignment.patient.full_name.charAt(0) }}
-                            </div>
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <p class="text-base font-bold text-slate-800">
-                                        {{ assignment.patient.full_name }}
-                                    </p>
-                                    <span v-if="priorityConfig[assignment.priority]"
-                                        :class="['text-xs font-bold px-2 py-0.5 rounded-full',
-                                            priorityConfig[assignment.priority].class]">
-                                        {{ priorityConfig[assignment.priority].label }}
+                            <!-- Patient -->
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-7 h-7 rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
+                                        style="background-color:#059669">
+                                        {{ item.patient.full_name?.charAt(0) }}
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-semibold text-slate-800 leading-tight">
+                                            {{ item.patient.full_name }}
+                                        </p>
+                                        <p class="text-xs text-slate-400 font-mono">
+                                            {{ item.patient.patient_code }} · {{ item.patient.age_sex }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <!-- Visit type + priority inline -->
+                                <div class="flex items-center gap-1.5 mt-1.5 ml-9">
+                                    <span v-if="item.visit"
+                                        class="text-xs font-semibold px-1.5 py-0.5 rounded"
+                                        :style="{
+                                            background: visitTypeBadge[item.visit.visit_type]?.bg,
+                                            color: visitTypeBadge[item.visit.visit_type]?.color
+                                        }">
+                                        {{ visitTypeBadge[item.visit.visit_type]?.label }}
+                                    </span>
+                                    <span v-if="item.visit?.employer_company"
+                                        class="text-xs text-slate-400">
+                                        · {{ item.visit.employer_company }}
+                                    </span>
+                                    <!-- Priority badge -->
+                                    <span v-if="priorityConfig[item.priority]"
+                                        class="text-xs font-bold px-1.5 py-0.5 rounded"
+                                        :style="{
+                                            background: priorityConfig[item.priority].bg,
+                                            color: priorityConfig[item.priority].color
+                                        }">
+                                        {{ priorityConfig[item.priority].label }}
                                     </span>
                                 </div>
-                                <p class="text-xs text-muted-foreground">
-                                    {{ assignment.patient.patient_code }} · {{ assignment.patient.age_sex }}
-                                </p>
-                            </div>
-                        </div>
+                            </td>
 
-                        <!-- Visit type + vitals status -->
-                        <div class="flex items-center gap-2 mt-2">
-                            <span v-if="assignment.visit"
-                                :class="['text-xs font-semibold px-2.5 py-1 rounded-full',
-                                    visitTypeBadge[assignment.visit.visit_type]]">
-                                {{ visitTypeLabel[assignment.visit.visit_type] }}
-                            </span>
+                            <!-- Queue Status -->
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-1.5"
+                                    :style="{ color: queueStatusConfig[item.status]?.color }">
+                                    <span class="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                        :style="{ background: queueStatusConfig[item.status]?.dot }"/>
+                                    <span class="text-xs font-semibold">
+                                        {{ queueStatusConfig[item.status]?.label ?? item.status }}
+                                    </span>
+                                </div>
+                                <div v-if="item.status === 'completed' && !item.visit?.has_vitals"
+                                    class="flex items-center gap-1 mt-1">
+                                    <AlertTriangle class="w-3 h-3 text-amber-500"/>
+                                    <span class="text-xs text-amber-600">Awaiting vitals</span>
+                                </div>
+                            </td>
 
-                            <!-- Vitals status -->
-                            <span v-if="assignment.visit?.has_vitals"
-                                class="flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full">
-                                <CheckCircle2 class="w-3 h-3"/>
-                                Vitals Recorded
-                            </span>
-                            <span v-else
-                                class="flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-100 px-2.5 py-1 rounded-full">
-                                <AlertTriangle class="w-3 h-3"/>
-                                Vitals Pending
-                            </span>
-                        </div>
+                            <!-- Vitals Status -->
+                            <td class="px-4 py-3">
+                                <div v-if="item.visit?.has_vitals"
+                                    class="flex items-center gap-1.5 text-emerald-600">
+                                    <CheckCircle2 class="w-3.5 h-3.5"/>
+                                    <span class="text-xs font-semibold">Recorded</span>
+                                </div>
+                                <div v-else class="flex items-center gap-1.5 text-amber-600">
+                                    <Clock class="w-3.5 h-3.5"/>
+                                    <span class="text-xs font-semibold">Not yet taken</span>
+                                </div>
+                            </td>
+
+                            <!-- Action -->
+                            <td class="px-4 py-3 text-right">
+                                <Link v-if="item.visit?.id"
+                                    :href="route('nurse.vitals', item.visit.id)">
+                                    <Button size="sm"
+                                        class="text-xs h-7 gap-1.5 text-white opacity-80 group-hover:opacity-100 transition-opacity"
+                                        :style="{
+                                            backgroundColor: item.visit?.has_vitals ? '#10b981' : '#1B4F9B'
+                                        }">
+                                        <ClipboardList class="w-3.5 h-3.5"/>
+                                        {{ item.visit?.has_vitals ? 'Update' : 'Record Vitals' }}
+                                    </Button>
+                                </Link>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════ -->
+        <!-- TAB 2: PENDING — Visits with no vitals         -->
+        <!-- ══════════════════════════════════════════════ -->
+        <div v-if="activeTab === 'pending'">
+
+            <!-- Info note -->
+            <div class="flex items-center gap-2 mb-4 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700">
+                <AlertTriangle class="w-4 h-4 flex-shrink-0"/>
+                <span>These are visits from <strong>any date</strong> where vitals have not been recorded yet.</span>
+            </div>
+
+            <!-- Search -->
+            <div class="flex items-center gap-2 mb-4">
+                <div class="relative flex-1 max-w-sm">
+                    <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400"/>
+                    <Input v-model="search" placeholder="Search patient name or code..."
+                        class="pl-9 h-8 text-xs" @keyup.enter="applyFilters"/>
+                </div>
+                <Button size="sm" class="h-8 text-xs gap-1.5"
+                    style="background-color:#1B4F9B; color:white;" @click="applyFilters">
+                    <Search class="w-3.5 h-3.5"/> Search
+                </Button>
+                <Button v-if="search" size="sm" variant="outline" class="h-8 text-xs"
+                    @click="clearFilters">Clear</Button>
+            </div>
+
+            <div v-if="!pending.data?.length"
+                class="bg-white rounded-xl border border-slate-200 py-20 text-center">
+                <CheckCircle2 class="w-10 h-10 text-emerald-400 mx-auto mb-3"/>
+                <p class="text-sm font-semibold text-slate-500">No pending vitals</p>
+                <p class="text-xs text-slate-400 mt-1">All patients have vitals recorded</p>
+            </div>
+
+            <div v-else class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-slate-100 bg-slate-50/80">
+                            <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Patient</th>
+                            <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider w-28">Visit Date</th>
+                            <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider w-36">Visit Type</th>
+                            <th class="px-4 py-2.5 w-32"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        <tr v-for="r in pending.data" :key="r.id"
+                            class="hover:bg-amber-50/30 transition-colors group">
+                            <td class="px-4 py-3">
+                                <p class="text-sm font-semibold text-slate-800">{{ r.patient_name }}</p>
+                                <p class="text-xs text-slate-400 font-mono">{{ r.patient_code }} · {{ r.age_sex }}</p>
+                                <span v-if="r.employer" class="text-xs text-purple-600">{{ r.employer }}</span>
+                            </td>
+                            <td class="px-4 py-3 text-xs text-slate-500">{{ r.visit_date }}</td>
+                            <td class="px-4 py-3">
+                                <span class="text-xs font-semibold px-1.5 py-0.5 rounded"
+                                    :style="{
+                                        background: visitTypeBadge[r.visit_type]?.bg,
+                                        color: visitTypeBadge[r.visit_type]?.color
+                                    }">
+                                    {{ visitTypeBadge[r.visit_type]?.label }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                <Link :href="route('nurse.vitals', r.visit_id)">
+                                    <Button size="sm"
+                                        class="text-xs h-7 gap-1 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                        style="background-color:#1B4F9B;">
+                                        <ClipboardList class="w-3 h-3"/> Record
+                                        <ChevronRight class="w-3 h-3"/>
+                                    </Button>
+                                </Link>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- Pagination -->
+                <div class="px-4 py-3 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <p class="text-xs text-slate-400">
+                        {{ pending.from }}–{{ pending.to }} of {{ pending.total }} records
+                    </p>
+                    <div class="flex items-center gap-0.5">
+                        <template v-for="link in pending.links" :key="link.label">
+                            <Link v-if="link.url" :href="link.url" preserve-state
+                                class="px-2.5 py-1 text-xs rounded transition-colors"
+                                :class="link.active ? 'text-white font-semibold' : 'text-slate-500 hover:bg-slate-100'"
+                                :style="link.active ? 'background-color:#1B4F9B' : ''"
+                                v-html="link.label"/>
+                            <span v-else class="px-2.5 py-1 text-xs text-slate-300" v-html="link.label"/>
+                        </template>
                     </div>
+                </div>
+            </div>
+        </div>
 
-                    <!-- Action -->
-                    <div class="flex-shrink-0 pl-5">
-                        <Link v-if="assignment.visit?.id"
-                            :href="route('nurse.vitals', assignment.visit.id)">
-                            <Button
-                                :class="assignment.visit?.has_vitals
-                                    ? 'gap-2'
-                                    : 'gap-2 text-white'"
-                                :variant="assignment.visit?.has_vitals ? 'outline' : 'default'"
-                                :style="!assignment.visit?.has_vitals ? 'background-color:#1B4F9B' : ''">
-                                <ClipboardList class="w-4 h-4"/>
-                                {{ assignment.visit?.has_vitals ? 'Update Vitals' : 'Record Vitals' }}
-                            </Button>
-                        </Link>
+        <!-- ══════════════════════════════════════════════ -->
+        <!-- TAB 3: HISTORY — Searchable vitals records     -->
+        <!-- ══════════════════════════════════════════════ -->
+        <div v-if="activeTab === 'history'">
+
+            <!-- Search + Date -->
+            <div class="flex items-center gap-2 mb-4">
+                <div class="relative flex-1 max-w-sm">
+                    <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400"/>
+                    <Input v-model="search" placeholder="Search patient name or code..."
+                        class="pl-9 h-8 text-xs" @keyup.enter="applyFilters"/>
+                </div>
+                <div class="flex items-center gap-1.5 border border-slate-200 rounded-lg px-2.5 h-8 bg-white">
+                    <Calendar class="w-3.5 h-3.5 text-slate-400"/>
+                    <Input v-model="date" type="date"
+                        class="border-0 shadow-none p-0 h-auto focus-visible:ring-0 text-xs w-32"
+                        @change="applyFilters"/>
+                </div>
+                <Button size="sm" class="h-8 text-xs gap-1.5"
+                    style="background-color:#1B4F9B; color:white;" @click="applyFilters">
+                    <Search class="w-3.5 h-3.5"/> Search
+                </Button>
+                <Button v-if="search || date" size="sm" variant="outline" class="h-8 text-xs"
+                    @click="clearFilters">Clear</Button>
+            </div>
+
+            <div v-if="!history.data?.length"
+                class="bg-white rounded-xl border border-slate-200 py-20 text-center">
+                <FileText class="w-10 h-10 text-slate-300 mx-auto mb-3"/>
+                <p class="text-sm font-semibold text-slate-500">No records found</p>
+                <p class="text-xs text-slate-400 mt-1">Try a different name or date</p>
+            </div>
+
+            <div v-else class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-slate-100 bg-slate-50/80">
+                            <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Patient</th>
+                            <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider w-36">Visit Date</th>
+                            <!-- Key vitals summary -->
+                            <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Key Vitals</th>
+                            <th class="px-4 py-2.5 w-28"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        <tr v-for="r in history.data" :key="r.id"
+                            class="hover:bg-slate-50/60 transition-colors group">
+                            <td class="px-4 py-3">
+                                <p class="text-sm font-semibold text-slate-800">{{ r.patient_name }}</p>
+                                <p class="text-xs text-slate-400 font-mono">{{ r.patient_code }} · {{ r.age_sex }}</p>
+                                <div class="flex items-center gap-1.5 mt-1">
+                                    <span class="text-xs font-semibold px-1.5 py-0.5 rounded"
+                                        :style="{
+                                            background: visitTypeBadge[r.visit_type]?.bg,
+                                            color: visitTypeBadge[r.visit_type]?.color
+                                        }">
+                                        {{ visitTypeBadge[r.visit_type]?.label }}
+                                    </span>
+                                    <span v-if="r.employer" class="text-xs text-slate-400">{{ r.employer }}</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-1.5 text-emerald-600">
+                                    <CheckCircle2 class="w-3.5 h-3.5"/>
+                                    <span class="text-xs font-medium">{{ r.visit_date }}</span>
+                                </div>
+                                <p class="text-xs text-slate-400 mt-0.5 ml-5">{{ r.recorded_at }}</p>
+                            </td>
+                            <!-- Vitals snapshot -->
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-3 flex-wrap text-xs">
+                                    <div v-if="r.bp" class="flex items-center gap-1">
+                                        <span class="text-slate-400">BP</span>
+                                        <span class="font-mono font-bold text-slate-700">{{ r.bp }}</span>
+                                    </div>
+                                    <div v-if="r.weight_kg" class="flex items-center gap-1">
+                                        <span class="text-slate-400">Wt</span>
+                                        <span class="font-mono font-bold text-slate-700">{{ r.weight_kg }}kg</span>
+                                    </div>
+                                    <div v-if="r.bmi" class="flex items-center gap-1">
+                                        <span class="text-slate-400">BMI</span>
+                                        <span class="font-mono font-bold"
+                                            :class="
+                                                r.bmi_category === 'Normal' ? 'text-emerald-600' :
+                                                r.bmi_category === 'Obese' || r.bmi_category === 'Underweight' ? 'text-red-600' :
+                                                'text-amber-600'">
+                                            {{ r.bmi }} ({{ r.bmi_category }})
+                                        </span>
+                                    </div>
+                                    <div v-if="r.temperature_celsius" class="flex items-center gap-1">
+                                        <span class="text-slate-400">Temp</span>
+                                        <span class="font-mono font-bold"
+                                            :class="r.temperature_celsius >= 37.5 ? 'text-red-600' : 'text-slate-700'">
+                                            {{ r.temperature_celsius }}°C
+                                        </span>
+                                    </div>
+                                    <div v-if="r.pulse_rate" class="flex items-center gap-1">
+                                        <span class="text-slate-400">PR</span>
+                                        <span class="font-mono font-bold text-slate-700">{{ r.pulse_rate }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                <Link :href="route('nurse.vitals', r.visit_id)"
+                                    class="opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button variant="outline" size="sm" class="text-xs h-7 gap-1">
+                                        <ClipboardList class="w-3 h-3"/> View
+                                    </Button>
+                                </Link>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- Pagination -->
+                <div class="px-4 py-3 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <p class="text-xs text-slate-400">
+                        {{ history.from }}–{{ history.to }} of {{ history.total }} records
+                    </p>
+                    <div class="flex items-center gap-0.5">
+                        <template v-for="link in history.links" :key="link.label">
+                            <Link v-if="link.url" :href="link.url" preserve-state
+                                class="px-2.5 py-1 text-xs rounded transition-colors"
+                                :class="link.active ? 'text-white font-semibold' : 'text-slate-500 hover:bg-slate-100'"
+                                :style="link.active ? 'background-color:#1B4F9B' : ''"
+                                v-html="link.label"/>
+                            <span v-else class="px-2.5 py-1 text-xs text-slate-300" v-html="link.label"/>
+                        </template>
                     </div>
-
                 </div>
             </div>
         </div>
