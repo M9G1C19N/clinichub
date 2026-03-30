@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { Button } from '@/components/ui/button'
@@ -10,7 +10,21 @@ import {
     RotateCcw, UserCheck, Clock,
     AlertTriangle, Users, Activity,
 } from 'lucide-vue-next'
+// ── Auto-refresh every 10 seconds ─────────────────
+let refreshTimer = null
 
+onMounted(() => {
+    refreshTimer = setInterval(() => {
+        router.reload({
+            only: ['queue'],
+            preserveScroll: true,
+        })
+    }, 10000)
+})
+
+onUnmounted(() => {
+    clearInterval(refreshTimer)
+})
 const props = defineProps({
     queue:     Array,
     room:      String,
@@ -86,10 +100,11 @@ function callNext() {
                                 <Users class="w-3 h-3" />
                                 {{ queue.length }} in queue
                             </span>
-                            <span class="flex items-center gap-1 text-xs text-emerald-600 font-medium">
-                                <Activity class="w-3 h-3" />
-                                Live
-                            </span>
+                           <span class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        Live · 10s refresh
                         </div>
                     </div>
                 </div>

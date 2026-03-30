@@ -67,6 +67,7 @@ const visitTypeLabel = {
     opd:            'OPD',
     pre_employment: 'Pre-Employment',
 }
+
 </script>
 
 <template>

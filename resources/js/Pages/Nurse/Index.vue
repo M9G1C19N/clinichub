@@ -1,4 +1,5 @@
 <script setup>
+import { onMounted, onUnmounted, ref } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { Button } from '@/components/ui/button'
@@ -33,8 +34,37 @@ const visitTypeBadge = {
     lab_only:       'bg-teal-100 text-teal-700',
 }
 
+
+// ── Auto-refresh every 10 seconds ─────────────────
+let refreshTimer = null
+const lastRefreshed = ref(new Date())
+
+onMounted(() => {
+    refreshTimer = setInterval(() => {
+        router.reload({
+            only: ['queue'],
+            preserveScroll: true,
+            onSuccess: () => { lastRefreshed.value = new Date() }
+        })
+    }, 10000)
+})
+
+onUnmounted(() => {
+    clearInterval(refreshTimer)
+})
+
+const timeAgo = () => {
+    const secs = Math.floor((new Date() - lastRefreshed.value) / 1000)
+    if (secs < 5)  return 'just now'
+    if (secs < 60) return `${secs}s ago`
+    return 'over a minute ago'
+}
 function refresh() {
-    router.reload({ preserveScroll: true })
+    router.reload({
+        only: ['queue'],
+        preserveScroll: true,
+        onSuccess: () => { lastRefreshed.value = new Date() }
+    })
 }
 </script>
 
@@ -49,16 +79,22 @@ function refresh() {
                     </p>
                 </div>
                 <div class="flex items-center gap-2">
-                    <span class="flex items-center gap-1.5 text-xs text-emerald-600 font-medium bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl">
-                        <Activity class="w-3.5 h-3.5"/>
-                        Live
-                    </span>
+                    <!-- Live indicator with pulse animation -->
+                    <div class="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl">
+                        <span class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        <span class="text-xs text-emerald-600 font-medium">
+                            Live · refreshes every 10s
+                        </span>
+                    </div>
                     <Button variant="outline" size="sm" class="gap-2" @click="refresh">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                         </svg>
-                        Refresh
+                        Refresh Now
                     </Button>
                 </div>
             </div>
