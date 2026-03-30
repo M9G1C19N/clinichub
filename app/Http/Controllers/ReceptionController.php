@@ -131,26 +131,23 @@ class ReceptionController extends Controller
     // ── STORE NEW VISIT + INVOICE + TICKET ────────────
 
     public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'patient_id'         => ['required', 'exists:patients,id'],
-            'visit_type'         => ['required', 'in:opd,pre_employment,follow_up,lab_only'],
-            'employer_company'   => ['nullable', 'string', 'max:150'],
-            'chief_complaint'    => ['nullable', 'string'],
-            'referral_validated' => ['boolean'],
-            'services'           => ['required', 'array', 'min:1'],
-            'services.*'         => ['exists:service_catalog,service_code'],
-            'priority'           => ['required', 'in:regular,senior,pwd,pregnant,urgent'],
-            'queue_counter_id'   => ['required', 'exists:queue_counters,id'],
-            'discount_amount'    => ['nullable', 'numeric', 'min:0'],
-            'notes'              => ['nullable', 'string'],
-        ]);
+{
+    $validated = $request->validate([
+        'patient_id'         => ['required', 'exists:patients,id'],
+        'visit_type'         => ['required', 'in:opd,pre_employment,follow_up,lab_only'],
+        'employer_company'   => ['nullable', 'string', 'max:150'],
+        'chief_complaint'    => ['nullable', 'string'],
+        'referral_validated' => ['boolean'],
+        'services'           => ['required', 'array', 'min:1'],
+        'services.*'         => ['exists:service_catalog,service_code'],
+        'priority'           => ['required', 'in:regular,senior,pwd,pregnant,urgent'],
+        'queue_counter_id'   => ['required', 'exists:queue_counters,id'],
+        'discount_amount'    => ['nullable', 'numeric', 'min:0'],
+        'notes'              => ['nullable', 'string'],
+    ]);
 
-        $visit   = null;
-        $invoice = null;
-        $ticket  = null;
-
-        DB::transaction(function () use ($validated, &$visit, &$invoice, &$ticket) {
+    try {
+        [$visit, $invoice, $ticket] = DB::transaction(function () use ($validated) {
 
             // 1. Create patient visit
             $visit = PatientVisit::create([
@@ -165,7 +162,7 @@ class ReceptionController extends Controller
                 'created_by'         => Auth::id(),
             ]);
 
-            // 2. Create invoice with SNAPSHOTTED prices
+            // 2. Create invoice
             $invoice = Invoice::create([
                 'patient_id'       => $validated['patient_id'],
                 'patient_visit_id' => $visit->id,
@@ -174,23 +171,24 @@ class ReceptionController extends Controller
                 'created_by'       => Auth::id(),
             ]);
 
-            // 3. Create invoice items — ALWAYS snapshot price from service_catalog
+            // 3. Create invoice items (snapshot pricing)
             $services = ServiceCatalog::whereIn('service_code', $validated['services'])->get();
+
             foreach ($services as $svc) {
                 InvoiceItem::create([
                     'invoice_id'   => $invoice->id,
                     'service_code' => $svc->service_code,
                     'service_name' => $svc->service_name,
-                    'unit_price'   => $svc->base_price, // ← SNAPSHOT — never pull live price later
+                    'unit_price'   => $svc->base_price,
                     'quantity'     => 1,
                     'subtotal'     => $svc->base_price,
                 ]);
             }
 
-            // 4. Recalculate invoice totals
+            // 4. Recalculate totals
             $invoice->recalculate();
 
-            // 5. Issue queue ticket + route
+            // 5. Create queue ticket
             $ticket = QueueTicket::create([
                 'patient_id'         => $validated['patient_id'],
                 'patient_visit_id'   => $visit->id,
@@ -202,13 +200,27 @@ class ReceptionController extends Controller
                 'issued_at'          => now(),
             ]);
 
+            // 6. Route ticket
             app(RoomRoutingEngine::class)->route($ticket);
+
+            return [$visit, $invoice, $ticket]; // ✅ important
         });
 
         return redirect()
             ->route('reception.show', $invoice->id)
-            ->with('success', "Visit registered! Invoice {$invoice->invoice_number} created. Ticket {$ticket->ticket_number} issued.");
+            ->with(
+                'success',
+                "Visit registered! Invoice {$invoice->invoice_number} created. Ticket {$ticket->ticket_number} issued."
+            );
+
+    } catch (\Throwable $e) {
+        report($e);
+
+        return back()->withErrors([
+            'error' => 'Something went wrong while processing the visit. Please try again.'
+        ])->withInput();
     }
+}
 
     // ── SHOW INVOICE ──────────────────────────────────
 

@@ -52,6 +52,9 @@ class RolePermissionSeeder extends Seeder
             'audit_logs.view',
             'esignatures.manage',
             'appointments.view', 'appointments.create', 'appointments.edit',
+
+            'doctor_features',  // Grants nurse full doctor access
+            'nurse_features',   // Grants doctor nurse workflow access
         ];
 
         foreach ($permissions as $perm) {

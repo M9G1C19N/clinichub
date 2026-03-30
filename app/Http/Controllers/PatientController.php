@@ -127,7 +127,7 @@ class PatientController extends Controller
 
         $patient->load([
             'registeredBy',
-            'visits' => fn($q) => $q->latest()->limit(10),
+            'visits' => fn($q) => $q->with('vitals')->latest()->limit(10),
         ]);
 
         return inertia('Patients/Show', [
@@ -156,12 +156,13 @@ class PatientController extends Controller
                 'is_active'                => $patient->is_active,
                 'registered_by'            => $patient->registeredBy?->name,
                 'created_at'               => $patient->created_at->format('M d, Y'),
-                'visits'                   => $patient->visits->map(fn($v) => [
-                    'id'         => $v->id,
-                    'visit_type' => $v->visit_type,
-                    'status'     => $v->status,
-                    'visit_date' => $v->visit_date->format('M d, Y h:i A'),
-                ]),
+                        'visits' => $patient->visits->map(fn($v) => [
+                'id'         => $v->id,
+                'visit_type' => $v->visit_type,
+                'status'     => $v->status,
+                'visit_date' => $v->visit_date->format('M d, Y h:i A'),
+                'has_vitals' => $v->vitals !== null,
+            ]),
             ],
         ]);
     }

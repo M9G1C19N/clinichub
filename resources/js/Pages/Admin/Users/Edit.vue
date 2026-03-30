@@ -27,6 +27,7 @@ const form = useForm({
     prc_number:     props.staff.prc_number ?? '',
     ptr_number:     props.staff.ptr_number ?? '',
     is_active:      props.staff.is_active,
+    extra_permissions: props.staff.extra_permissions ?? [],
     _method:        'PUT',
 })
 
@@ -90,6 +91,12 @@ function submitResetPassword() {
             newPassword.value   = ''
         }
     })
+}
+function togglePermission(perm) {
+    const idx = form.extra_permissions.indexOf(perm)
+    idx === -1
+        ? form.extra_permissions.push(perm)
+        : form.extra_permissions.splice(idx, 1)
 }
 
 function submit() {
@@ -289,6 +296,68 @@ function submit() {
                                 <Label>PTR No.</Label>
                                 <Input v-model="form.ptr_number" placeholder="0000000"/>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Extended Access — nurse/doctor only -->
+                    <div v-if="form.role === 'nurse' || form.role === 'doctor'"
+                        class="bg-card rounded-xl border shadow-sm">
+                        <div class="px-5 py-3.5 border-b flex items-center gap-2">
+                            <span class="w-1 h-4 rounded-full inline-block bg-amber-400"></span>
+                            <h3 class="text-xs font-bold text-muted-foreground uppercase tracking-widest">Extended Access</h3>
+                            <span class="text-xs text-muted-foreground">(Optional)</span>
+                        </div>
+                        <div class="p-5 space-y-3">
+                            <p class="text-xs text-muted-foreground">
+                                Grant this account additional features beyond their base role.
+                            </p>
+
+                            <!-- Grant doctor features to nurse -->
+                            <label v-if="form.role === 'nurse'"
+                                class="flex items-start gap-3 cursor-pointer p-4 rounded-xl border-2 transition-all"
+                                :class="form.extra_permissions.includes('doctor_features')
+                                    ? 'border-purple-400 bg-purple-50'
+                                    : 'border-border hover:border-slate-300 hover:bg-muted/30'">
+                                <input type="checkbox"
+                                    :checked="form.extra_permissions.includes('doctor_features')"
+                                    @change="togglePermission('doctor_features')"
+                                    class="mt-0.5 w-4 h-4 rounded accent-purple-600 flex-shrink-0"/>
+                                <div>
+                                    <p class="text-sm font-semibold text-slate-700">Full Doctor Access</p>
+                                    <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+                                        Allows this nurse to write SOAP notes, diagnoses, ICD-10 codes,
+                                        pre-employment classification (Class A–E), and prescriptions.
+                                    </p>
+                                    <div v-if="form.extra_permissions.includes('doctor_features')"
+                                        class="mt-2 flex flex-wrap gap-1.5">
+                                        <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">SOAP Notes</span>
+                                        <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">ICD-10</span>
+                                        <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">Classification</span>
+                                        <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">Prescriptions</span>
+                                    </div>
+                                </div>
+                            </label>
+
+                            <!-- Grant nurse features to doctor -->
+                            <label v-if="form.role === 'doctor'"
+                                class="flex items-start gap-3 cursor-pointer p-4 rounded-xl border-2 transition-all"
+                                :class="form.extra_permissions.includes('nurse_features')
+                                    ? 'border-emerald-400 bg-emerald-50'
+                                    : 'border-border hover:border-slate-300 hover:bg-muted/30'">
+                                <input type="checkbox"
+                                    :checked="form.extra_permissions.includes('nurse_features')"
+                                    @change="togglePermission('nurse_features')"
+                                    class="mt-0.5 w-4 h-4 rounded accent-emerald-600 flex-shrink-0"/>
+                                <div>
+                                    <p class="text-sm font-semibold text-slate-700">Nurse Intake Access</p>
+                                    <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+                                        Allows this doctor to use the nurse intake workflow for recording
+                                        patient vitals, visual acuity, and Ishihara test.
+                                        <span class="text-emerald-600 font-medium">(Doctors already have this by default.)</span>
+                                    </p>
+                                </div>
+                            </label>
+
                         </div>
                     </div>
 

@@ -6,6 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class QueueRoomAssignment extends Model
 {
+    const ROOM_LABELS = [
+        'laboratory'     => 'Laboratory',
+        'xray_utz'       => 'X-Ray & Ultrasound',
+        'drug_test'      => 'Drug Test',
+        'interview_room' => 'Interview Room',
+    ];
+
     protected $fillable = [
         'queue_ticket_id',
         'patient_visit_id',
@@ -30,64 +37,19 @@ class QueueRoomAssignment extends Model
         'completed_at' => 'datetime',
     ];
 
-    // Room display labels
-    const ROOM_LABELS = [
-        'laboratory'     => 'Laboratory',
-        'xray_utz'       => 'X-Ray & Ultrasound',
-        'drug_test'      => 'Drug Test',
-        'interview_room' => 'Interview Room',
-    ];
-
-    // Room queue number prefixes
-    const ROOM_PREFIXES = [
-        'laboratory'     => 'LAB',
-        'xray_utz'       => 'XRAY',
-        'drug_test'      => 'DRUG',
-        'interview_room' => 'INT',
-    ];
-
-    // ── Relationships ──────────────────────────────────
+    // ── Relationships ──────────────────────────────
 
     public function ticket()
     {
         return $this->belongsTo(QueueTicket::class, 'queue_ticket_id');
     }
 
-    public function visit()
+    // ── Scopes ─────────────────────────────────────
+
+    public function scopeToday($query)
     {
-        return $this->belongsTo(PatientVisit::class, 'patient_visit_id');
+        return $query->whereDate('created_at', today());
     }
-
-    public function servedBy()
-    {
-        return $this->belongsTo(User::class, 'served_by');
-    }
-
-    // ── Helpers ────────────────────────────────────────
-
-    public function getRoomLabelAttribute(): string
-    {
-        return self::ROOM_LABELS[$this->room] ?? $this->room;
-    }
-
-    public function isActive(): bool
-    {
-        return in_array($this->status, ['waiting', 'directing', 'calling', 'serving']);
-    }
-
-    // Generate room-specific queue number: LAB-001
-    public static function generateRoomNumber(string $room): string
-    {
-        $prefix = self::ROOM_PREFIXES[$room] ?? 'Q';
-
-        $count = static::whereDate('created_at', today())
-            ->where('room', $room)
-            ->count() + 1;
-
-        return $prefix . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
-    }
-
-    // ── Scopes ─────────────────────────────────────────
 
     public function scopeForRoom($query, string $room)
     {
@@ -96,11 +58,49 @@ class QueueRoomAssignment extends Model
 
     public function scopeActive($query)
     {
-        return $query->whereIn('status', ['waiting', 'directing', 'calling', 'serving']);
+        return $query->whereIn('status', ['waiting', 'calling', 'serving']);
     }
 
-    public function scopeToday($query)
+    // ── Accessors ──────────────────────────────────
+
+    public function getRoomLabelAttribute(): string
     {
-        return $query->whereDate('created_at', today());
+        return self::ROOM_LABELS[$this->room] ?? $this->room;
+    }
+
+    public function getPatientNameAttribute(): string
+    {
+        return $this->ticket?->patient?->full_name ?? '—';
+    }
+
+    public function getIssuedAtAttribute(): string
+    {
+        return $this->ticket?->issued_at
+            ? $this->ticket->issued_at->format('h:i A')
+            : '—';
+    }
+
+    public function getServicesAttribute(): array
+    {
+        return $this->ticket?->services_requested ?? [];
+    }
+
+    // ── Static helpers ─────────────────────────────
+
+    public static function generateRoomNumber(string $room): string
+    {
+        $prefix = match($room) {
+            'laboratory'     => 'L',
+            'xray_utz'       => 'X',
+            'drug_test'      => 'D',
+            'interview_room' => 'I',
+            default          => 'Q',
+        };
+
+        $count = static::whereDate('created_at', today())
+                       ->where('room', $room)
+                       ->count() + 1;
+
+        return $prefix . str_pad($count, 3, '0', STR_PAD_LEFT);
     }
 }

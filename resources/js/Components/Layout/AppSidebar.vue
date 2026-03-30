@@ -15,7 +15,12 @@ const collapsed = ref(false)
 const user = computed(() => page.props.auth.user)
 const role = computed(() => user.value?.role)
 
+const permissions = computed(() => page.props.auth.user?.permissions ?? [])
+const hasPermission = (perm) => permissions.value.includes(perm)
+
+
 const navMap = {
+
     admin: [
         { label: 'Dashboard',      href: '/dashboard',        icon: LayoutDashboard },
         { label: 'Patients',       href: '/patients',         icon: Users },
@@ -44,12 +49,13 @@ const navMap = {
     ],
 
     nurse: [
-        { label: 'Dashboard',      href: '/dashboard',        icon: LayoutDashboard },
-        { label: 'Patients',       href: '/patients',         icon: Users },
-        { label: 'Queue',          href: '/queue',            icon: HeartPulse },
+        { label: 'Dashboard',      href: '/dashboard',              icon: LayoutDashboard },
+        { label: 'Patients',       href: '/patients',               icon: Users },
+        { label: 'Nurse Intake',   href: '/nurse',                  icon: HeartPulse },
         { divider: true },
         { label: 'Interview Room', href: '/queue/room/interview_room', icon: Monitor, badge: 'Room Screen' },
     ],
+
 
     doctor: [
         { label: 'Dashboard',      href: '/dashboard',        icon: LayoutDashboard },
@@ -91,7 +97,22 @@ const navMap = {
     ],
 }
 
-const navItems = computed(() => navMap[role.value] ?? navMap.admin)
+const navItems = computed(() => {
+    const base = navMap[role.value] ?? navMap.admin
+
+    // Nurse with doctor_features → merge doctor nav items
+    if (role.value === 'nurse' && hasPermission('doctor_features')) {
+        return [
+            ...navMap.nurse,
+            { divider: true },
+            { label: 'Consultations',  href: '/doctor',       icon: Stethoscope },
+            { label: 'Prescriptions',  href: '/prescriptions', icon: Pill },
+            { label: 'Lab Results',    href: '/laboratory',    icon: FlaskConical },
+        ]
+    }
+
+    return base
+})
 
 const isActive = (href) => page.url === href || page.url.startsWith(href + '/')
 

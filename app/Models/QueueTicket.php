@@ -29,7 +29,6 @@ class QueueTicket extends Model
     ];
 
     // ── Relationships ──────────────────────────────────
-
     public function patient()
     {
         return $this->belongsTo(Patient::class);
@@ -45,15 +44,20 @@ class QueueTicket extends Model
         return $this->belongsTo(QueueCounter::class, 'queue_counter_id');
     }
 
+    public function assignments()
+    {
+        return $this->hasMany(QueueRoomAssignment::class, 'queue_ticket_id');
+    }
+
+    // Alias used in some places
+    public function roomAssignments()
+    {
+        return $this->hasMany(QueueRoomAssignment::class, 'queue_ticket_id');
+    }
+
     public function issuedBy()
     {
         return $this->belongsTo(User::class, 'issued_by');
-    }
-
-    public function roomAssignments()
-    {
-        return $this->hasMany(QueueRoomAssignment::class)
-                    ->orderBy('routing_sequence');
     }
 
     public function currentRoom()
@@ -62,6 +66,7 @@ class QueueTicket extends Model
                     ->whereIn('status', ['waiting', 'directing', 'calling', 'serving'])
                     ->orderBy('routing_sequence');
     }
+
 
     // ── Auto-generate ticket number ────────────────────
 
@@ -122,4 +127,5 @@ class QueueTicket extends Model
             default    => 1,
         };
     }
+
 }

@@ -94,4 +94,17 @@ Route::middleware('auth')->group(function () {
         Route::get('/search-patient',                      [\App\Http\Controllers\ReceptionController::class, 'searchPatient'])->name('search-patient');
     });
 
+    // ── Nurse Intake ──────────────────────────────────
+    Route::prefix('nurse')->name('nurse.')->group(function () {
+        Route::get('/',                                          [App\Http\Controllers\NurseController::class, 'index'])->name('index');
+        Route::get('/vitals/{visit}',                           [App\Http\Controllers\NurseController::class, 'vitals'])->name('vitals');
+        Route::post('/vitals/{visit}',                          [App\Http\Controllers\NurseController::class, 'storeVitals'])->name('vitals.store');
+    });
+    // Doctor consultation routes — doctor role OR nurse with doctor_features permission
+    Route::middleware('role:admin|doctor|nurse')
+        ->prefix('doctor')->name('doctor.')->group(function () {
+            Route::get('/', fn() => inertia('Doctor/Index'))->name('index');
+            // ... consultation routes will go here
+        });
+
 });

@@ -53,4 +53,12 @@ class PatientVisit extends Model
     {
         return $query->where('status', $status);
     }
+    public function invoice()
+    {
+        return $this->hasOne(Invoice::class, 'patient_visit_id');
+    }
+    public function vitals()
+    {
+        return $this->hasOne(PatientVital::class, 'patient_visit_id');
+    }
 }

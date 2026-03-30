@@ -47,6 +47,13 @@ class RoomRoutingEngine
         'CONSULTATION'=> 'interview_room',
     ];
 
+    const ROOM_LABELS = [
+    'laboratory'     => 'Laboratory',
+    'xray_utz'       => 'X-Ray & Ultrasound',
+    'drug_test'      => 'Drug Test',
+    'interview_room' => 'Interview Room',
+];
+
     /**
      * Main routing method.
      * Takes a QueueTicket and assigns it to rooms in optimal sequence.
@@ -229,7 +236,7 @@ class RoomRoutingEngine
 
         foreach ($rooms as $room) {
             $stats[$room] = [
-                'label'     => QueueRoomAssignment::ROOM_LABELS[$room],
+                'label'     => self::ROOM_LABELS[$room],  // ← use self:: not QueueRoomAssignment::
                 'waiting'   => QueueRoomAssignment::today()->forRoom($room)->where('status', 'waiting')->count(),
                 'serving'   => QueueRoomAssignment::today()->forRoom($room)->where('status', 'serving')->count(),
                 'completed' => QueueRoomAssignment::today()->forRoom($room)->where('status', 'completed')->count(),
@@ -239,4 +246,5 @@ class RoomRoutingEngine
 
         return $stats;
     }
+
 }

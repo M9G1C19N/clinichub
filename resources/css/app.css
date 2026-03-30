@@ -137,3 +137,20 @@
         @apply bg-background text-foreground;
     }
 }
+@media print {
+    /* Hide the app shell on print */
+    aside,
+    header.border-b,
+    .no-print {
+        display: none !important;
+    }
+
+    /* Show only print area */
+    body {
+        background: white !important;
+    }
+
+    main {
+        padding: 0 !important;
+    }
+}

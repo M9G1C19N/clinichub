@@ -89,6 +89,8 @@ class UserController extends Controller
             'specialization' => ['nullable', 'string', 'max:100'],
             'prc_number'     => ['nullable', 'string', 'max:50'],
             'ptr_number'     => ['nullable', 'string', 'max:50'],
+            'extra_permissions' => ['nullable', 'array'],
+            'extra_permissions.*' => ['in:doctor_features,nurse_features'],
             'password'       => ['required', Password::min(8)->mixedCase()->numbers()],
         ]);
 
@@ -106,6 +108,11 @@ class UserController extends Controller
         ]);
 
         $user->assignRole($validated['role']);
+
+        // Assign extra permissions if granted
+        if (!empty($validated['extra_permissions'])) {
+            $user->givePermissionTo($validated['extra_permissions']);
+        }
 
         return redirect()
             ->route('admin.users.index')
@@ -129,6 +136,7 @@ class UserController extends Controller
                 'ptr_number'     => $user->ptr_number,
                 'is_active'      => $user->is_active,
                 'photo_path'     => $user->photo_path,
+                'extra_permissions' => $user->getDirectPermissions()->pluck('name')->toArray(),
                 'must_change_password' => $user->must_change_password,
                 'created_at'     => $user->created_at->format('M d, Y'),
             ],
@@ -149,6 +157,8 @@ class UserController extends Controller
             'specialization' => ['nullable', 'string', 'max:100'],
             'prc_number'     => ['nullable', 'string', 'max:50'],
             'ptr_number'     => ['nullable', 'string', 'max:50'],
+            'extra_permissions'   => ['nullable', 'array'],
+            'extra_permissions.*' => ['in:doctor_features,nurse_features'],
             'is_active'      => ['boolean'],
         ]);
 
@@ -165,6 +175,8 @@ class UserController extends Controller
 
         // Update role
         $user->syncRoles([$validated['role']]);
+        // Sync extra permissions
+        $user->syncPermissions($validated['extra_permissions'] ?? []);
 
         return redirect()
             ->route('admin.users.index')

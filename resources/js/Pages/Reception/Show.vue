@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import PrintableInvoice from '@/Components/Invoice/PrintableInvoice.vue'
 import {
     Select, SelectContent, SelectItem,
     SelectTrigger, SelectValue,
@@ -14,6 +15,10 @@ import {
     Receipt, CreditCard, CheckCircle2,
     Clock, User, Building2, Printer,
 } from 'lucide-vue-next'
+
+function printInvoice() {
+    window.print()
+}
 
 const props = defineProps({
     invoice: Object,
@@ -90,9 +95,9 @@ const visitTypeLabel = {
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <Button variant="outline" size="sm" class="gap-2" onclick="window.print()">
+                    <Button variant="outline" size="sm" class="gap-2 no-print" @click="printInvoice">
                         <Printer class="w-4 h-4"/>
-                        Print
+                        Print Invoice
                     </Button>
                     <Button v-if="invoice.status !== 'paid' && invoice.status !== 'cancelled'"
                         @click="showPaymentForm = !showPaymentForm"
@@ -319,4 +324,15 @@ const visitTypeLabel = {
         </div>
 
     </AppLayout>
+
+     <!-- Printable Invoice — hidden on screen, visible only on print -->
+    <div class="hidden print:block">
+        <PrintableInvoice
+            :invoice="invoice"
+            :patient="patient"
+            :visit="visit"
+            :items="items"
+            :payments="payments"
+        />
+    </div>
 </template>
