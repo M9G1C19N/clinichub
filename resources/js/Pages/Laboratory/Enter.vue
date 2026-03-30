@@ -10,12 +10,14 @@ import {
     FlaskConical, Save, CheckCircle2,
     AlertTriangle, Printer,
 } from 'lucide-vue-next'
-
+import PrintableLabResult from '@/Components/Lab/PrintableLabResult.vue'
 const props = defineProps({
     visit:      Object,
     patient:    Object,
     labRequest: Object,
-    tests:      Array,
+    tests:       Array,
+    allTests:    Array,
+    currentUser: Object,
 })
 
 const isReleased = props.labRequest?.status === 'released'
@@ -27,10 +29,13 @@ const form = useForm({
         value:   t.result_value ?? '',
         remarks: t.remarks ?? '',
     })),
-    examined_by_name:    props.labRequest?.examined_by_name    ?? '',
-    examined_by_license: props.labRequest?.examined_by_license ?? '',
-    noted_by_name:       props.labRequest?.noted_by_name       ?? '',
-    noted_by_license:    props.labRequest?.noted_by_license    ?? '',
+     examined_by_name:    props.labRequest?.examined_by_name
+                            ?? props.currentUser?.name ?? '',
+    examined_by_license: props.labRequest?.examined_by_license
+                            ?? props.currentUser?.prc_number ?? '',
+    noted_by_name:       props.labRequest?.noted_by_name    ?? '',
+    noted_by_license:    props.labRequest?.noted_by_license ?? '',
+    general_remarks:     props.labRequest?.clinical_notes   ?? '',
     release: false,
 })
 
@@ -72,16 +77,31 @@ const abnormalCount = computed(() =>
     }).length
 )
 
+
+
 // Get flag for a result value on the fly
 function getFlag(test, value) {
-    if (test.is_text_result || !value) return null
+    if (test.is_text_result || !value || value === '') return null
     const v = parseFloat(value)
     if (isNaN(v)) return null
 
-    // Parse normal_range string like "135-175"
     const range = test.normal_range
     if (!range || range === '—') return null
-    const parts = range.replace(/[<>]/g, '').split('-')
+
+    // Handle < format: e.g. "<200"
+    if (range.startsWith('<')) {
+        const max = parseFloat(range.replace('<', ''))
+        if (!isNaN(max) && v >= max) return 'H'
+        return null
+    }
+    // Handle > format: e.g. ">35"
+    if (range.startsWith('>')) {
+        const min = parseFloat(range.replace('>', ''))
+        if (!isNaN(min) && v <= min) return 'L'
+        return null
+    }
+    // Handle min-max format: e.g. "135-175" or "4.5-5.2"
+    const parts = range.split('-')
     if (parts.length === 2) {
         const min = parseFloat(parts[0])
         const max = parseFloat(parts[1])
@@ -104,8 +124,26 @@ function release() {
     form.post(route('laboratory.save', props.visit.id))
 }
 
+const liveAbnormalCount = computed(() => {
+    return props.tests.filter((test, idx) => {
+        const val = form.results[idx]?.value
+        return getFlag(test, val) !== null
+    }).length
+})
+
+const resultsByCode = computed(() => {
+    const map = {}
+    props.tests.forEach(t => {
+        map[t.test_code] = {
+            value:         t.result_value,
+            is_abnormal:   t.is_abnormal,
+            abnormal_flag: t.abnormal_flag,
+        }
+    })
+    return map
+})
 function printResults() {
-    window.print()
+    window.open(route('laboratory.print', props.visit.id), '_blank')
 }
 </script>
 
@@ -241,8 +279,8 @@ function printResults() {
                         <div class="flex justify-between">
                             <span class="text-muted-foreground">Abnormal</span>
                             <span :class="['font-bold',
-                                tests.some(t => t.is_abnormal) ? 'text-red-600' : 'text-emerald-600']">
-                                {{ tests.filter(t => t.is_abnormal).length }} flags
+                                liveAbnormalCount > 0 ? 'text-red-600' : 'text-emerald-600']">
+                                {{ liveAbnormalCount }} flags
                             </span>
                         </div>
                     </div>
@@ -342,7 +380,7 @@ function printResults() {
                         Remarks
                     </Label>
                     <textarea
-                        v-model="form.results[0]"
+                        v-model="form.general_remarks"
                         class="w-full border border-input rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
                         :rows="2"
                         placeholder="General remarks for this lab request..."
@@ -352,10 +390,10 @@ function printResults() {
                 <!-- Action bar -->
                 <div v-if="!isReleased"
                     class="bg-card rounded-xl border shadow-sm px-5 py-4 flex items-center justify-between">
-                    <div class="flex items-center gap-2 text-xs text-muted-foreground">
-                        <AlertTriangle v-if="tests.some(t => t.is_abnormal)" class="w-4 h-4 text-red-500"/>
-                        <span v-if="tests.some(t => t.is_abnormal)" class="text-red-600 font-semibold">
-                            {{ tests.filter(t => t.is_abnormal).length }} abnormal result(s) flagged
+                   <div class="flex items-center gap-2 text-xs text-muted-foreground">
+                        <AlertTriangle v-if="liveAbnormalCount > 0" class="w-4 h-4 text-red-500"/>
+                        <span v-if="liveAbnormalCount > 0" class="text-red-600 font-semibold">
+                            {{ liveAbnormalCount }} abnormal result(s) flagged
                         </span>
                         <span v-else>Enter results then save draft or release</span>
                     </div>
@@ -393,4 +431,13 @@ function printResults() {
         </div>
 
     </AppLayout>
+    <!-- Printable Lab Result — hidden on screen, visible on print -->
+    <div class="hidden print:block">
+        <PrintableLabResult
+            :visit="visit"
+            :patient="patient"
+            :lab-request="labRequest"
+            :tests="allTests"
+        />
+    </div>
 </template>

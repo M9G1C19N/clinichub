@@ -7,22 +7,47 @@
     @routes
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @inertiaHead
-    <style>
-        @media print {
-            /* Hide everything except the print area */
-            body * { visibility: hidden; }
-            #print-area, #print-area * { visibility: visible; }
-            #print-area {
-                position: fixed;
-                top: 0; left: 0;
-                width: 100%;
-                padding: 0;
-                margin: 0;
-            }
-            /* Hide sidebar, topbar, buttons */
-            aside, header, nav, button, a[href], .no-print { display: none !important; }
+   <style>
+    @media print {
+        @page {
+            size: A4 portrait;
+            margin: 10mm 12mm;
         }
-    </style>
+
+        /* Hide the app shell */
+        body > div > div > aside,
+        body > div > div > div > header,
+        .no-print,
+        button,
+        nav {
+            display: none !important;
+        }
+
+        /* Make everything invisible first */
+        body { background: white !important; }
+
+        /* Show only print area */
+        #print-area,
+        .print\:block {
+            display: block !important;
+            visibility: visible !important;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+        }
+
+        /* Hide non-print content */
+        #app > * {
+            display: none !important;
+        }
+
+        /* Show only the print block */
+        #app .print\:block {
+            display: block !important;
+        }
+    }
+</style>
 </head>
 <body class="antialiased bg-slate-50">
     @inertia

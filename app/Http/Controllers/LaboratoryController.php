@@ -89,6 +89,8 @@ class LaboratoryController extends Controller
 
     public function enter(PatientVisit $visit)
     {
+        $currentUser = Auth::user();
+
         $visit->load([
             'patient',
             'invoice.items',
@@ -117,6 +119,8 @@ class LaboratoryController extends Controller
             'PREGNANCY'    => ['serology'],
             'DENGUE'       => ['serology'],
             'THYROID'      => ['thyroid'],
+            'PSA'          => ['serology'],
+            'BLOODTYPING'  => ['hematology', 'serology'],
         ];
 
         // Get ordered lab services from invoice
@@ -134,7 +138,7 @@ class LaboratoryController extends Controller
                 }
             }
         }
-
+        if (in_array('PSA', $orderedServices)) $specificTestCodes[] = 'PSA';
         // Get tests for needed categories + specific codes
         $specificTestCodes = [];
         if (in_array('BLOODTYPING', $orderedServices)) $specificTestCodes[] = 'BTYPE';
@@ -178,6 +182,24 @@ class LaboratoryController extends Controller
             'abnormal_flag'      => $existingResults[$t->id]?->abnormal_flag ?? null,
         ]);
 
+        $allTests = LabTest::active()
+        ->orderBy('sort_order')
+        ->get()
+        ->map(fn($t) => [
+            'id'             => $t->id,
+            'test_code'      => $t->test_code,
+            'test_name'      => $t->test_name,
+            'category'       => $t->category,
+            'unit'           => $t->unit,
+            'normal_range'   => $t->getNormalRangeForPatient($patient->sex),
+            'is_text_result' => $t->is_text_result,
+            // Pull result if it exists
+            'result_value'   => $existingResults[$t->id]?->result_value ?? '',
+            'remarks'        => $existingResults[$t->id]?->remarks ?? '',
+            'is_abnormal'    => $existingResults[$t->id]?->is_abnormal ?? false,
+            'abnormal_flag'  => $existingResults[$t->id]?->abnormal_flag ?? null,
+        ]);
+
         return inertia('Laboratory/Enter', [
             'visit' => [
                 'id'               => $visit->id,
@@ -204,6 +226,12 @@ class LaboratoryController extends Controller
                 'noted_by_license'    => $labRequest->noted_by_license,
             ] : null,
             'tests'  => $testData,
+        'currentUser' => [
+                    'name'       => $currentUser->name,
+                    'prc_number' => $currentUser->prc_number ?? '',
+            ],
+            'tests'   => $testData,
+            'allTests'  => $allTests,
         ]);
     }
 
@@ -220,6 +248,7 @@ class LaboratoryController extends Controller
             'examined_by_license'  => ['nullable', 'string', 'max:50'],
             'noted_by_name'        => ['nullable', 'string', 'max:100'],
             'noted_by_license'     => ['nullable', 'string', 'max:50'],
+            'general_remarks'       => ['nullable', 'string'],
             'release'              => ['boolean'],
         ]);
 
@@ -239,6 +268,7 @@ class LaboratoryController extends Controller
                     'status'              => $validated['release'] ? 'released' : 'processing',
                     'released_at'         => $validated['release'] ? now() : null,
                     'released_by'         => $validated['release'] ? Auth::id() : null,
+                    'clinical_notes'      => $validated['general_remarks'] ?? null,
                 ]
             );
 
@@ -284,5 +314,61 @@ class LaboratoryController extends Controller
         return redirect()
             ->route('laboratory.index')
             ->with('success', "Lab results {$action} for {$visit->patient->full_name}.");
+    }
+
+    public function print(PatientVisit $visit)
+    {
+        $visit->load(['patient', 'invoice.items', 'labRequest.results.labTest']);
+
+        $patient   = $visit->patient;
+        $labRequest = $visit->labRequest;
+
+        $existingResults = $labRequest
+            ? $labRequest->results->keyBy('lab_test_id')
+            : collect();
+
+        $allTests = LabTest::active()
+            ->orderBy('sort_order')
+            ->get()
+            ->map(fn($t) => [
+                'id'             => $t->id,
+                'test_code'      => $t->test_code,
+                'test_name'      => $t->test_name,
+                'category'       => $t->category,
+                'unit'           => $t->unit,
+                'normal_range'   => $t->getNormalRangeForPatient($patient->sex),
+                'is_text_result' => $t->is_text_result,
+                'result_value'   => $existingResults[$t->id]?->result_value ?? '',
+                'is_abnormal'    => $existingResults[$t->id]?->is_abnormal ?? false,
+                'abnormal_flag'  => $existingResults[$t->id]?->abnormal_flag ?? null,
+            ]);
+
+        return inertia('Laboratory/Print', [
+            'visit' => [
+                'id'               => $visit->id,
+                'visit_type'       => $visit->visit_type,
+                'visit_date'       => $visit->visit_date->format('M d, Y'),
+                'employer_company' => $visit->employer_company,
+            ],
+            'patient' => [
+                'id'           => $patient->id,
+                'full_name'    => $patient->full_name,
+                'patient_code' => $patient->patient_code,
+                'age_sex'      => $patient->age_sex,
+                'sex'          => $patient->sex,
+                'birthdate'    => $patient->birthdate?->format('M d, Y'),
+                'civil_status' => $patient->civil_status ?? '—',
+            ],
+            'labRequest' => $labRequest ? [
+                'request_number'      => $labRequest->request_number,
+                'status'              => $labRequest->status,
+                'examined_by_name'    => $labRequest->examined_by_name,
+                'examined_by_license' => $labRequest->examined_by_license,
+                'noted_by_name'       => $labRequest->noted_by_name,
+                'noted_by_license'    => $labRequest->noted_by_license,
+                'clinical_notes'      => $labRequest->clinical_notes,
+            ] : null,
+            'tests' => $allTests,
+        ]);
     }
 }

@@ -8,6 +8,7 @@ import {
     ChevronLeft, ChevronRight, LogOut, Activity, Monitor,
     Microscope, ScanLine, Syringe, HeartPulse,
 } from 'lucide-vue-next'
+import { CLINIC_LOGO, CLINIC_INFO } from '@/config/clinic.js'
 
 const page = usePage()
 const collapsed = ref(false)
@@ -146,17 +147,19 @@ const roleLabel = {
         ]"
     >
         <!-- Logo -->
-        <div class="flex items-center h-16 px-4 border-b border-white/10 flex-shrink-0">
-            <div class="flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0"
-                style="background-color:#1B4F9B">
-                <Activity class="w-5 h-5 text-white" />
-            </div>
-            <transition name="fade-slide">
-                <div v-if="!collapsed" class="ml-3 overflow-hidden">
-                    <p class="text-white font-bold text-sm leading-tight">ClinicHub</p>
-                    <p class="text-white/40 text-xs leading-tight truncate">St. Peter Diagnostics</p>
+           <div class="flex items-center gap-3 px-4 py-5 border-b border-white/10">
+            <div class="w-10 h-10 rounded-lg bg-white p-0.5 flex-shrink-0 overflow-hidden">
+                <img :src="CLINIC_LOGO" alt="SPDL Logo"
+                    class="w-full h-full object-contain"/>
+                <!-- Fallback if logo missing -->
+                <div class="w-full h-full items-center justify-center text-blue-700 font-black text-sm hidden">
+                    SP
                 </div>
-            </transition>
+            </div>
+            <div v-if="!collapsed" class="min-w-0">
+                <p class="text-white font-black text-sm leading-tight truncate">St. Peter Diagnostics</p>
+                <p class="text-white/50 text-xs truncate">& Laboratory</p>
+            </div>
         </div>
 
         <!-- Navigation -->

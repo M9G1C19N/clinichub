@@ -5,7 +5,7 @@ import {
     FlaskConical, ScanLine, TestTube,
     Stethoscope, Activity,
 } from 'lucide-vue-next'
-
+import { CLINIC_LOGO, CLINIC_INFO } from '@/config/clinic.js'
 const props = defineProps({
     board:          Object,
     todayTotal:     Number,
@@ -51,7 +51,7 @@ const roomConfig = {
             <div class="flex items-center gap-4">
                 <div class="w-12 h-12 rounded-xl flex items-center justify-center"
                     style="background:#1B4F9B">
-                    <Activity class="w-7 h-7 text-white" />
+                    <img :src="CLINIC_LOGO" class="w-12 h-12 object-contain bg-white rounded-xl p-1"/>
                 </div>
                 <div>
                     <h1 class="text-2xl font-black text-white">St. Peter Diagnostics & Laboratory</h1>

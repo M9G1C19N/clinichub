@@ -1,4 +1,5 @@
 <script setup>
+import { CLINIC_LOGO, CLINIC_INFO } from '@/config/clinic.js'
 defineProps({
     invoice: Object,
     patient: Object,
@@ -36,7 +37,7 @@ const methodLabel = {
             <div>
                 <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
                     <div style="width:40px; height:40px; background:#1B4F9B; border-radius:8px; display:flex; align-items:center; justify-content:center;">
-                        <span style="color:white; font-weight:900; font-size:18px;">+</span>
+                        <img :src="CLINIC_LOGO" style="width:50px; height:50px; object-fit:contain;"/>
                     </div>
                     <div>
                         <div style="font-weight:900; font-size:16px; color:#0F2044;">ST. PETER DIAGNOSTICS</div>
