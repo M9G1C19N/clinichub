@@ -58,16 +58,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/appointments', fn() => inertia('Appointments/Index'))->name('appointments.index');
 
     // ── Admin Routes ───────────────────────────────────
-    Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
-
-        Route::resource('users', UserController::class)->names('users');
-
-        Route::post('/users/{user}/reset-password',    [UserController::class, 'resetPassword'])->name('users.reset-password');
-        Route::patch('/users/{user}/toggle-active',    [UserController::class, 'toggleActive'])->name('users.toggle-active');
-
-        Route::get('/services', fn() => inertia('Admin/Services'))->name('services');
-        Route::get('/audit',    fn() => inertia('Admin/Audit'))->name('audit');
-    });
 
         Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
 
@@ -107,4 +97,18 @@ Route::middleware('auth')->group(function () {
             // ... consultation routes will go here
         });
 
+        // ── Doctor Dashboard ──────────────────────────────
+    Route::middleware('role:admin|doctor|nurse')
+        ->prefix('doctor')->name('doctor.')->group(function () {
+            Route::get('/',                 [App\Http\Controllers\DoctorController::class, 'index'])->name('index');
+            Route::get('/consult/{visit}',  [App\Http\Controllers\DoctorController::class, 'consult'])->name('consult');
+            Route::post('/consult/{visit}', [App\Http\Controllers\DoctorController::class, 'store'])->name('store');
+        });
+    // ── Laboratory ─────────────────────────────────────
+    Route::middleware('role:admin|lab_technician|doctor')
+        ->prefix('laboratory')->name('laboratory.')->group(function () {
+            Route::get('/',                  [App\Http\Controllers\LaboratoryController::class, 'index'])->name('index');
+            Route::get('/enter/{visit}',     [App\Http\Controllers\LaboratoryController::class, 'enter'])->name('enter');
+            Route::post('/enter/{visit}',    [App\Http\Controllers\LaboratoryController::class, 'saveResults'])->name('save');
+        });
 });

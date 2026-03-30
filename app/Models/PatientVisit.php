@@ -61,4 +61,12 @@ class PatientVisit extends Model
     {
         return $this->hasOne(PatientVital::class, 'patient_visit_id');
     }
+    public function consultation()
+    {
+        return $this->hasOne(Consultation::class, 'patient_visit_id');
+    }
+    public function labRequest()
+    {
+        return $this->hasOne(LaboratoryRequest::class, 'patient_visit_id');
+    }
 }
