@@ -9,10 +9,15 @@ const dropdownOpen = ref(false)
 
 const breadcrumbs = computed(() => {
     const parts = page.url.split('/').filter(Boolean)
+
+    // Routes that are not real pages (intermediate segments)
+    const nonClickable = ['room', 'assignments', 'admin']
+
     return parts.map((part, i) => ({
-        label: part.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-        href: '/' + parts.slice(0, i + 1).join('/'),
+        label: part.replace(/-/g, ' ').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        href:  '/' + parts.slice(0, i + 1).join('/'),
         isLast: i === parts.length - 1,
+        isClickable: !nonClickable.includes(part),
     }))
 })
 </script>
@@ -21,12 +26,20 @@ const breadcrumbs = computed(() => {
     <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 flex-shrink-0">
         <!-- Breadcrumbs -->
         <nav class="flex items-center gap-1.5 text-sm">
-            <Link href="/dashboard" class="text-slate-400 hover:text-slate-700">Home</Link>
+            <Link href="/dashboard" class="text-slate-400 hover:text-slate-700 transition-colors">
+                Home
+            </Link>
             <template v-for="crumb in breadcrumbs" :key="crumb.href">
                 <span class="text-slate-300">/</span>
-                <span :class="crumb.isLast ? 'text-slate-800 font-semibold' : 'text-slate-400'">
-                    <Link v-if="!crumb.isLast" :href="crumb.href">{{ crumb.label }}</Link>
-                    <span v-else>{{ crumb.label }}</span>
+                <span v-if="crumb.isLast" class="text-slate-800 font-semibold">
+                    {{ crumb.label }}
+                </span>
+                <Link v-else-if="crumb.isClickable" :href="crumb.href"
+                    class="text-slate-400 hover:text-slate-700 transition-colors">
+                    {{ crumb.label }}
+                </Link>
+                <span v-else class="text-slate-400 cursor-default">
+                    {{ crumb.label }}
                 </span>
             </template>
         </nav>

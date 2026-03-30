@@ -3,96 +3,95 @@
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\PasswordChangeController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\PatientController;
+use App\Http\Controllers\QueueController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
-    // Public
-    Route::middleware('guest')->group(function () {
-        Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-        Route::post('/login', [AuthController::class, 'login'])->name('login.post');
-    });
-
-    // ── Queue Routes ──────────────────────────────────────────
-Route::prefix('queue')->name('queue.')->group(function () {
-
-    // Receptionist dashboard
-    Route::get('/', [App\Http\Controllers\QueueController::class, 'index'])
-        ->name('index');
-
-    // Issue new ticket
-    Route::post('/issue', [App\Http\Controllers\QueueController::class, 'issueTicket'])
-        ->name('issue');
-
-    // Cancel ticket
-    Route::patch('/{ticket}/cancel', [App\Http\Controllers\QueueController::class, 'cancelTicket'])
-        ->name('cancel');
-
-    // Room actions
-    Route::post('/call-next', [App\Http\Controllers\QueueController::class, 'callNext'])
-        ->name('call-next');
-    Route::patch('/assignments/{assignment}/serving', [App\Http\Controllers\QueueController::class, 'markServing'])
-        ->name('serving');
-    Route::patch('/assignments/{assignment}/complete', [App\Http\Controllers\QueueController::class, 'markComplete'])
-        ->name('complete');
-    Route::patch('/assignments/{assignment}/no-show', [App\Http\Controllers\QueueController::class, 'markNoShow'])
-        ->name('no-show');
-    Route::patch('/assignments/{assignment}/skip', [App\Http\Controllers\QueueController::class, 'skip'])
-        ->name('skip');
-    Route::patch('/assignments/{assignment}/recall', [App\Http\Controllers\QueueController::class, 'recall'])
-        ->name('recall');
-
-    // Room screens (per department)
-    Route::get('/room/{room}', [App\Http\Controllers\QueueController::class, 'roomScreen'])
-        ->name('room');
-
-    // Patient search API
-    Route::get('/search-patient', [App\Http\Controllers\QueueController::class, 'searchPatient'])
-        ->name('search-patient');
+// ── Public Routes (no auth) ──────────────────────────
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 });
 
-// TV Display Board — public, no auth needed
-Route::get('/queue-display', [App\Http\Controllers\QueueController::class, 'display'])
-    ->name('queue.display');
+// TV Display Board — public kiosk, no auth
+Route::get('/queue-display', [QueueController::class, 'display'])->name('queue.display');
 
+// ── Authenticated Routes ─────────────────────────────
+Route::middleware('auth')->group(function () {
 
-    // Authenticated
-    Route::middleware('auth')->group(function () {
+    // Logout + Password change
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-
-    // Force password change
-    Route::get('/change-password', [PasswordChangeController::class, 'show'])->name('password.change');
+    Route::get('/change-password',  [PasswordChangeController::class, 'show'])->name('password.change');
     Route::post('/change-password', [PasswordChangeController::class, 'update'])->name('password.update');
 
-    // Role-based dashboards
+    // Dashboard
+    Route::get('/', fn() => redirect()->route('dashboard'));
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Patient routes
-    Route::middleware('permission:patients.view')
-        ->group(function () {
-            Route::resource('patients', \App\Http\Controllers\PatientController::class);
-        });
+    // ── Patients ──────────────────────────────────────
+    Route::resource('patients', PatientController::class);
 
-    // Admin routes
+    // ── Queue ─────────────────────────────────────────
+    Route::prefix('queue')->name('queue.')->group(function () {
+        Route::get('/',                                     [QueueController::class, 'index'])->name('index');
+        Route::post('/issue',                               [QueueController::class, 'issueTicket'])->name('issue');
+        Route::patch('/{ticket}/cancel',                   [QueueController::class, 'cancelTicket'])->name('cancel');
+        Route::post('/call-next',                          [QueueController::class, 'callNext'])->name('call-next');
+        Route::patch('/assignments/{assignment}/serving',  [QueueController::class, 'markServing'])->name('serving');
+        Route::patch('/assignments/{assignment}/complete', [QueueController::class, 'markComplete'])->name('complete');
+        Route::patch('/assignments/{assignment}/no-show',  [QueueController::class, 'markNoShow'])->name('no-show');
+        Route::patch('/assignments/{assignment}/skip',     [QueueController::class, 'skip'])->name('skip');
+        Route::patch('/assignments/{assignment}/recall',   [QueueController::class, 'recall'])->name('recall');
+        Route::get('/room/{room}',                         [QueueController::class, 'roomScreen'])->name('room');
+        Route::get('/search-patient',                      [QueueController::class, 'searchPatient'])->name('search-patient');
+    });
+
+    // ── Module placeholder routes ──────────────────────
+
+    Route::get('/laboratory',   fn() => inertia('Laboratory/Index'))->name('laboratory.index');
+    Route::get('/xray',         fn() => inertia('XRay/Index'))->name('xray.index');
+    Route::get('/drug-test',    fn() => inertia('DrugTest/Index'))->name('drug-test.index');
+    Route::get('/doctor',       fn() => inertia('Doctor/Index'))->name('doctor.index');
+    Route::get('/billing',      fn() => inertia('Billing/Index'))->name('billing.index');
+    Route::get('/reports',      fn() => inertia('Reports/Index'))->name('reports.index');
+    Route::get('/appointments', fn() => inertia('Appointments/Index'))->name('appointments.index');
+
+    // ── Admin Routes ───────────────────────────────────
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
-        Route::get('/users', fn() => inertia('Admin/Users/Index'))->name('users.index');
+
+        Route::resource('users', UserController::class)->names('users');
+
+        Route::post('/users/{user}/reset-password',    [UserController::class, 'resetPassword'])->name('users.reset-password');
+        Route::patch('/users/{user}/toggle-active',    [UserController::class, 'toggleActive'])->name('users.toggle-active');
+
+        Route::get('/services', fn() => inertia('Admin/Services'))->name('services');
+        Route::get('/audit',    fn() => inertia('Admin/Audit'))->name('audit');
     });
 
-    // Receptionist routes
-    Route::middleware('role:admin|receptionist')->prefix('reception')->name('reception.')->group(function () {
-        Route::get('/', fn() => inertia('Reception/Index'))->name('index');
+        Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
+
+        Route::resource('users', UserController::class)->names('users');
+        Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');
+        Route::patch('/users/{user}/toggle-active',  [UserController::class, 'toggleActive'])->name('users.toggle-active');
+
+        // Service Catalog
+        Route::resource('services', \App\Http\Controllers\Admin\ServiceCatalogController::class)
+            ->names('services');
+        Route::patch('/services/{service}/toggle-active', [\App\Http\Controllers\Admin\ServiceCatalogController::class, 'toggleActive'])
+            ->name('services.toggle-active');
+
+        Route::get('/audit', fn() => inertia('Admin/Audit'))->name('audit');
     });
 
-    // Lab routes
-    Route::middleware('role:admin|lab_technician|doctor')->prefix('laboratory')->name('lab.')->group(function () {
-        Route::get('/', fn() => inertia('Laboratory/Index'))->name('index');
+    // ── Reception & Billing ───────────────────────────
+    Route::prefix('reception')->name('reception.')->group(function () {
+        Route::get('/',                                    [\App\Http\Controllers\ReceptionController::class, 'index'])->name('index');
+        Route::get('/create',                              [\App\Http\Controllers\ReceptionController::class, 'create'])->name('create');
+        Route::post('/',                                   [\App\Http\Controllers\ReceptionController::class, 'store'])->name('store');
+        Route::get('/invoice/{invoice}',                   [\App\Http\Controllers\ReceptionController::class, 'show'])->name('show');
+        Route::post('/invoice/{invoice}/payment',          [\App\Http\Controllers\ReceptionController::class, 'recordPayment'])->name('payment');
+        Route::get('/search-patient',                      [\App\Http\Controllers\ReceptionController::class, 'searchPatient'])->name('search-patient');
     });
 
-    // X-Ray routes
-    Route::middleware('role:admin|xray_tech|doctor')->prefix('xray')->name('xray.')->group(function () {
-        Route::get('/', fn() => inertia('XRay/Index'))->name('index');
-    });
-
-    // Drug Test routes
-    Route::middleware('role:admin|drug_test_staff')->prefix('drug-test')->name('drug_test.')->group(function () {
-        Route::get('/', fn() => inertia('DrugTest/Index'))->name('index');
-    });
 });

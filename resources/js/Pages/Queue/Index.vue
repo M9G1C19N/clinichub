@@ -18,12 +18,9 @@ import {
 
 import {
     FlaskConical, ScanLine, TestTube, Stethoscope,
-    Tv2, Plus, Bell, CheckCircle, XCircle,
-    Clock, AlertTriangle, ChevronRight, Search,
-    Ticket, Users, Activity,
+    Monitor, Tv2, Bell, ChevronRight,
+    AlertTriangle, Users, Activity,
 } from 'lucide-vue-next'
-
-
 
 const props = defineProps({
     tickets:   Array,
@@ -231,21 +228,16 @@ const roomIconMap = {
                 </div>
                 <div class="flex items-center gap-2">
                     <!-- TV Display link -->
-                    <a :href="route('queue.display')" target="_blank">
-                        <Button variant="outline" size="sm" class="gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                            </svg>
-                            TV Display
-                        </Button>
-                    </a>
-                    <Button @click="openIssueModal" style="background-color:#1B4F9B" class="gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                        </svg>
-                        Issue Ticket
-                    </Button>
+                        <a :href="route('queue.display')" target="_blank">
+                            <Button variant="outline" size="sm" class="gap-2">
+                                <Tv2 class="w-4 h-4" />
+                                TV Display
+                            </Button>
+                        </a>
+                <Button @click="openIssueModal" style="background-color:#1B4F9B" class="gap-2">
+                    <Monitor class="w-4 h-4" />
+                    Issue Ticket
+                </Button>
                 </div>
             </div>
         </template>
@@ -351,7 +343,9 @@ const roomIconMap = {
 
             <!-- Empty -->
             <div v-if="tickets.length === 0" class="py-16 text-center">
-                <p class="text-3xl mb-3">🎟️</p>
+                <div class="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                    <Activity class="w-7 h-7 text-slate-300" />
+                </div>
                 <p class="text-sm font-medium text-slate-400">No tickets issued today</p>
                 <p class="text-xs text-slate-300 mt-1">Click "Issue Ticket" to get started</p>
             </div>
@@ -580,38 +574,54 @@ const roomIconMap = {
                     </div>
 
                     <!-- Routing Preview -->
-                    <div v-if="issueForm.services_requested.length > 0"
-                        class="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                        <p class="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">
-                            Routing Preview
-                        </p>
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <template v-if="issueForm.services_requested.some(s => ['DRUGTEST','MET','THC'].includes(s))">
-                                <span class="flex items-center gap-1 px-2.5 py-1 bg-rose-100 text-rose-700 rounded-lg text-xs font-bold">
-                                    🧬 Drug Test <span class="text-rose-400 font-normal">(1st — priority)</span>
-                                </span>
-                                <span class="text-slate-300">→</span>
-                            </template>
-                            <template v-if="issueForm.services_requested.some(s => ['CBC','UA','FECALYSIS','BLOODTYPING','FBS','BUN','CREATININE','URICACID','CHOLESTEROL','TRIGLYCERIDES','HDLLDL','SGOT','SGPT','HBSAG','VDRL','PREGNANCY'].includes(s))">
-                                <span class="flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs font-bold">
-                                    🧪 Laboratory
-                                </span>
-                                <span class="text-slate-300">→</span>
-                            </template>
-                            <template v-if="issueForm.services_requested.some(s => ['CXRPA','UTZ','ECG','XRAY'].includes(s))">
-                                <span class="flex items-center gap-1 px-2.5 py-1 bg-purple-100 text-purple-700 rounded-lg text-xs font-bold">
-                                    📡 X-Ray & UTZ
-                                </span>
-                                <span class="text-slate-300">→</span>
-                            </template>
-                            <template v-if="issueForm.visit_type === 'opd' || issueForm.services_requested.some(s => ['OPD','CONSULTATION'].includes(s))">
-                                <span class="flex items-center gap-1 px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold">
-                                    👨‍⚕️ Interview Room
-                                </span>
-                            </template>
-                        </div>
-                    </div>
+            <div v-if="issueForm.services_requested.length > 0"
+                class="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                <p class="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
+                    Routing Preview — Smart Engine
+                </p>
+                <div class="flex items-center gap-2 flex-wrap">
 
+                    <!-- Drug Test — always first -->
+                    <template v-if="issueForm.services_requested.some(s => ['DRUGTEST','MET','THC'].includes(s))">
+                        <div class="flex items-center gap-1.5 px-3 py-1.5 bg-rose-100 border border-rose-200 text-rose-700 rounded-lg text-xs font-bold">
+                            <TestTube class="w-3.5 h-3.5" />
+                            Drug Test
+                            <span class="text-rose-400 font-normal text-xs">(1st — priority)</span>
+                        </div>
+                        <ChevronRight class="w-4 h-4 text-slate-300" />
+                    </template>
+
+                    <!-- Laboratory -->
+                    <template v-if="issueForm.services_requested.some(s =>
+                        ['CBC','UA','FECALYSIS','BLOODTYPING','FBS','BUN','CREATININE',
+                        'URICACID','CHOLESTEROL','TRIGLYCERIDES','HDLLDL','SGOT',
+                        'SGPT','HBSAG','VDRL','PREGNANCY'].includes(s))">
+                        <div class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 border border-blue-200 text-blue-700 rounded-lg text-xs font-bold">
+                            <FlaskConical class="w-3.5 h-3.5" />
+                            Laboratory
+                        </div>
+                        <ChevronRight class="w-4 h-4 text-slate-300" />
+                    </template>
+
+                    <!-- X-Ray & UTZ -->
+                    <template v-if="issueForm.services_requested.some(s => ['CXRPA','UTZ','ECG','XRAY'].includes(s))">
+                        <div class="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 border border-purple-200 text-purple-700 rounded-lg text-xs font-bold">
+                            <ScanLine class="w-3.5 h-3.5" />
+                            X-Ray & UTZ
+                        </div>
+                        <ChevronRight class="w-4 h-4 text-slate-300" />
+                    </template>
+
+                    <!-- Interview Room -->
+                    <template v-if="issueForm.visit_type === 'opd' || issueForm.services_requested.some(s => ['OPD','CONSULTATION'].includes(s))">
+                        <div class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-lg text-xs font-bold">
+                            <Stethoscope class="w-3.5 h-3.5" />
+                            Interview Room
+                        </div>
+                    </template>
+
+                </div>
+            </div>
                     <!-- Submit -->
                     <div class="flex justify-end gap-2 pt-2">
                         <Button type="button" variant="outline" @click="showIssueModal = false">
