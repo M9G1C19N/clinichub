@@ -82,4 +82,5 @@ class PatientVisit extends Model
     {
         return $this->hasOne(DrugTestRequest::class, 'patient_visit_id');
     }
+
 }

@@ -148,20 +148,86 @@ class DoctorController extends Controller
     public function consult(PatientVisit $visit)
     {
         $doctor = Auth::user();
+
         $visit->load([
             'patient',
             'vitals',
             'consultation',
             'invoice.items',
+            'labRequest.results.labTest',    // ← lab results
+            'imagingRequest',                // ← xray findings
+            'drugTestRequest',               // ← drug test result
         ]);
 
         $existing = $visit->consultation;
 
-        // Build results summary from invoice items
         $services = $visit->invoice?->items->map(fn($i) => [
             'service_code' => $i->service_code,
             'service_name' => $i->service_name,
         ])->toArray() ?? [];
+
+        // ── Lab Results ─────────────────────────────
+        $labRequest = $visit->labRequest;
+        $labResults = null;
+        if ($labRequest) {
+            $resultsByCode = $labRequest->results->keyBy(fn($r) => $r->labTest?->test_code);
+            $labResults = [
+                'request_number'      => $labRequest->request_number,
+                'status'              => $labRequest->status,
+                'is_released'         => $labRequest->status === 'released',
+                'examined_by_name'    => $labRequest->examined_by_name,
+                'noted_by_name'       => $labRequest->noted_by_name,
+                'has_abnormal'        => $labRequest->results->where('is_abnormal', true)->count() > 0,
+                'abnormal_count'      => $labRequest->results->where('is_abnormal', true)->count(),
+                'results'             => $labRequest->results->map(fn($r) => [
+                    'test_code'      => $r->labTest?->test_code,
+                    'test_name'      => $r->labTest?->test_name,
+                    'category'       => $r->labTest?->category,
+                    'result_value'   => $r->result_value,
+                    'unit'           => $r->unit,
+                    'normal_range'   => $r->normal_range_display,
+                    'is_abnormal'    => $r->is_abnormal,
+                    'abnormal_flag'  => $r->abnormal_flag,
+                    'remarks'        => $r->remarks,
+                ])->sortBy(fn($r) => [
+                    // Sort by category group for clean display
+                    match($r['category']) {
+                        'hematology' => 1,
+                        'chemistry'  => 2,
+                        'urinalysis' => 3,
+                        'stool'      => 4,
+                        'serology'   => 5,
+                        default      => 6
+                    },
+                ])->values()->toArray(),
+            ];
+        }
+
+        // ── Imaging / XRay Results ───────────────────
+        $imaging = $visit->imagingRequest;
+        $imagingResult = $imaging ? [
+            'request_number'        => $imaging->request_number,
+            'imaging_type'          => $imaging->imaging_type,
+            'imaging_type_label'    => $imaging->imaging_type_label,
+            'radiographic_findings' => $imaging->radiographic_findings,
+            'impression'            => $imaging->impression,
+            'is_provisional'        => $imaging->is_provisional,
+            'status'                => $imaging->status,
+            'is_released'           => $imaging->status === 'released',
+            'rad_tech_name'         => $imaging->rad_tech_name,
+            'radiologist_name'      => $imaging->radiologist_name,
+        ] : null;
+
+        // ── Drug Test Result ─────────────────────────
+        $drugTest = $visit->drugTestRequest;
+        $drugTestResult = $drugTest ? [
+            'code_number'  => $drugTest->code_number,
+            'result'       => $drugTest->result,
+            'drugs_label'  => $drugTest->drugs_label,
+            'status'       => $drugTest->status,
+            'is_released'  => $drugTest->status === 'released',
+            'purpose'      => $drugTest->test_purpose_label,
+        ] : null;
 
         return inertia('Doctor/Consult', [
             'visit' => [
@@ -197,6 +263,9 @@ class DoctorController extends Controller
                 'ishihara_result'          => $visit->vitals->ishihara_result,
                 'nurse_notes'              => $visit->vitals->nurse_notes,
             ] : null,
+            'labResults'     => $labResults,
+            'imagingResult'  => $imagingResult,
+            'drugTestResult' => $drugTestResult,
             'consultation' => $existing ? [
                 'id'                 => $existing->id,
                 'chief_complaint'    => $existing->chief_complaint,
@@ -210,13 +279,15 @@ class DoctorController extends Controller
                 'pe_classification'  => $existing->pe_classification,
                 'pe_findings'        => $existing->pe_findings,
                 'pe_recommendation'  => $existing->pe_recommendation,
+                'essentially_normal' => $existing->essentially_normal,
                 'doctor_notes'       => $existing->doctor_notes,
+                'follow_up_date'     => $existing->follow_up_date?->format('Y-m-d'),
                 'is_finalized'       => $existing->is_finalized,
             ] : null,
-                'doctor' => [
+            'doctor' => [
                 'name'       => $doctor->name,
-                'prc_number' => $doctor->prc_number,
-                'ptr_number' => $doctor->ptr_number,
+                'prc_number' => $doctor->prc_number ?? '',
+                'ptr_number' => $doctor->ptr_number ?? '',
             ],
         ]);
     }

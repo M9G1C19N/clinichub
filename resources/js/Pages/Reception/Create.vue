@@ -31,7 +31,7 @@ const form = useForm({
     referral_validated: false,
     services:           [],
     priority:           'regular',
-    queue_counter_id:   props.counters[0]?.id ?? null,
+    queue_counter_id: props.counters[0]?.id ? String(props.counters[0].id) : null,
     discount_amount:    0,
     notes:              '',
 })
@@ -246,9 +246,9 @@ function submit() {
                             <Select v-model="form.queue_counter_id">
                                 <SelectTrigger class="h-8 text-xs"><SelectValue/></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem v-for="c in counters" :key="c.id" :value="c.id">
-                                        {{ c.counter_name }}
-                                    </SelectItem>
+                                <SelectItem v-for="c in counters" :key="c.id" :value="String(c.id)">
+                                    {{ c.counter_name }}
+                                </SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -304,9 +304,9 @@ function submit() {
                     </div>
 
                     <!-- Submit -->
-                    <Button type="submit"
+                   <Button type="submit"
                         :disabled="form.processing || !form.patient_id || form.services.length === 0"
-                        class="w-full gap-2" style="background-color:#1B4F9B">
+                        class="w-full gap-2 text-white" style="background-color:#1B4F9B">
                         <svg v-if="form.processing" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
@@ -314,6 +314,16 @@ function submit() {
                         <CheckCircle2 v-else class="w-4 h-4"/>
                         {{ form.processing ? 'Processing...' : 'Register Visit & Issue Ticket' }}
                     </Button>
+
+                    <!-- Show ALL validation errors, not just patient_id and services -->
+                    <div v-if="Object.keys(form.errors).length > 0"
+                        class="mt-3 p-3 bg-red-50 border border-red-200 rounded-xl space-y-1">
+                        <p class="text-xs font-bold text-red-700 mb-1">Please fix these errors:</p>
+                        <p v-for="(error, field) in form.errors" :key="field"
+                            class="text-xs text-red-600">
+                            · {{ error }}
+                        </p>
+                    </div>
 
                     <p v-if="form.errors.patient_id" class="text-xs text-red-500 text-center">{{ form.errors.patient_id }}</p>
                     <p v-if="form.errors.services" class="text-xs text-red-500 text-center">{{ form.errors.services }}</p>

@@ -79,20 +79,22 @@ class QueueTicket extends Model
         });
     }
 
-    public static function generateTicketNumber(?int $counterId): string
+   protected static function generateTicketNumber(int $counterId): string
     {
-        $counter = $counterId
-            ? QueueCounter::find($counterId)
-            : null;
+        $counter = \App\Models\QueueCounter::find($counterId);
+        $prefix  = $counter?->counter_code ?? 'A';
 
-        $prefix = $counter ? $counter->counter_code : 'T';
+        $result = \Illuminate\Support\Facades\DB::selectOne(
+            "SELECT COALESCE(
+                MAX(CAST(SUBSTRING_INDEX(ticket_number, '-', -1) AS UNSIGNED)),
+            0) as max_num
+            FROM queue_tickets
+            WHERE ticket_number LIKE ?",
+            [$prefix . '-%']
+        );
 
-        // Count tickets today with this prefix
-        $count = static::whereDate('created_at', today())
-            ->where('ticket_number', 'like', $prefix . '-%')
-            ->count() + 1;
-
-        return $prefix . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
+        $next = (int)($result->max_num ?? 0) + 1;
+        return $prefix . '-' . str_pad($next, 3, '0', STR_PAD_LEFT);
     }
 
     // ── Scopes ─────────────────────────────────────────

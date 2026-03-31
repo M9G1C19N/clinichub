@@ -82,13 +82,6 @@ Route::middleware('auth')->group(function () {
             Route::get('/print/{visit}',  [\App\Http\Controllers\LaboratoryController::class, 'print'])->name('print'); // ← INSIDE prefix now
         });
 
-    // ── Placeholder routes ────────────────────────────
-    Route::get('/xray',         fn() => inertia('XRay/Index'))->name('xray.index');
-    Route::get('/drug-test',    fn() => inertia('DrugTest/Index'))->name('drug-test.index');
-    Route::get('/billing',      fn() => inertia('Billing/Index'))->name('billing.index');
-    Route::get('/reports',      fn() => inertia('Reports/Index'))->name('reports.index');
-    Route::get('/appointments', fn() => inertia('Appointments/Index'))->name('appointments.index');
-
     // ── Admin ─────────────────────────────────────────
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
         Route::resource('users', UserController::class)->names('users');

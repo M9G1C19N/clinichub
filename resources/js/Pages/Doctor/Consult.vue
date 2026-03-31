@@ -23,6 +23,9 @@ const props = defineProps({
     vitals:       Object,
     consultation: Object,
     doctor:       Object,
+    labResults:     Object,
+    imagingResult:  Object,
+    drugTestResult: Object,
 })
 
 const isPreEmployment = props.visit.visit_type === 'pre_employment'
@@ -304,6 +307,169 @@ const bpStatus = computed(() => {
                         <p class="text-xs text-amber-600 font-semibold">No vitals recorded yet</p>
                         <p class="text-xs text-slate-400 mt-1">Nurse intake pending</p>
                     </div>
+                </div>
+                <!-- ── LAB RESULTS ──────────────────── -->
+                <div v-if="labResults" class="bg-card rounded-xl border shadow-sm overflow-hidden">
+                    <div class="px-4 py-3 border-b flex items-center justify-between"
+                        :class="labResults.has_abnormal ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'">
+                        <div class="flex items-center gap-2">
+                            <FlaskConical class="w-4 h-4"
+                                :class="labResults.has_abnormal ? 'text-red-600' : 'text-blue-600'"/>
+                            <span class="text-xs font-bold uppercase tracking-widest"
+                                :class="labResults.has_abnormal ? 'text-red-700' : 'text-blue-700'">
+                                Lab Results
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span v-if="labResults.has_abnormal"
+                                class="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+                                {{ labResults.abnormal_count }} Abnormal
+                            </span>
+                            <span :class="['text-xs font-semibold px-2 py-0.5 rounded-full',
+                                labResults.is_released
+                                    ? 'bg-emerald-100 text-emerald-700'
+                                    : 'bg-amber-100 text-amber-700']">
+                                {{ labResults.is_released ? 'Released' : 'Pending' }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Only show if released -->
+                    <div v-if="labResults.is_released" class="divide-y divide-slate-50">
+                        <div v-for="result in labResults.results.filter(r => r.result_value)"
+                            :key="result.test_code"
+                            :class="['flex items-center justify-between px-4 py-2 text-xs',
+                                result.is_abnormal ? 'bg-red-50/50' : '']">
+                            <span class="text-slate-600 flex-1">{{ result.test_name }}</span>
+                            <div class="flex items-center gap-2">
+                                <span :class="['font-bold font-mono',
+                                    result.is_abnormal ? 'text-red-700' : 'text-slate-800']">
+                                    {{ result.result_value }}
+                                    <span v-if="result.unit" class="font-normal text-slate-400 text-xs">
+                                        {{ result.unit }}
+                                    </span>
+                                </span>
+                                <span v-if="result.abnormal_flag"
+                                    :class="['text-xs font-black px-1 rounded',
+                                        result.abnormal_flag === 'H'
+                                            ? 'bg-red-100 text-red-700'
+                                            : 'bg-blue-100 text-blue-700']">
+                                    {{ result.abnormal_flag }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-else class="px-4 py-3 text-xs text-amber-600 flex items-center gap-2">
+                        <AlertTriangle class="w-3.5 h-3.5"/>
+                        Results not yet released by lab technician
+                    </div>
+
+                    <!-- Lab staff -->
+                    <div v-if="labResults.is_released && labResults.examined_by_name"
+                        class="px-4 py-2 border-t bg-slate-50/50 text-xs text-slate-500">
+                        Examined by: <strong>{{ labResults.examined_by_name }}</strong>
+                        <span v-if="labResults.noted_by_name">
+                            · Noted by: <strong>{{ labResults.noted_by_name }}</strong>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- ── XRAY RESULTS ─────────────────── -->
+                <div v-if="imagingResult" class="bg-card rounded-xl border shadow-sm overflow-hidden">
+                    <div class="px-4 py-3 border-b bg-purple-50 border-purple-200 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <ScanLine class="w-4 h-4 text-purple-600"/>
+                            <span class="text-xs font-bold uppercase tracking-widest text-purple-700">
+                                {{ imagingResult.imaging_type_label }}
+                            </span>
+                        </div>
+                        <span :class="['text-xs font-semibold px-2 py-0.5 rounded-full',
+                            imagingResult.is_released
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : 'bg-amber-100 text-amber-700']">
+                            {{ imagingResult.is_released ? 'Released' : 'Pending' }}
+                        </span>
+                    </div>
+                    <div v-if="imagingResult.is_released" class="px-4 py-3 space-y-2 text-xs">
+                        <div v-if="imagingResult.is_provisional"
+                            class="text-amber-700 font-bold bg-amber-50 p-2 rounded-lg border border-amber-200">
+                            **SEE ATTACHED CXR OFFICIAL READING**
+                        </div>
+                        <div v-else-if="imagingResult.radiographic_findings">
+                            <p class="text-muted-foreground mb-1 font-semibold">Findings:</p>
+                            <p class="text-slate-700 whitespace-pre-line leading-relaxed">
+                                {{ imagingResult.radiographic_findings }}
+                            </p>
+                        </div>
+                        <div v-if="imagingResult.impression"
+                            class="pt-2 border-t mt-2">
+                            <p class="text-muted-foreground mb-1 font-semibold">Impression:</p>
+                            <p class="font-bold text-slate-800 uppercase">{{ imagingResult.impression }}</p>
+                        </div>
+                        <p v-if="imagingResult.radiologist_name"
+                            class="text-muted-foreground border-t pt-2 mt-2">
+                            Radiologist: <strong>{{ imagingResult.radiologist_name }}</strong>
+                        </p>
+                    </div>
+                    <div v-else class="px-4 py-3 text-xs text-amber-600 flex items-center gap-2">
+                        <AlertTriangle class="w-3.5 h-3.5"/>
+                        Report not yet released by X-Ray technician
+                    </div>
+                </div>
+
+                <!-- ── DRUG TEST RESULT ──────────────── -->
+                <div v-if="drugTestResult" class="bg-card rounded-xl border shadow-sm overflow-hidden">
+                    <div class="px-4 py-3 border-b flex items-center justify-between"
+                        :class="drugTestResult.result === 'positive'
+                            ? 'bg-red-50 border-red-200'
+                            : drugTestResult.result === 'negative'
+                            ? 'bg-emerald-50 border-emerald-200'
+                            : 'bg-rose-50 border-rose-200'">
+                        <div class="flex items-center gap-2">
+                            <TestTube class="w-4 h-4"
+                                :class="drugTestResult.result === 'positive' ? 'text-red-600' :
+                                        drugTestResult.result === 'negative' ? 'text-emerald-600' : 'text-rose-600'"/>
+                            <span class="text-xs font-bold uppercase tracking-widest text-rose-700">Drug Test</span>
+                        </div>
+                        <span :class="['text-xs font-semibold px-2 py-0.5 rounded-full',
+                            drugTestResult.is_released
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : 'bg-amber-100 text-amber-700']">
+                            {{ drugTestResult.is_released ? 'Released' : 'Pending' }}
+                        </span>
+                    </div>
+                    <div v-if="drugTestResult.is_released" class="px-4 py-3 text-xs space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-muted-foreground">Result</span>
+                            <span :class="['font-black text-base',
+                                drugTestResult.result === 'negative' ? 'text-emerald-600' :
+                                drugTestResult.result === 'positive' ? 'text-red-600' : 'text-slate-600']">
+                                {{ drugTestResult.result?.toUpperCase() }}
+                            </span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-muted-foreground">Drugs Tested</span>
+                            <span class="font-semibold text-right">{{ drugTestResult.drugs_label }}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-muted-foreground">Purpose</span>
+                            <span class="font-semibold">{{ drugTestResult.purpose }}</span>
+                        </div>
+                    </div>
+                    <div v-else class="px-4 py-3 text-xs text-amber-600 flex items-center gap-2">
+                        <AlertTriangle class="w-3.5 h-3.5"/>
+                        Result not yet released by drug test staff
+                    </div>
+                </div>
+
+                <!-- No results at all -->
+                <div v-if="!labResults && !imagingResult && !drugTestResult"
+                    class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-700">
+                    <div class="flex items-center gap-2 font-semibold mb-1">
+                        <AlertTriangle class="w-4 h-4"/>
+                        No diagnostic results yet
+                    </div>
+                    <p class="text-amber-600">Lab, X-Ray, and Drug Test results will appear here once released by the respective technicians.</p>
                 </div>
 
                 <!-- Services ordered -->
