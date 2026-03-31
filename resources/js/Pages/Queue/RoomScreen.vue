@@ -12,7 +12,7 @@ import {
 } from 'lucide-vue-next'
 // ── Auto-refresh every 10 seconds ─────────────────
 let refreshTimer = null
-
+import { VISIT_TYPE_BADGE } from '@/config/visitTypes.js'
 onMounted(() => {
     refreshTimer = setInterval(() => {
         router.reload({

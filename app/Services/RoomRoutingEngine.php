@@ -45,6 +45,10 @@ class RoomRoutingEngine
         // Interview Room (doctor consultation)
         'OPD'         => 'interview_room',
         'CONSULTATION'=> 'interview_room',
+        'PE_CONSULT' => 'interview_room',
+        'ANNUAL_PE'  => 'interview_room',
+        'EXIT_PE'    => 'interview_room',
+        'FOLLOW_UP'  => 'interview_room',
     ];
 
     const ROOM_LABELS = [
@@ -98,8 +102,15 @@ class RoomRoutingEngine
             }
         }
 
-        // OPD always needs interview room
-        if ($visitType === 'opd' && !in_array('interview_room', $rooms)) {
+        // Interview Room rules:
+        // PE types ALWAYS go to interview room (nurse vitals + doctor classification)
+        $peTypes = ['pre_employment', 'annual_pe', 'exit_pe'];
+        if (in_array($visitType, $peTypes) && !in_array('interview_room', $rooms)) {
+            $rooms[] = 'interview_room';
+        }
+
+        // OPD/Follow-up: only if consultation service selected
+        if (in_array($visitType, ['opd', 'follow_up']) && !in_array('interview_room', $rooms)) {
             $rooms[] = 'interview_room';
         }
 

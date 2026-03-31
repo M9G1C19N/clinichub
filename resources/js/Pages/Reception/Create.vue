@@ -25,7 +25,7 @@ const props = defineProps({
 
 const form = useForm({
     patient_id:         props.patient?.id ?? null,
-    visit_type:         props.patient?.visit_type ?? 'opd',
+    visit_type: 'opd',
     employer_company:   '',
     chief_complaint:    '',
     referral_validated: false,
@@ -58,7 +58,6 @@ function onPatientSearch() {
 function selectPatient(p) {
     selectedPatient.value    = p
     form.patient_id          = p.id
-    form.visit_type          = p.visit_type
     patientSearch.value      = p.full_name
     patientResults.value     = []
 }
@@ -204,7 +203,7 @@ function submit() {
 
                         <div class="space-y-1.5">
                             <Label class="text-xs">Visit Type</Label>
-                            <Select v-model="form.visit_type">
+                            <Select :model-value="form.visit_type" @update:model-value="(val) => form.visit_type = val">
                                 <SelectTrigger class="h-8 text-xs">
                                     <SelectValue/>
                                 </SelectTrigger>

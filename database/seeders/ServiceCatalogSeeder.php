@@ -50,6 +50,10 @@ class ServiceCatalogSeeder extends Seeder
             // ── Consultation ─────────────────────────────
             ['code' => 'OPD',           'name' => 'OPD Consultation',           'category' => 'consultation','room' => 'interview_room', 'price' => 300.00,  'turnaround' => 0],
             ['code' => 'PE_CONSULT',    'name' => 'Pre-Employment Consultation', 'category' => 'consultation','room' => 'interview_room', 'price' => 200.00,  'turnaround' => 0],
+
+            ['code' => 'ANNUAL_PE', 'name' => 'Annual Physical Exam Consultation', 'category' => 'consultation', 'room' => 'interview_room', 'price' => 200.00, 'turnaround' => 0],
+            ['code' => 'EXIT_PE',   'name' => 'Exit Physical Exam Consultation',   'category' => 'consultation', 'room' => 'interview_room', 'price' => 200.00, 'turnaround' => 0],
+            ['code' => 'FOLLOW_UP', 'name' => 'Follow-up Consultation',            'category' => 'consultation', 'room' => 'interview_room', 'price' => 150.00, 'turnaround' => 0],
         ];
 
         foreach ($services as $svc) {
