@@ -267,23 +267,42 @@ class DoctorController extends Controller
             'imagingResult'  => $imagingResult,
             'drugTestResult' => $drugTestResult,
             'consultation' => $existing ? [
-                'id'                 => $existing->id,
-                'chief_complaint'    => $existing->chief_complaint,
-                'soap_subjective'    => $existing->soap_subjective,
-                'soap_objective'     => $existing->soap_objective,
-                'soap_assessment'    => $existing->soap_assessment,
-                'soap_plan'          => $existing->soap_plan,
-                'icd10_code'         => $existing->icd10_code,
-                'icd10_description'  => $existing->icd10_description,
-                'diagnosis_type'     => $existing->diagnosis_type,
-                'pe_classification'  => $existing->pe_classification,
-                'pe_findings'        => $existing->pe_findings,
-                'pe_recommendation'  => $existing->pe_recommendation,
-                'essentially_normal' => $existing->essentially_normal,
-                'doctor_notes'       => $existing->doctor_notes,
-                'follow_up_date'     => $existing->follow_up_date?->format('Y-m-d'),
-                'is_finalized'       => $existing->is_finalized,
-            ] : null,
+            'id'                   => $existing->id,
+            'chief_complaint'      => $existing->chief_complaint,
+            'soap_subjective'      => $existing->soap_subjective,
+            'soap_objective'       => $existing->soap_objective,
+            'soap_assessment'      => $existing->soap_assessment,
+            'soap_plan'            => $existing->soap_plan,
+            'icd10_code'           => $existing->icd10_code,
+            'icd10_description'    => $existing->icd10_description,
+            'diagnosis_type'       => $existing->diagnosis_type,
+            'pe_classification'    => $existing->pe_classification,
+            'pe_findings'          => $existing->pe_findings,
+            'pe_recommendation'    => $existing->pe_recommendation,
+            'position_applied'     => $existing->position_applied,
+            'requesting_physician' => $existing->requesting_physician,
+            // Physical Exam
+            'pe_heent'         => $existing->pe_heent,
+            'pe_chest_lungs'   => $existing->pe_chest_lungs,
+            'pe_heart'         => $existing->pe_heart,
+            'pe_abdomen'       => $existing->pe_abdomen,
+            'pe_extremities'   => $existing->pe_extremities,
+            'pe_neurological'  => $existing->pe_neurological,
+            'pe_genitourinary' => $existing->pe_genitourinary,
+            'pe_skin'          => $existing->pe_skin,
+            'pe_others'        => $existing->pe_others,
+            // Medical History
+            'past_illnesses'      => $existing->past_illnesses,
+            'surgical_history'    => $existing->surgical_history,
+            'allergies'           => $existing->allergies,
+            'current_medications' => $existing->current_medications,
+            'family_history'      => $existing->family_history,
+            // Common
+            'essentially_normal' => $existing->essentially_normal,
+            'doctor_notes'       => $existing->doctor_notes,
+            'follow_up_date'     => $existing->follow_up_date?->format('Y-m-d'),
+            'is_finalized'       => $existing->is_finalized,
+        ] : null,
             'doctor' => [
                 'name'       => $doctor->name,
                 'prc_number' => $doctor->prc_number ?? '',
@@ -299,21 +318,39 @@ class DoctorController extends Controller
         $isPreEmployment = in_array($visit->visit_type, ['pre_employment', 'annual_pe', 'exit_pe']);
 
         $rules = [
-            'chief_complaint'   => ['nullable', 'string'],
-            'soap_subjective'   => ['nullable', 'string'],
-            'soap_objective'    => ['nullable', 'string'],
-            'soap_assessment'   => ['nullable', 'string'],
-            'soap_plan'         => ['nullable', 'string'],
-            'icd10_code'        => ['nullable', 'string', 'max:10'],
-            'icd10_description' => ['nullable', 'string', 'max:255'],
-            'diagnosis_type'    => ['nullable', 'in:primary,secondary,provisional'],
-            'pe_classification' => ['nullable', 'in:A,B,C,D,E'],
-            'pe_findings'       => ['nullable', 'string'],
-            'pe_recommendation' => ['nullable', 'string'],
-            'doctor_notes'      => ['nullable', 'string'],
-            'is_finalized'      => ['boolean'],
-            'essentially_normal' => ['boolean'],
-            'follow_up_date'     => ['nullable', 'date'],
+            'chief_complaint'      => ['nullable', 'string'],
+            'soap_subjective'      => ['nullable', 'string'],
+            'soap_objective'       => ['nullable', 'string'],
+            'soap_assessment'      => ['nullable', 'string'],
+            'soap_plan'            => ['nullable', 'string'],
+            'icd10_code'           => ['nullable', 'string', 'max:10'],
+            'icd10_description'    => ['nullable', 'string', 'max:255'],
+            'diagnosis_type'       => ['nullable', 'in:primary,secondary,provisional'],
+            'pe_classification'    => ['nullable', 'in:A,B,C,D,E'],
+            'pe_findings'          => ['nullable', 'string'],
+            'pe_recommendation'    => ['nullable', 'string'],
+            'position_applied'     => ['nullable', 'string', 'max:150'],
+            'requesting_physician' => ['nullable', 'string', 'max:150'],
+            // Physical Exam
+            'pe_heent'         => ['nullable', 'string'],
+            'pe_chest_lungs'   => ['nullable', 'string'],
+            'pe_heart'         => ['nullable', 'string'],
+            'pe_abdomen'       => ['nullable', 'string'],
+            'pe_extremities'   => ['nullable', 'string'],
+            'pe_neurological'  => ['nullable', 'string'],
+            'pe_genitourinary' => ['nullable', 'string'],
+            'pe_skin'          => ['nullable', 'string'],
+            'pe_others'        => ['nullable', 'string'],
+            // Medical History
+            'past_illnesses'      => ['nullable', 'string'],
+            'surgical_history'    => ['nullable', 'string'],
+            'allergies'           => ['nullable', 'string'],
+            'current_medications' => ['nullable', 'string'],
+            'family_history'      => ['nullable', 'string'],
+            'doctor_notes'        => ['nullable', 'string'],
+            'is_finalized'        => ['boolean'],
+            'essentially_normal'  => ['boolean'],
+            'follow_up_date'      => ['nullable', 'date'],
         ];
 
         $validated = $request->validate($rules);
@@ -343,5 +380,120 @@ class DoctorController extends Controller
         return redirect()
             ->route('doctor.index')
             ->with('success', "Consultation {$action} for {$visit->patient->full_name}.");
+    }
+
+    // ── PRINT MEDICAL EXAM REPORT ─────────────────────
+    public function printExam(PatientVisit $visit)
+    {
+        $visit->load([
+            'patient',
+            'vitals',
+            'consultation.doctor',
+            'labRequest.results.labTest',
+            'imagingRequest',
+            'drugTestRequest',
+        ]);
+
+        $consultation = $visit->consultation;
+        $patient      = $visit->patient;
+        $vitals       = $visit->vitals;
+        $labRequest   = $visit->labRequest;
+        $imaging      = $visit->imagingRequest;
+        $drugTest     = $visit->drugTestRequest;
+
+        // Map lab results by test code for easy access in template
+        $labResultMap = [];
+        if ($labRequest?->results) {
+            foreach ($labRequest->results as $r) {
+                $labResultMap[$r->labTest?->test_code] = [
+                    'value'   => $r->result_value,
+                    'unit'    => $r->unit,
+                    'flag'    => $r->abnormal_flag,
+                    'is_abnormal' => $r->is_abnormal,
+                    'normal_range' => $r->normal_range_display,
+                ];
+            }
+        }
+
+        return inertia('Doctor/Print', [
+            'visit' => [
+                'id'               => $visit->id,
+                'visit_type'       => $visit->visit_type,
+                'visit_date'       => $visit->visit_date->format('M d, Y'),
+                'employer_company' => $visit->employer_company,
+            ],
+            'patient' => [
+                'full_name'    => $patient->full_name,
+                'last_name'    => $patient->last_name,
+                'first_name'   => $patient->first_name,
+                'middle_name'  => $patient->middle_name ?? '',
+                'age'          => $patient->age,
+                'sex'          => $patient->sex,
+                'age_sex'      => $patient->age_sex,
+                'birthdate'    => $patient->birthdate?->format('m/d/Y'),
+                'civil_status' => $patient->civil_status ?? '',
+                'address'      => $patient->address ?? '',
+                'patient_code' => $patient->patient_code,
+            ],
+            'vitals' => $vitals ? [
+                'weight_kg'                => $vitals->weight_kg,
+                'height_cm'                => $vitals->height_cm,
+                'bmi'                      => $vitals->bmi,
+                'blood_pressure_systolic'  => $vitals->blood_pressure_systolic,
+                'blood_pressure_diastolic' => $vitals->blood_pressure_diastolic,
+                'pulse_rate'               => $vitals->pulse_rate,
+                'temperature_celsius'      => $vitals->temperature_celsius,
+                'visual_acuity_right'      => $vitals->visual_acuity_right,
+                'visual_acuity_left'       => $vitals->visual_acuity_left,
+                'ishihara_result'          => $vitals->ishihara_result,
+            ] : null,
+            'consultation' => $consultation ? [
+                'pe_classification'    => $consultation->pe_classification,
+                'pe_findings'          => $consultation->pe_findings,
+                'pe_recommendation'    => $consultation->pe_recommendation,
+                'position_applied'     => $consultation->position_applied,
+                'requesting_physician' => $consultation->requesting_physician,
+                'essentially_normal'   => $consultation->essentially_normal,
+                'pe_heent'             => $consultation->pe_heent,
+                'pe_chest_lungs'       => $consultation->pe_chest_lungs,
+                'pe_heart'             => $consultation->pe_heart,
+                'pe_abdomen'           => $consultation->pe_abdomen,
+                'pe_extremities'       => $consultation->pe_extremities,
+                'pe_neurological'      => $consultation->pe_neurological,
+                'pe_genitourinary'     => $consultation->pe_genitourinary,
+                'pe_skin'              => $consultation->pe_skin,
+                'pe_others'            => $consultation->pe_others,
+                'past_illnesses'       => $consultation->past_illnesses,
+                'surgical_history'     => $consultation->surgical_history,
+                'allergies'            => $consultation->allergies,
+                'current_medications'  => $consultation->current_medications,
+                'family_history'       => $consultation->family_history,
+                'doctor_notes'         => $consultation->doctor_notes,
+                'finalized_at'         => $consultation->finalized_at?->format('M d, Y'),
+                'doctor_name'          => $consultation->doctor?->name ?? Auth::user()->name,
+                'doctor_prc'           => $consultation->doctor?->prc_number ?? '',
+                'doctor_ptr'           => $consultation->doctor?->ptr_number ?? '',
+            ] : null,
+            'labResults' => $labResultMap,
+            'labRequest' => $labRequest ? [
+                'status'           => $labRequest->status,
+                'examined_by_name' => $labRequest->examined_by_name,
+                'noted_by_name'    => $labRequest->noted_by_name,
+            ] : null,
+            'imaging' => $imaging ? [
+                'imaging_type_label'    => $imaging->imaging_type_label,
+                'radiographic_findings' => $imaging->radiographic_findings,
+                'impression'            => $imaging->impression,
+                'is_provisional'        => $imaging->is_provisional,
+                'request_number'        => $imaging->request_number,
+                'rad_tech_name'         => $imaging->rad_tech_name,
+                'radiologist_name'      => $imaging->radiologist_name,
+            ] : null,
+            'drugTest' => $drugTest ? [
+                'result'      => $drugTest->result,
+                'drugs_label' => $drugTest->drugs_label,
+                'code_number' => $drugTest->code_number,
+            ] : null,
+        ]);
     }
 }

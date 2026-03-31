@@ -14,7 +14,7 @@ import {
 import {
     Stethoscope, Activity, Eye, Heart,
     Thermometer, Save, CheckCircle2,
-    AlertTriangle, FlaskConical, FileText,
+    AlertTriangle, FlaskConical, FileText, Printer,
 } from 'lucide-vue-next'
 import { IS_PE_TYPE } from '@/config/visitTypes.js'
 
@@ -42,19 +42,48 @@ const form = useForm({
     icd10_description: props.consultation?.icd10_description ?? '',
     diagnosis_type:    props.consultation?.diagnosis_type    ?? 'primary',
 
-    // Pre-Employment
+    // PE Header
     pe_classification:  props.consultation?.pe_classification  ?? '',
     pe_findings:        props.consultation?.pe_findings        ?? '',
     pe_recommendation:  props.consultation?.pe_recommendation  ?? '',
+    position_applied:   props.consultation?.position_applied   ?? '',
+    requesting_physician: props.consultation?.requesting_physician ?? '',
+
+    // Physical Examination
+    pe_heent:         props.consultation?.pe_heent         ?? '',
+    pe_chest_lungs:   props.consultation?.pe_chest_lungs   ?? '',
+    pe_heart:         props.consultation?.pe_heart         ?? '',
+    pe_abdomen:       props.consultation?.pe_abdomen       ?? '',
+    pe_extremities:   props.consultation?.pe_extremities   ?? '',
+    pe_neurological:  props.consultation?.pe_neurological  ?? '',
+    pe_genitourinary: props.consultation?.pe_genitourinary ?? '',
+    pe_skin:          props.consultation?.pe_skin          ?? '',
+    pe_others:        props.consultation?.pe_others        ?? '',
+
+    // Medical History
+    past_illnesses:      props.consultation?.past_illnesses      ?? '',
+    surgical_history:    props.consultation?.surgical_history    ?? '',
+    allergies:           props.consultation?.allergies           ?? '',
+    current_medications: props.consultation?.current_medications ?? '',
+    family_history:      props.consultation?.family_history      ?? '',
 
     // Common
-    doctor_notes:  props.consultation?.doctor_notes  ?? '',
-    is_finalized:  false,
-
+    doctor_notes:       props.consultation?.doctor_notes       ?? '',
+    is_finalized:       false,
     essentially_normal: props.consultation?.essentially_normal ?? false,
     follow_up_date:     props.consultation?.follow_up_date     ?? '',
 })
 
+// "Fill Normal" for PE — fills all exam fields with "Normal"
+function fillAllNormal() {
+    const normalFields = [
+        'pe_heent','pe_chest_lungs','pe_heart','pe_abdomen',
+        'pe_extremities','pe_neurological','pe_genitourinary','pe_skin',
+    ]
+    normalFields.forEach(f => { if (!form[f]) form[f] = 'Normal' })
+    form.essentially_normal = true
+    form.pe_classification = form.pe_classification || 'A'
+}
 // ICD-10 search — common codes for quick selection
 const commonICD10 = [
     { code: 'J00',   desc: 'Acute Nasopharyngitis (Common Cold)' },
@@ -750,6 +779,128 @@ const bpStatus = computed(() => {
 
                 </template>
 
+                <!-- ─── Examination Details ─── -->
+                    <div class="bg-card rounded-xl border shadow-sm">
+                        <div class="px-5 py-3.5 border-b flex items-center gap-2">
+                            <span class="w-1 h-4 rounded-full inline-block bg-purple-400"></span>
+                            <h3 class="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                                Examination Details
+                            </h3>
+                        </div>
+                        <div class="p-5 grid grid-cols-2 gap-4">
+                            <div class="space-y-1.5">
+                                <Label class="text-xs">Position Applied</Label>
+                                <Input v-model="form.position_applied"
+                                    placeholder="e.g. Driver, Security Guard, Office Staff"
+                                    class="h-8 text-xs"
+                                    :disabled="consultation?.is_finalized"/>
+                            </div>
+                            <div class="space-y-1.5">
+                                <Label class="text-xs">Requesting Physician</Label>
+                                <Input v-model="form.requesting_physician"
+                                    placeholder="e.g. Dr. Roland E. Mira"
+                                    class="h-8 text-xs"
+                                    :disabled="consultation?.is_finalized"/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ─── Medical / Surgical History ─── -->
+                    <div class="bg-card rounded-xl border shadow-sm">
+                        <div class="px-5 py-3.5 border-b flex items-center gap-2">
+                            <span class="w-1 h-4 rounded-full inline-block bg-amber-500"></span>
+                            <h3 class="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                                Medical / Surgical History
+                            </h3>
+                        </div>
+                        <div class="p-5 grid grid-cols-2 gap-4">
+                            <div class="space-y-1.5">
+                                <Label class="text-xs">Past Illnesses</Label>
+                                <Textarea v-model="form.past_illnesses" :rows="2"
+                                    class="resize-none text-xs"
+                                    placeholder="Hypertension, DM, PTB, etc. or None"
+                                    :disabled="consultation?.is_finalized"/>
+                            </div>
+                            <div class="space-y-1.5">
+                                <Label class="text-xs">Surgical History</Label>
+                                <Textarea v-model="form.surgical_history" :rows="2"
+                                    class="resize-none text-xs"
+                                    placeholder="Previous operations or None"
+                                    :disabled="consultation?.is_finalized"/>
+                            </div>
+                            <div class="space-y-1.5">
+                                <Label class="text-xs">Allergies</Label>
+                                <Textarea v-model="form.allergies" :rows="2"
+                                    class="resize-none text-xs"
+                                    placeholder="Drug/food allergies or NKDA"
+                                    :disabled="consultation?.is_finalized"/>
+                            </div>
+                            <div class="space-y-1.5">
+                                <Label class="text-xs">Current Medications</Label>
+                                <Textarea v-model="form.current_medications" :rows="2"
+                                    class="resize-none text-xs"
+                                    placeholder="Maintenance medications or None"
+                                    :disabled="consultation?.is_finalized"/>
+                            </div>
+                            <div class="col-span-2 space-y-1.5">
+                                <Label class="text-xs">Family History</Label>
+                                <Input v-model="form.family_history"
+                                    class="h-8 text-xs"
+                                    placeholder="e.g. DM (father), HPN (mother) or None"
+                                    :disabled="consultation?.is_finalized"/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ─── Physical Examination ─── -->
+                    <div class="bg-card rounded-xl border shadow-sm">
+                        <div class="px-5 py-3.5 border-b flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <Stethoscope class="w-4 h-4 text-emerald-600"/>
+                                <h3 class="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                                    Physical Examination
+                                </h3>
+                            </div>
+                            <Button v-if="!consultation?.is_finalized"
+                                type="button" variant="outline" size="sm"
+                                class="text-xs h-7 gap-1.5 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                                @click="fillAllNormal">
+                                <CheckCircle2 class="w-3.5 h-3.5"/>
+                                Fill All Normal
+                            </Button>
+                        </div>
+                        <div class="p-5 grid grid-cols-2 gap-4">
+                            <div v-for="field in [
+                                { key: 'pe_heent',         label: 'HEENT',             placeholder: 'Head, Eyes, Ears, Nose, Throat' },
+                                { key: 'pe_chest_lungs',   label: 'Chest / Lungs',     placeholder: 'Chest expansion, breath sounds' },
+                                { key: 'pe_heart',         label: 'Heart / CVS',       placeholder: 'Rate, rhythm, murmurs' },
+                                { key: 'pe_abdomen',       label: 'Abdomen',           placeholder: 'Soft, non-tender, no organomegaly' },
+                                { key: 'pe_extremities',   label: 'Extremities',       placeholder: 'No edema, full ROM' },
+                                { key: 'pe_neurological',  label: 'Neurological',      placeholder: 'Intact, no focal deficit' },
+                                { key: 'pe_genitourinary', label: 'Genitourinary',     placeholder: 'Normal or Not examined' },
+                                { key: 'pe_skin',          label: 'Skin / Integument', placeholder: 'No lesions, normal turgor' },
+                            ]" :key="field.key" class="space-y-1.5">
+                                <Label class="text-xs font-semibold">{{ field.label }}</Label>
+                                <Input v-model="form[field.key]"
+                                    :placeholder="field.placeholder"
+                                    class="h-8 text-xs transition-colors"
+                                    :class="form[field.key] === 'Normal'
+                                        ? 'border-emerald-300 bg-emerald-50/40 text-emerald-700 font-semibold'
+                                        : form[field.key]
+                                        ? 'border-amber-300 bg-amber-50/30'
+                                        : ''"
+                                    :disabled="consultation?.is_finalized"/>
+                            </div>
+                            <div class="col-span-2 space-y-1.5">
+                                <Label class="text-xs font-semibold">Other Findings</Label>
+                                <Textarea v-model="form.pe_others" :rows="2"
+                                    class="resize-none text-xs"
+                                    placeholder="Any other physical examination findings..."
+                                    :disabled="consultation?.is_finalized"/>
+                            </div>
+                        </div>
+                    </div>
+
                 <!-- Doctor Notes — both modes -->
                 <div class="bg-card rounded-xl border shadow-sm">
                     <div class="px-5 py-3.5 border-b flex items-center gap-2">
@@ -800,10 +951,17 @@ const bpStatus = computed(() => {
                         <CheckCircle2 class="w-8 h-8 text-emerald-500"/>
                         <div>
                             <p class="text-sm font-bold text-emerald-700">Consultation Finalized</p>
-                            <p class="text-xs text-emerald-600">Cannot be edited</p>
+                            <p class="text-xs text-emerald-600">Results are linked to patient profile</p>
                         </div>
+                        <a v-if="isPreEmployment"
+                            :href="route('doctor.print', visit.id)"
+                            target="_blank" class="ml-auto">
+                            <Button variant="outline" class="gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-100">
+                                <Printer class="w-4 h-4"/>
+                                Print Medical Exam Report
+                            </Button>
+                        </a>
                     </div>
-                    <!-- Doctor signature block matching actual document -->
                     <div class="border-t border-emerald-200 pt-3 mt-3 text-xs text-slate-600">
                         <p class="font-bold">{{ doctor.name }}, M.D.</p>
                         <p>Lic. No.: {{ doctor.prc_number }} · PTR No.: {{ doctor.ptr_number }}</p>

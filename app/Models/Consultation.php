@@ -10,29 +10,24 @@ class Consultation extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'patient_id',
-        'patient_visit_id',
-        'visit_type',
+        'patient_id', 'patient_visit_id', 'visit_type',
         'chief_complaint',
-        'soap_subjective',
-        'soap_objective',
-        'soap_assessment',
-        'soap_plan',
-        'icd10_code',
-        'icd10_description',
-        'diagnosis_type',
-        'pe_classification',
-        'pe_findings',
-        'pe_recommendation',
-        'employer_company',
-        'doctor_notes',
-        'is_finalized',
-        'finalized_at',
-        'doctor_id',
-        'consultation_date',
-        'follow_up_date',
-        'essentially_normal',
-        'status',
+        'soap_subjective', 'soap_objective', 'soap_assessment', 'soap_plan',
+        'icd10_code', 'icd10_description', 'diagnosis_type',
+        // PE header
+        'pe_classification', 'pe_findings', 'pe_recommendation',
+        'employer_company', 'position_applied', 'requesting_physician',
+        // Physical Exam
+        'pe_heent', 'pe_chest_lungs', 'pe_heart', 'pe_abdomen',
+        'pe_extremities', 'pe_neurological', 'pe_genitourinary',
+        'pe_skin', 'pe_others',
+        // Medical History
+        'past_illnesses', 'surgical_history', 'allergies',
+        'current_medications', 'family_history',
+        // Common
+        'doctor_notes', 'is_finalized', 'finalized_at',
+        'doctor_id', 'consultation_date', 'follow_up_date',
+        'essentially_normal', 'status',
     ];
 
     protected $casts = [
