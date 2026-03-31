@@ -51,7 +51,7 @@ class NurseController extends Controller
         $pendingQuery = PatientVisit::with(['patient'])
             ->whereDoesntHave('vitals')
             ->where('status', '!=', 'cancelled')
-            ->whereIn('visit_type', ['opd', 'pre_employment', 'follow_up'])
+            ->whereIn('visit_type', ['opd', 'pre_employment', 'annual_pe', 'exit_pe', 'follow_up'])
             ->when($search, fn($q) =>
                 $q->whereHas('patient', fn($p) =>
                     $p->where('first_name', 'like', "%{$search}%")

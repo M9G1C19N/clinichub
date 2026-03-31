@@ -14,6 +14,7 @@ import {
     FlaskConical, ScanLine, TestTube, Stethoscope,
     AlertTriangle, ChevronRight, FileText,
 } from 'lucide-vue-next'
+import { VISIT_TYPE_BADGE as visitTypeBadge } from '@/config/visitTypes.js'
 
 const props = defineProps({
     today:   Object,
@@ -49,12 +50,6 @@ function switchTab(tab) {
 }
 
 // Config
-const visitTypeBadge = {
-    opd:            { bg: '#eff6ff', color: '#1d4ed8', label: 'OPD' },
-    pre_employment: { bg: '#faf5ff', color: '#7c3aed', label: 'Pre-Employment' },
-    follow_up:      { bg: '#fffbeb', color: '#b45309', label: 'Follow-up' },
-    lab_only:       { bg: '#f0fdfa', color: '#0f766e', label: 'Lab Only' },
-}
 
 const invoiceStatusConfig = {
     unpaid:    { bg: '#fef2f2', color: '#dc2626', label: 'Unpaid'   },

@@ -209,15 +209,17 @@ function submit() {
                                     <SelectValue/>
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="opd">OPD</SelectItem>
-                                    <SelectItem value="pre_employment">Pre-Employment</SelectItem>
+                                    <SelectItem value="opd">OPD (Out-Patient)</SelectItem>
+                                    <SelectItem value="pre_employment">Pre-Employment PE</SelectItem>
+                                    <SelectItem value="annual_pe">Annual PE</SelectItem>
+                                    <SelectItem value="exit_pe">Exit PE</SelectItem>
                                     <SelectItem value="follow_up">Follow-up</SelectItem>
                                     <SelectItem value="lab_only">Lab Only</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
 
-                        <div v-if="form.visit_type === 'pre_employment'" class="space-y-1.5">
+                        <div v-if="['pre_employment','annual_pe','exit_pe'].includes(form.visit_type)" class="space-y-1.5">
                             <Label class="text-xs">Employer Company</Label>
                             <Input v-model="form.employer_company" placeholder="e.g. TMC, PGMC" class="h-8 text-xs"/>
                         </div>

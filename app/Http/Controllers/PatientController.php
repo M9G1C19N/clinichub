@@ -97,7 +97,7 @@ class PatientController extends Controller
             'occupation'               => ['nullable', 'string', 'max:100'],
             'emergency_contact_name'   => ['nullable', 'string', 'max:150'],
             'emergency_contact_number' => ['nullable', 'string', 'max:15'],
-            'visit_type_default'       => ['required', 'in:opd,pre_employment'],
+            'visit_type_default' => ['required', 'in:opd,pre_employment,annual_pe,exit_pe,follow_up,lab_only'],
             'photo'                    => ['nullable', 'image', 'max:2048'],
         ]);
 

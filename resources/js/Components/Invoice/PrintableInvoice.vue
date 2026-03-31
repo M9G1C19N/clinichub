@@ -1,5 +1,6 @@
 <script setup>
 import { CLINIC_LOGO, CLINIC_INFO } from '@/config/clinic.js'
+import { VISIT_TYPE_LABEL as visitTypeLabel } from '@/config/visitTypes.js'
 defineProps({
     invoice: Object,
     patient: Object,
@@ -7,13 +8,6 @@ defineProps({
     items:   Array,
     payments:Array,
 })
-
-const visitTypeLabel = {
-    opd:            'OPD Consultation',
-    pre_employment: 'Pre-Employment Medical',
-    follow_up:      'Follow-up Consultation',
-    lab_only:       'Laboratory Only',
-}
 
 const methodLabel = {
     cash:       'Cash',

@@ -267,7 +267,7 @@ class ReceptionController extends Controller
     ]);
         $validated = $request->validate([
             'patient_id'         => ['required', 'exists:patients,id'],
-            'visit_type'         => ['required', 'in:opd,pre_employment,follow_up,lab_only'],
+            'visit_type'         => ['required', 'in:opd,pre_employment,annual_pe,exit_pe,follow_up,lab_only'],
             'employer_company'   => ['nullable', 'string', 'max:150'],
             'chief_complaint'    => ['nullable', 'string'],
             'referral_validated' => ['boolean'],

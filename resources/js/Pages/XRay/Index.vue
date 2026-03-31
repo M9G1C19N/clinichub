@@ -10,7 +10,7 @@ import {
     Calendar, FileText, ChevronRight,
     Loader2,
 } from 'lucide-vue-next'
-
+import { VISIT_TYPE_BADGE as visitTypeBadge } from '@/config/visitTypes.js'
 const props = defineProps({
     queue:   Array,
     pending: Object,
@@ -59,12 +59,6 @@ const queueStatusConfig = {
     calling:   { label: 'Calling',   dot: '#3b82f6', color: '#1e40af' },
     serving:   { label: 'Serving',   dot: '#10b981', color: '#065f46' },
     completed: { label: 'Completed', dot: '#94a3b8', color: '#475569' },
-}
-
-const visitTypeBadge = {
-    opd:            { bg: '#eff6ff', color: '#1d4ed8', label: 'OPD' },
-    pre_employment: { bg: '#faf5ff', color: '#7c3aed', label: 'Pre-Employment' },
-    follow_up:      { bg: '#fffbeb', color: '#b45309', label: 'Follow-up' },
 }
 
 function getImagingStatus(visit) {

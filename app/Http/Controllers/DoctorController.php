@@ -64,7 +64,7 @@ class DoctorController extends Controller
             $q->where('is_finalized', true)
         )
         ->where('status', '!=', 'cancelled')
-        ->whereIn('visit_type', ['opd', 'pre_employment', 'follow_up'])
+        ->whereIn('visit_type', ['opd', 'pre_employment', 'annual_pe', 'exit_pe', 'follow_up'])
         ->when($filter === 'pre_employment', fn($q) =>
             $q->where('visit_type', 'pre_employment')
         )
@@ -123,7 +123,7 @@ class DoctorController extends Controller
             'pending_total'  => PatientVisit::whereDoesntHave('consultation', fn($q) =>
                                     $q->where('is_finalized', true)
                                 )->where('status', '!=', 'cancelled')
-                                ->whereIn('visit_type', ['opd', 'pre_employment', 'follow_up'])
+                                ->whereIn('visit_type', ['opd', 'pre_employment', 'annual_pe', 'exit_pe', 'follow_up'])
                                 ->count(),
             'pending_pe'     => PatientVisit::whereDoesntHave('consultation', fn($q) =>
                                     $q->where('is_finalized', true)
@@ -296,7 +296,7 @@ class DoctorController extends Controller
 
     public function store(Request $request, PatientVisit $visit)
     {
-        $isPreEmployment = $visit->visit_type === 'pre_employment';
+        $isPreEmployment = in_array($visit->visit_type, ['pre_employment', 'annual_pe', 'exit_pe']);
 
         $rules = [
             'chief_complaint'   => ['nullable', 'string'],

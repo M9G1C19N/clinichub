@@ -9,7 +9,7 @@ import {
     Activity, AlertTriangle, Search,
     Calendar, FileText, ChevronRight, Loader2,
 } from 'lucide-vue-next'
-
+import { VISIT_TYPE_BADGE as visitTypeBadge } from '@/config/visitTypes.js'
 const props = defineProps({
     queue:   Array,
     pending: Object,
@@ -63,11 +63,7 @@ const resultConfig = {
     adulterated: { label:'ADULTERATED',bg:'#fff1f2', color:'#be123c', border:'#fda4af' },
 }
 
-const visitTypeBadge = {
-    opd:            { bg:'#eff6ff', color:'#1d4ed8', label:'OPD' },
-    pre_employment: { bg:'#faf5ff', color:'#7c3aed', label:'Pre-Employment' },
-    follow_up:      { bg:'#fffbeb', color:'#b45309', label:'Follow-up' },
-}
+
 </script>
 
 <template>

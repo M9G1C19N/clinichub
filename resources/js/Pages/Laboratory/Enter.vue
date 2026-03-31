@@ -11,6 +11,7 @@ import {
     AlertTriangle, Printer,
 } from 'lucide-vue-next'
 import PrintableLabResult from '@/Components/Lab/PrintableLabResult.vue'
+import { VISIT_TYPE_LABEL } from '@/config/visitTypes.js'
 const props = defineProps({
     visit:      Object,
     patient:    Object,
@@ -222,7 +223,7 @@ function printResults() {
                             <span class="text-muted-foreground">Type</span>
                             <span :class="['font-semibold',
                                 visit.visit_type === 'pre_employment' ? 'text-purple-600' : 'text-blue-600']">
-                                {{ visit.visit_type === 'pre_employment' ? 'Pre-Employment' : 'OPD' }}
+                                {{VISIT_TYPE_LABEL[visit.visit_type] ?? visit.visit_type}}
                             </span>
                         </div>
                         <div class="flex justify-between">

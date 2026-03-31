@@ -16,6 +16,7 @@ import {
     Thermometer, Save, CheckCircle2,
     AlertTriangle, FlaskConical, FileText,
 } from 'lucide-vue-next'
+import { IS_PE_TYPE } from '@/config/visitTypes.js'
 
 const props = defineProps({
     visit:        Object,
@@ -28,7 +29,7 @@ const props = defineProps({
     drugTestResult: Object,
 })
 
-const isPreEmployment = props.visit.visit_type === 'pre_employment'
+const isPreEmployment = IS_PE_TYPE(props.visit.visit_type)
 
 const form = useForm({
     // OPD

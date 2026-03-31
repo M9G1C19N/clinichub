@@ -10,7 +10,7 @@ import {
     Calendar, FileText, ChevronRight,
     ClipboardList, User,
 } from 'lucide-vue-next'
-
+import { VISIT_TYPE_BADGE as visitTypeBadge } from '@/config/visitTypes.js'
 const props = defineProps({
     todayQueue: Array,
     pending:    Object,
@@ -59,12 +59,6 @@ const priorityConfig = {
     pregnant: { label: 'PREGNANT', bg: '#fdf2f8', color: '#be185d' },
     pwd:      { label: 'PWD',      bg: '#eff6ff', color: '#1d4ed8' },
     senior:   { label: 'SENIOR',   bg: '#fffbeb', color: '#b45309' },
-}
-
-const visitTypeBadge = {
-    opd:            { bg: '#eff6ff', color: '#1d4ed8', label: 'OPD' },
-    pre_employment: { bg: '#faf5ff', color: '#7c3aed', label: 'Pre-Employment' },
-    follow_up:      { bg: '#fffbeb', color: '#b45309', label: 'Follow-up' },
 }
 </script>
 

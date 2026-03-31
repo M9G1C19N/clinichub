@@ -10,6 +10,7 @@ import {
     FlaskConical, Calendar, ChevronRight,
     FileText, Printer,
 } from 'lucide-vue-next'
+import { VISIT_TYPE_BADGE as visitTypeBadge, VISIT_TYPE_LABEL as visitTypeLabel } from '@/config/visitTypes.js'
 
 const props = defineProps({
     todayQueue: Array,
@@ -38,20 +39,6 @@ function applyFilter(f) {
     router.get(route('doctor.index'), { filter: f }, {
         preserveState: true, replace: true
     })
-}
-
-const visitTypeBadge = {
-    opd:            'bg-blue-100 text-blue-700',
-    pre_employment: 'bg-purple-100 text-purple-700',
-    follow_up:      'bg-amber-100 text-amber-700',
-    lab_only:       'bg-teal-100 text-teal-700',
-}
-
-const visitTypeLabel = {
-    opd:            'OPD',
-    pre_employment: 'Pre-Employment',
-    follow_up:      'Follow-up',
-    lab_only:       'Lab Only',
 }
 
 const priorityConfig = {
@@ -196,7 +183,7 @@ const peClassColor = {
                     <div class="flex flex-col items-center justify-center w-24 flex-shrink-0 pr-5 border-r border-slate-100">
                         <p class="text-xs text-muted-foreground mb-1">#{{ i + 1 }}</p>
                         <p class="text-3xl font-black font-mono leading-none"
-                            :style="{ color: a.visit?.visit_type === 'pre_employment' ? '#8B5CF6' : '#10B981' }">
+                            :style="{ color: ['pre_employment','annual_pe','exit_pe'].includes(a.visit?.visit_type) ? '#8B5CF6' : '#10B981' }">
                             {{ a.queue_number }}
                         </p>
                         <span :class="['mt-2 text-xs font-semibold px-2 py-0.5 rounded-full',
@@ -281,6 +268,8 @@ const peClassColor = {
                         { value: 'all',            label: 'All' },
                         { value: 'pre_employment', label: 'Pre-Employment' },
                         { value: 'opd',            label: 'OPD' },
+                        { value: 'annual_pe', label: 'Annual PE' },
+                        { value: 'exit_pe',   label: 'Exit PE'   },
                     ]" :key="f.value"
                         @click="applyFilter(f.value)"
                         :class="[

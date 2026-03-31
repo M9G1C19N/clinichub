@@ -1,6 +1,6 @@
 <script setup>
 import { CLINIC_LOGO, CLINIC_INFO } from '@/config/clinic.js'
-
+import { IS_PE_TYPE } from '@/config/visitTypes.js'
 const props = defineProps({
     visit:      Object,
     patient:    Object,
@@ -164,7 +164,7 @@ const rowStyle = (code) =>
                     <strong style="color:#8B5CF6;">{{ visit.employer_company }}</strong>
                 </span>
                 <span><strong>Exam Type:</strong>
-                    <strong style="color:#1B4F9B;">{{ visit.visit_type === 'pre_employment' ? 'PRE-EMPLOYMENT' : 'OPD' }}</strong>
+                    <strong style="color:#1B4F9B;">{{ IS_PE_TYPE(visit.visit_type) ? 'PRE-EMPLOYMENT' : 'OPD'}}</strong>
                 </span>
             </div>
         </div>

@@ -93,7 +93,7 @@ class QueueController extends Controller
     {
         $validated = $request->validate([
             'patient_id'         => ['required', 'exists:patients,id'],
-            'visit_type'         => ['required', 'in:opd,pre_employment,follow_up,lab_only'],
+            'visit_type' => ['required', 'in:opd,pre_employment,annual_pe,exit_pe,follow_up,lab_only'],
             'priority'           => ['required', 'in:regular,senior,pwd,pregnant,urgent'],
             'queue_counter_id'   => ['required', 'exists:queue_counters,id'],
             'services_requested' => ['required', 'array', 'min:1'],

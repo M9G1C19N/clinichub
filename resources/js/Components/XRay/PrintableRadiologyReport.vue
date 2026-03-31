@@ -1,5 +1,6 @@
 <script setup>
 import { CLINIC_LOGO, CLINIC_INFO } from '@/config/clinic.js'
+import { IS_PE_TYPE } from '@/config/visitTypes.js'
 
 defineProps({
     visit:               Object,
@@ -51,7 +52,7 @@ defineProps({
             </div>
             <div style="color:#555; padding-top:3px;">Chief Complaint :</div>
             <div style="border-bottom:1px solid #ccc; padding-bottom:2px; font-weight:700;">
-                {{ visit.visit_type === 'pre_employment' ? 'ANNUAL PE' : 'OPD CONSULTATION' }}
+                {{ IS_PE_TYPE(visit.visit_type) ? visit.visit_type.replace('_',' ').toUpperCase() : 'OPD CONSULTATION' }}
             </div>
 
             <div style="color:#555; padding-top:3px;">Date :</div>
