@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 use App\Services\RoomRoutingEngine;
+use Illuminate\Support\Facades\URL;
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -22,6 +23,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // URL::forceScheme('https');
         Gate::before(function ($user, $ability) {
             if ($user->hasRole('admin')) {
                 return true; // Admin bypasses all permission checks

@@ -15,7 +15,7 @@ import {
     Activity, Heart, Thermometer, Wind,
     Eye, Save, User, CheckCircle2,
 } from 'lucide-vue-next'
-
+import { IS_PE_TYPE } from '@/config/visitTypes.js'
 const props = defineProps({
     visit:   Object,
     patient: Object,
@@ -36,6 +36,29 @@ const form = useForm({
     visual_acuity_left:       props.vitals?.visual_acuity_left       ?? '',
     ishihara_result:          props.vitals?.ishihara_result          ?? '',
     nurse_notes:              props.vitals?.nurse_notes              ?? '',
+    // Medical History
+    present_symptoms:        props.vitals?.present_symptoms        ?? '',
+    past_illnesses_flags:    props.vitals?.past_illnesses_flags    ?? [],
+    past_illnesses_remarks:  props.vitals?.past_illnesses_remarks  ?? '',
+    family_history:          props.vitals?.family_history          ?? '',
+    accidents_injuries:      props.vitals?.accidents_injuries      ?? 'UNREMARKABLE',
+    surgical_history_detail: props.vitals?.surgical_history_detail ?? 'UNREMARKABLE',
+    allergies_flags:         props.vitals?.allergies_flags         ?? ['none'],
+    allergies_others:        props.vitals?.allergies_others        ?? '',
+    menstrual_cycle:         props.vitals?.menstrual_cycle         ?? '',
+    lmp:                     props.vitals?.lmp                     ?? 'N/A',
+    ob_gravida:              props.vitals?.ob_gravida              ?? '',
+    ob_para:                 props.vitals?.ob_para                 ?? '',
+    ob_nulligravida:         props.vitals?.ob_nulligravida         ?? false,
+    tobacco_use:             props.vitals?.tobacco_use             ?? 'never',
+    alcohol_use:             props.vitals?.alcohol_use             ?? 'never',
+    // Additional vitals
+    conversational_hearing:   props.vitals?.conversational_hearing   ?? 'Normal',
+    visual_acuity_near_right: props.vitals?.visual_acuity_near_right ?? '',
+    visual_acuity_near_left:  props.vitals?.visual_acuity_near_left  ?? '',
+    color_vision_result:      props.vitals?.color_vision_result      ?? '',
+    pe_findings_normal:       props.vitals?.pe_findings_normal       ?? {},
+    pe_findings_remarks:      props.vitals?.pe_findings_remarks      ?? '',
 })
 
 // Live BMI calculation
@@ -68,7 +91,65 @@ const bpStatus = computed(() => {
     return                          { label: 'High Stage 2', color: 'text-red-600'   }
 })
 
-const isPreEmployment = props.visit.visit_type === 'pre_employment'
+// PE system labels matching the actual form
+const peSystems = [
+    { key: 'eyes',          label: '1. Eyes'          },
+    { key: 'nose_sinuses',  label: '2. Nose/Sinuses'  },
+    { key: 'neck_thyroid',  label: '4. Neck/Thyroid'  },
+    { key: 'mouth_throat',  label: '3. Mouth/Throat'  },
+    { key: 'chest_breast',  label: '5. Chest/Breast'  },
+    { key: 'lungs',         label: '6. Lungs'         },
+    { key: 'heart',         label: '7. Heart'         },
+    { key: 'abdomen',       label: '8. Abdomen'       },
+    { key: 'back',          label: '9. Back'          },
+    { key: 'anus',          label: '10. Anus'         },
+    { key: 'genitals',      label: '11. Genitals'     },
+    { key: 'extremities',   label: '12. Extremities'  },
+    { key: 'skin',          label: '13. Skin'         },
+]
+
+const pastIllnessList = [
+    { key: 'tuberculosis',    label: '1. Tuberculosis'          },
+    { key: 'asthma',          label: '2. Asthma'                },
+    { key: 'hypertension',    label: '3. Hypertension'          },
+    { key: 'heart_disease',   label: '4. Heart Disease/AMI'     },
+    { key: 'cva_stroke',      label: '5. CVA/Stroke'            },
+    { key: 'diabetes',        label: '6. Diabetes'              },
+    { key: 'kidney',          label: '7. Kidney Disease'        },
+    { key: 'liver',           label: '8. Liver Disease'         },
+    { key: 'fainting',        label: '9. Fainting/Seizure'      },
+    { key: 'headaches',       label: '10. Headaches/Migraine'   },
+    { key: 'mental',          label: '11. Mental Disorder'      },
+    { key: 'std',             label: '12. Sexually Transmitted' },
+    { key: 'malaria',         label: '13. Malaria/Typhoid'      },
+    { key: 'hernia',          label: '14. Hernia'               },
+    { key: 'hemorrhoids',     label: '15. Hemorrhoids'          },
+]
+
+function toggleIllness(key) {
+    const arr = form.past_illnesses_flags
+    const idx = arr.indexOf(key)
+    idx === -1 ? arr.push(key) : arr.splice(idx, 1)
+}
+
+function hasIllness(key) {
+    return form.past_illnesses_flags.includes(key)
+}
+
+function setPeNormal(key, val) {
+    form.pe_findings_normal = { ...form.pe_findings_normal, [key]: val }
+}
+
+function markAllPeNormal() {
+    const all = {}
+    peSystems.forEach(s => { all[s.key] = true })
+    form.pe_findings_normal = all
+}
+
+const isPeNormal = (key) => form.pe_findings_normal[key] === true
+const isPeAbnormal = (key) => form.pe_findings_normal[key] === false
+
+const isPreEmployment = IS_PE_TYPE(props.visit.visit_type)
 
 function submit() {
     form.post(route('nurse.vitals.store', props.visit.id))
@@ -354,6 +435,233 @@ function submit() {
                             <Textarea v-model="form.nurse_notes" :rows="3"
                                 placeholder="Additional observations, patient complaints, or notes for the doctor..."
                                 class="resize-none"/>
+                        </div>
+                    </div>
+                    <!-- ── I. MEDICAL HISTORY ─────────────────── -->
+                    <div class="bg-card rounded-xl border shadow-sm">
+                        <div class="px-5 py-3.5 border-b flex items-center gap-2">
+                            <span class="w-1 h-4 rounded-full inline-block bg-amber-500"></span>
+                            <h3 class="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                                I. Medical History
+                            </h3>
+                        </div>
+                        <div class="p-5 space-y-5">
+
+                            <!-- A. Present Symptoms -->
+                            <div class="space-y-1.5">
+                                <Label class="text-xs font-bold">A. Present Symptoms / Complaints</Label>
+                                <Input v-model="form.present_symptoms" class="h-8 text-xs"
+                                    placeholder="e.g. Nosebleed, Headache, None"/>
+                            </div>
+
+                            <!-- B. Past Illnesses -->
+                            <div class="space-y-2">
+                                <Label class="text-xs font-bold">B. Past Illnesses / Hospitalizations</Label>
+                                <div class="grid grid-cols-3 gap-1.5">
+                                    <label v-for="ill in pastIllnessList" :key="ill.key"
+                                        class="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-50 border border-transparent"
+                                        :class="hasIllness(ill.key) ? 'bg-red-50 border-red-200' : ''">
+                                        <input type="checkbox"
+                                            :checked="hasIllness(ill.key)"
+                                            @change="toggleIllness(ill.key)"
+                                            class="rounded border-slate-300 text-red-600 w-3.5 h-3.5"/>
+                                        <span class="text-xs" :class="hasIllness(ill.key) ? 'text-red-700 font-semibold' : 'text-slate-600'">
+                                            {{ ill.label }}
+                                        </span>
+                                    </label>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <Label class="text-xs text-muted-foreground">Remarks</Label>
+                                    <Input v-model="form.past_illnesses_remarks" class="h-8 text-xs"
+                                        placeholder="Additional remarks on past illnesses..."/>
+                                </div>
+                            </div>
+
+                            <!-- C-E. Family, Accidents, Surgical -->
+                            <div class="grid grid-cols-3 gap-4">
+                                <div class="space-y-1.5">
+                                    <Label class="text-xs font-bold">C. Family Medical History</Label>
+                                    <Input v-model="form.family_history" class="h-8 text-xs"
+                                        placeholder="e.g. DM Type II Father"/>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <Label class="text-xs font-bold">D. Accidents / Injuries</Label>
+                                    <Input v-model="form.accidents_injuries" class="h-8 text-xs"
+                                        placeholder="UNREMARKABLE"/>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <Label class="text-xs font-bold">E. Surgical History</Label>
+                                    <Input v-model="form.surgical_history_detail" class="h-8 text-xs"
+                                        placeholder="UNREMARKABLE"/>
+                                </div>
+                            </div>
+
+                            <!-- F. Allergies -->
+                            <div class="space-y-2">
+                                <Label class="text-xs font-bold">F. Allergies</Label>
+                                <div class="flex items-center gap-5">
+                                    <label v-for="opt in [{val:'none',label:'None'},{val:'food',label:'Food'},{val:'drug',label:'Drug'},{val:'others',label:'Others'}]"
+                                        :key="opt.val" class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox"
+                                            :checked="form.allergies_flags.includes(opt.val)"
+                                            @change="() => {
+                                                const idx = form.allergies_flags.indexOf(opt.val)
+                                                idx === -1 ? form.allergies_flags.push(opt.val) : form.allergies_flags.splice(idx,1)
+                                            }"
+                                            class="rounded border-slate-300 text-blue-600 w-3.5 h-3.5"/>
+                                        <span class="text-xs text-slate-600">{{ opt.label }}</span>
+                                    </label>
+                                    <Input v-model="form.allergies_others" class="h-7 text-xs flex-1"
+                                        placeholder="Specify if Others..."/>
+                                </div>
+                            </div>
+
+                            <!-- G. Menstrual + H. OB History — for female -->
+                            <div v-if="patient.sex === 'F' || patient.sex === 'Female'" class="grid grid-cols-2 gap-4">
+                                <div class="space-y-2">
+                                    <Label class="text-xs font-bold">G. Menstrual History</Label>
+                                    <div class="flex flex-wrap gap-3">
+                                        <label v-for="opt in [{val:'regular',label:'Regular'},{val:'irregular',label:'Irregular'},{val:'menopause',label:'Menopause'},{val:'postmenopausal',label:'Postmenopausal'}]"
+                                            :key="opt.val" class="flex items-center gap-1.5 cursor-pointer">
+                                            <input type="radio" :value="opt.val" v-model="form.menstrual_cycle"
+                                                class="border-slate-300 text-blue-600 w-3.5 h-3.5"/>
+                                            <span class="text-xs text-slate-600">{{ opt.label }}</span>
+                                        </label>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <Label class="text-xs text-muted-foreground whitespace-nowrap">LMP & Duration:</Label>
+                                        <Input v-model="form.lmp" class="h-7 text-xs" placeholder="N/A"/>
+                                    </div>
+                                </div>
+                                <div class="space-y-2">
+                                    <Label class="text-xs font-bold">H. OB History</Label>
+                                    <div class="flex items-center gap-3">
+                                        <label class="flex items-center gap-1.5 cursor-pointer">
+                                            <input type="checkbox" v-model="form.ob_nulligravida"
+                                                class="rounded border-slate-300 text-blue-600 w-3.5 h-3.5"/>
+                                            <span class="text-xs">Nulligravida</span>
+                                        </label>
+                                        <div class="flex items-center gap-1.5">
+                                            <Label class="text-xs">Gravida:</Label>
+                                            <Input v-model="form.ob_gravida" class="h-7 text-xs w-16" placeholder="N/A"/>
+                                        </div>
+                                        <div class="flex items-center gap-1.5">
+                                            <Label class="text-xs">Para:</Label>
+                                            <Input v-model="form.ob_para" class="h-7 text-xs w-16" placeholder="N/A"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- I. Personal/Social History -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="space-y-2">
+                                    <Label class="text-xs font-bold">I. Tobacco Use</Label>
+                                    <div class="flex gap-4">
+                                        <label v-for="opt in [{val:'current',label:'Current'},{val:'former',label:'Former'},{val:'never',label:'Never'}]"
+                                            :key="opt.val" class="flex items-center gap-1.5 cursor-pointer">
+                                            <input type="radio" :value="opt.val" v-model="form.tobacco_use"
+                                                class="border-slate-300 text-blue-600 w-3.5 h-3.5"/>
+                                            <span class="text-xs text-slate-600">{{ opt.label }}</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="space-y-2">
+                                    <Label class="text-xs font-bold">Alcohol Use</Label>
+                                    <div class="flex gap-4">
+                                        <label v-for="opt in [{val:'current',label:'Current'},{val:'former',label:'Former'},{val:'never',label:'Never'}]"
+                                            :key="opt.val" class="flex items-center gap-1.5 cursor-pointer">
+                                            <input type="radio" :value="opt.val" v-model="form.alcohol_use"
+                                                class="border-slate-300 text-blue-600 w-3.5 h-3.5"/>
+                                            <span class="text-xs text-slate-600">{{ opt.label }}</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- ── II. PHYSICAL EXAMINATION FINDINGS ──── -->
+                    <div class="bg-card rounded-xl border shadow-sm">
+                        <div class="px-5 py-3.5 border-b flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="w-1 h-4 rounded-full inline-block bg-emerald-500"></span>
+                                <h3 class="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                                    PE Findings — Normal / Abnormal
+                                </h3>
+                            </div>
+                            <Button type="button" variant="outline" size="sm"
+                                class="text-xs h-7 gap-1.5 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                                @click="markAllPeNormal">
+                                <CheckCircle2 class="w-3.5 h-3.5"/>
+                                Mark All Normal
+                            </Button>
+                        </div>
+                        <div class="p-5">
+                            <div class="grid grid-cols-2 gap-2 mb-4">
+                                <div v-for="sys in peSystems" :key="sys.key"
+                                    class="flex items-center justify-between p-2 rounded-lg border text-xs transition-colors"
+                                    :class="isPeNormal(sys.key) ? 'bg-emerald-50 border-emerald-200'
+                                        : isPeAbnormal(sys.key) ? 'bg-red-50 border-red-200'
+                                        : 'bg-slate-50 border-slate-200'">
+                                    <span class="font-semibold text-slate-700">{{ sys.label }}</span>
+                                    <div class="flex items-center gap-2">
+                                        <label class="flex items-center gap-1 cursor-pointer">
+                                            <input type="radio"
+                                                :checked="isPeNormal(sys.key)"
+                                                @change="() => setPeNormal(sys.key, true)"
+                                                class="w-3 h-3 text-emerald-600 border-slate-300"/>
+                                            <span :class="isPeNormal(sys.key) ? 'text-emerald-700 font-bold' : 'text-slate-500'">
+                                                Normal
+                                            </span>
+                                        </label>
+                                        <label class="flex items-center gap-1 cursor-pointer">
+                                            <input type="radio"
+                                                :checked="isPeAbnormal(sys.key)"
+                                                @change="() => setPeNormal(sys.key, false)"
+                                                class="w-3 h-3 text-red-600 border-slate-300"/>
+                                            <span :class="isPeAbnormal(sys.key) ? 'text-red-700 font-bold' : 'text-slate-500'">
+                                                Abnormal
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="space-y-1.5">
+                                <Label class="text-xs">Other PE Findings</Label>
+                                <Textarea v-model="form.pe_findings_remarks" :rows="2"
+                                    class="resize-none text-xs"
+                                    placeholder="Describe any abnormal findings..."/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Additional vitals for the form -->
+                    <div class="bg-card rounded-xl border shadow-sm p-5 grid grid-cols-2 gap-4">
+                        <div class="space-y-1.5">
+                            <Label class="text-xs font-semibold">Conversational Hearing</Label>
+                            <div class="flex gap-4">
+                                <label v-for="opt in ['Normal','Defective']" :key="opt"
+                                    class="flex items-center gap-1.5 cursor-pointer">
+                                    <input type="radio" :value="opt" v-model="form.conversational_hearing"
+                                        class="border-slate-300 text-blue-600 w-3.5 h-3.5"/>
+                                    <span class="text-xs">{{ opt }}</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="space-y-1.5">
+                            <Label class="text-xs font-semibold">Color Vision</Label>
+                            <Input v-model="form.color_vision_result" class="h-8 text-xs"
+                                placeholder="e.g. Normal, Defective"/>
+                        </div>
+                        <div class="space-y-1.5">
+                            <Label class="text-xs font-semibold">Near Vision — OD (Right)</Label>
+                            <Input v-model="form.visual_acuity_near_right" class="h-8 text-xs" placeholder="e.g. 20/20"/>
+                        </div>
+                        <div class="space-y-1.5">
+                            <Label class="text-xs font-semibold">Near Vision — OS (Left)</Label>
+                            <Input v-model="form.visual_acuity_near_left" class="h-8 text-xs" placeholder="e.g. 20/20"/>
                         </div>
                     </div>
 
