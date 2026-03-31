@@ -173,6 +173,7 @@ class ReceptionController extends Controller
 
             // Journey status per room
             'journey' => [
+                'case_number' => $v->case_number,
                 'lab' => !empty($labServices) ? [
                     'has_services' => true,
                     'services'     => array_values($labServices),
@@ -268,6 +269,7 @@ class ReceptionController extends Controller
         $validated = $request->validate([
             'patient_id'         => ['required', 'exists:patients,id'],
             'visit_type'         => ['required', 'in:opd,pre_employment,annual_pe,exit_pe,follow_up,lab_only'],
+            'is_field_visit'     => ['boolean'],
             'employer_company'   => ['nullable', 'string', 'max:150'],
             'chief_complaint'    => ['nullable', 'string'],
             'referral_validated' => ['boolean'],
@@ -288,6 +290,7 @@ class ReceptionController extends Controller
                     'employer_company'   => $validated['employer_company'] ?? null,
                     'services_selected'  => $validated['services'],
                     'visit_date'         => now(),
+                    'is_field_visit'     => $validated['is_field_visit'] ?? false,
                     'status'             => 'pending',
                     'chief_complaint'    => $validated['chief_complaint'] ?? null,
                     'referral_validated' => $validated['referral_validated'] ?? false,
@@ -397,6 +400,7 @@ class ReceptionController extends Controller
             ],
             'visit' => [
                 'id'               => $invoice->visit->id,
+                'case_number'      => $invoice->visit->case_number,
                 'visit_type'       => $invoice->visit->visit_type,
                 'status'           => $invoice->visit->status,
                 'employer_company' => $invoice->visit->employer_company,

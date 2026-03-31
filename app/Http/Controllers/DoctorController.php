@@ -418,6 +418,7 @@ class DoctorController extends Controller
         return inertia('Doctor/Print', [
             'visit' => [
                 'id'               => $visit->id,
+                'case_number'      => $visit->case_number,
                 'visit_type'       => $visit->visit_type,
                 'visit_date'       => $visit->visit_date->format('M d, Y'),
                 'employer_company' => $visit->employer_company,

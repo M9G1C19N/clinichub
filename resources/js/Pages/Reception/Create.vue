@@ -17,6 +17,55 @@ import {
     User, CheckCircle2, AlertTriangle,
 } from 'lucide-vue-next'
 
+// ── SERVICE PACKAGES ──────────────────────────────
+const servicePackages = computed(() => {
+    const vt = form.visit_type
+
+    // Consultation code depends on visit type
+    const consultCode = {
+        pre_employment: 'PE_CONSULT',
+        annual_pe:      'ANNUAL_PE',
+        exit_pe:        'EXIT_PE',
+        opd:            'OPD',
+        follow_up:      'OPD',
+    }[vt] ?? null
+
+    // Base 5 services — same for all PE types
+    const base5 = ['CBC', 'CXRPA', 'FECALYSIS', 'UA']
+    if (consultCode) base5.push(consultCode)
+
+    const labelMap = {
+        pre_employment: 'Basic Pre-Employment Package',
+        annual_pe:      'Basic Annual PE Package',
+        exit_pe:        'Basic Exit PE Package',
+        opd:            'Basic OPD Package',
+        follow_up:      'Basic Follow-up Package',
+    }
+
+    if (!labelMap[vt]) return []
+
+    return [{
+        key:   'basic',
+        label: labelMap[vt],
+        color: ['pre_employment','annual_pe','exit_pe'].includes(vt) ? '#8B5CF6' : '#1B4F9B',
+        desc:  'CBC · Chest X-Ray · Stool Exam · Urinalysis · Consultation',
+        codes: base5,
+    }]
+})
+
+function applyPackage(codes) {
+    // Add all codes from package, don't remove existing selections
+    codes.forEach(code => {
+        if (!form.services.includes(code)) {
+            form.services.push(code)
+        }
+    })
+}
+
+function clearServices() {
+    form.services = []
+}
+
 const props = defineProps({
     patient:  Object,
     services: Array,
@@ -34,6 +83,7 @@ const form = useForm({
     queue_counter_id: props.counters[0]?.id ? String(props.counters[0].id) : null,
     discount_amount:    0,
     notes:              '',
+    is_field_visit: false,
 })
 
 // Patient search
@@ -228,6 +278,56 @@ function submit() {
                             <Input v-model="form.chief_complaint" placeholder="e.g. Fever, cough" class="h-8 text-xs"/>
                         </div>
 
+                        <!-- Visit Mode Toggle — In-Clinic vs Field Visit -->
+                        <div class="space-y-1.5">
+                            <Label class="text-xs">Visit Mode</Label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button type="button"
+                                    @click="form.is_field_visit = false"
+                                    :class="[
+                                        'flex flex-col items-center gap-1 p-3 rounded-xl border-2 text-xs font-semibold transition-all',
+                                        !form.is_field_visit
+                                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                            : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                                    ]">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 8v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4"/>
+                                    </svg>
+                                    <span>In-Clinic</span>
+                                    <span class="text-xs font-normal opacity-70">Auto case no.</span>
+                                </button>
+                                <button type="button"
+                                    @click="form.is_field_visit = true"
+                                    :class="[
+                                        'flex flex-col items-center gap-1 p-3 rounded-xl border-2 text-xs font-semibold transition-all',
+                                        form.is_field_visit
+                                            ? 'border-amber-500 bg-amber-50 text-amber-700'
+                                            : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                                    ]">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    </svg>
+                                    <span>Field / Off-Site</span>
+                                    <span class="text-xs font-normal opacity-70">No case no. yet</span>
+                                </button>
+                            </div>
+                            <!-- Warning banner for field visits -->
+                            <div v-if="form.is_field_visit"
+                                class="flex items-start gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg mt-1">
+                                <svg class="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                </svg>
+                                <p class="text-xs text-amber-700">
+                                    <strong>Field visit mode.</strong> Case number will not be assigned yet. Sync to clinic system later to assign case numbers.
+                                </p>
+                            </div>
+                        </div>
+
                         <div class="space-y-1.5">
                             <Label class="text-xs">Priority</Label>
                             <Select v-model="form.priority">
@@ -340,9 +440,34 @@ function submit() {
                                 <span class="w-1 h-4 rounded-full inline-block" style="background:#1B4F9B"></span>
                                 <h3 class="text-xs font-bold text-muted-foreground uppercase tracking-widest">Select Services</h3>
                             </div>
-                            <span class="text-xs text-muted-foreground">
-                                {{ form.services.length }} selected
-                            </span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-muted-foreground">{{ form.services.length }} selected</span>
+                                <button v-if="form.services.length > 0"
+                                    type="button" @click="clearServices"
+                                    class="text-xs text-red-500 hover:text-red-700 font-semibold underline">
+                                    Clear all
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Quick Package Buttons — only shown when packages are available -->
+                        <div v-if="servicePackages.length > 0" class="px-5 py-3 border-b bg-slate-50/60 flex items-center gap-2 flex-wrap">
+                            <span class="text-xs font-bold text-slate-500 mr-1">Quick Select:</span>
+                            <button v-for="pkg in servicePackages" :key="pkg.key"
+                                type="button"
+                                @click="applyPackage(pkg.codes)"
+                                class="group flex items-center gap-2 px-3 py-1.5 rounded-lg border-2 text-xs font-semibold transition-all hover:shadow-sm"
+                                :style="{
+                                    borderColor: pkg.color,
+                                    color: pkg.color,
+                                    background: pkg.color + '10'
+                                }">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                </svg>
+                                {{ pkg.label }}
+                                <span class="text-xs opacity-60 font-normal hidden group-hover:inline">— {{ pkg.desc }}</span>
+                            </button>
                         </div>
 
                         <div class="p-5 space-y-6">

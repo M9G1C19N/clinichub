@@ -21,6 +21,7 @@ class PatientVisit extends Model
         'result_claim_date',
         'chief_complaint',
         'created_by',
+        'case_number',
     ];
 
     protected $casts = [
@@ -29,6 +30,20 @@ class PatientVisit extends Model
         'visit_date'         => 'datetime',
         'result_claim_date'  => 'date',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (PatientVisit $visit) {
+              if (empty($visit->case_number) && !$visit->is_field_visit) {
+            $year  = now()->format('y');
+            $count = static::whereYear('created_at', now()->year)
+                           ->whereNotNull('case_number')
+                           ->withTrashed()
+                           ->count() + 1;
+            $visit->case_number = $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+        }
+        });
+    }
 
     // ── Relationships ──────────────────────────────────────
 

@@ -64,7 +64,8 @@ const visitTypeLabel = {
             </div>
             <div style="text-align:right;">
                 <div style="font-size:9px; color:#555;">Control No.:</div>
-                <div style="font-weight:900; font-size:13px; color:#0F2044;">{{ patient.patient_code }}</div>
+                <div style="font-size:9px; color:#555;">Control No.:</div>
+                <div style="font-weight:900; font-size:13px; color:#0F2044;">{{ visit.case_number }}</div>
                 <div style="font-size:8.5px; color:#555; margin-top:3px;">Exam Date:</div>
                 <div style="font-weight:700; font-size:9px;">{{ visit.visit_date }}</div>
             </div>
