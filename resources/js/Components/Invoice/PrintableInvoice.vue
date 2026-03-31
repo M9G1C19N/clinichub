@@ -63,9 +63,6 @@ const formatAmount = (val) =>
                 <div style="font-size:9px; margin-top:4px; color:#333;">
                     Date: <strong>{{ invoice.created_at }}</strong>
                 </div>
-                <div style="font-size:9px; margin-top:2px; color:#333;">
-                    No. <strong style="font-size:12px;">{{ invoice.invoice_number }}</strong>
-                </div>
             </div>
         </div>
 
@@ -155,11 +152,8 @@ const formatAmount = (val) =>
                <div>
                     <span style="font-weight:700;">CN: </span>
                     <span style="border-bottom:1px solid #aaa; display:inline-block; min-width:200px; padding-bottom:1px;">
-                        {{ visit.case_number ?? invoice.invoice_number }}
+                         {{ visit.case_number ?? '' }}
                     </span>
-                </div>
-                <div class="text-xs text-slate-500">
-                    Case No.: <strong class="text-slate-800 font-mono">{{ visit.case_number }}</strong>
                 </div>
                 <!-- Payment method if paid -->
                 <div v-if="payments && payments.length > 0" style="margin-top:3px; color:#555;">
@@ -239,9 +233,9 @@ const formatAmount = (val) =>
             </div>
             <div style="font-size:8.5px; text-align:right; color:#555;">
                 <div style="font-size:7.5px;">Printer's Accreditation No.: 10SMP2019000000001</div>
-                <div style="font-size:11px; font-weight:900; color:#111;">
-                    No. &nbsp; {{ invoice.invoice_number?.replace('INV-', '') }}
-                </div>
+                    <div style="font-size:9px; margin-top:2px; color:#333;">
+                        No. <strong style="font-size:12px;">16778</strong>
+                    </div>
             </div>
         </div>
 

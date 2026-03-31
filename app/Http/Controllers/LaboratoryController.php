@@ -369,59 +369,60 @@ class LaboratoryController extends Controller
             ->with('success', "Lab results {$action} for {$visit->patient->full_name}.");
     }
 
-    public function print(PatientVisit $visit)
+   public function print(PatientVisit $visit)
     {
-        $visit->load(['patient', 'invoice.items', 'labRequest.results.labTest']);
+        $visit->load(['patient', 'labRequest.results.labTest']);
 
-        $patient   = $visit->patient;
         $labRequest = $visit->labRequest;
+        $results = [];
+        $categories = [];
 
-        $existingResults = $labRequest
-            ? $labRequest->results->keyBy('lab_test_id')
-            : collect();
-
-        $allTests = LabTest::active()
-            ->orderBy('sort_order')
-            ->get()
-            ->map(fn($t) => [
-                'id'             => $t->id,
-                'test_code'      => $t->test_code,
-                'test_name'      => $t->test_name,
-                'category'       => $t->category,
-                'unit'           => $t->unit,
-                'normal_range'   => $t->getNormalRangeForPatient($patient->sex),
-                'is_text_result' => $t->is_text_result,
-                'result_value'   => $existingResults[$t->id]?->result_value ?? '',
-                'is_abnormal'    => $existingResults[$t->id]?->is_abnormal ?? false,
-                'abnormal_flag'  => $existingResults[$t->id]?->abnormal_flag ?? null,
-            ]);
+        if ($labRequest) {
+            foreach ($labRequest->results as $r) {
+                $code = $r->labTest?->test_code;
+                $cat  = $r->labTest?->category;
+                if ($code) {
+                    $results[$code] = [
+                        'value'       => $r->result_value,
+                        'is_abnormal' => $r->is_abnormal,
+                        'flag'        => $r->abnormal_flag,
+                    ];
+                }
+                if ($cat && !in_array($cat, $categories)) {
+                    $categories[] = $cat;
+                }
+            }
+        }
 
         return inertia('Laboratory/Print', [
-            'visit' => [
+            'visit'   => [
                 'id'               => $visit->id,
-                'visit_type'       => $visit->visit_type,
+                'case_number'      => $visit->case_number,
                 'visit_date'       => $visit->visit_date->format('M d, Y'),
+                'visit_time'       => $visit->visit_date->format('h:i A'),
+                'visit_type'       => $visit->visit_type,
                 'employer_company' => $visit->employer_company,
             ],
             'patient' => [
-                'id'           => $patient->id,
-                'full_name'    => $patient->full_name,
-                'patient_code' => $patient->patient_code,
-                'age_sex'      => $patient->age_sex,
-                'sex'          => $patient->sex,
-                'birthdate'    => $patient->birthdate?->format('M d, Y'),
-                'civil_status' => $patient->civil_status ?? '—',
+                'id'          => $visit->patient->id,
+                'full_name'   => $visit->patient->full_name,
+                'last_name'   => $visit->patient->last_name,
+                'first_name'  => $visit->patient->first_name,
+                'middle_name' => $visit->patient->middle_name,
+                'age_sex'     => $visit->patient->age_sex,
+                'address'     => $visit->patient->address,
             ],
             'labRequest' => $labRequest ? [
-                'request_number'      => $labRequest->request_number,
+                'id'                  => $labRequest->id,
                 'status'              => $labRequest->status,
                 'examined_by_name'    => $labRequest->examined_by_name,
                 'examined_by_license' => $labRequest->examined_by_license,
                 'noted_by_name'       => $labRequest->noted_by_name,
                 'noted_by_license'    => $labRequest->noted_by_license,
-                'clinical_notes'      => $labRequest->clinical_notes,
+                'remarks'             => $labRequest->remarks,
             ] : null,
-            'tests' => $allTests,
+            'results'    => $results,
+            'categories' => $categories,
         ]);
     }
 }
