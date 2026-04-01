@@ -22,6 +22,7 @@ class PatientVisit extends Model
         'chief_complaint',
         'created_by',
         'case_number',
+        'is_field_visit',
     ];
 
     protected $casts = [
@@ -29,19 +30,22 @@ class PatientVisit extends Model
         'referral_validated' => 'boolean',
         'visit_date'         => 'datetime',
         'result_claim_date'  => 'date',
+        'is_field_visit' => 'boolean',
     ];
 
     protected static function booted(): void
     {
-        static::creating(function (PatientVisit $visit) {
-              if (empty($visit->case_number) && !$visit->is_field_visit) {
-            $year  = now()->format('y');
-            $count = static::whereYear('created_at', now()->year)
-                           ->whereNotNull('case_number')
-                           ->withTrashed()
-                           ->count() + 1;
-            $visit->case_number = $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
-        }
+            static::creating(function (PatientVisit $visit) {
+            // Auto-generate case_number ONLY for in-clinic visits
+            if (!$visit->is_field_visit && empty($visit->case_number)) {
+                $year  = now()->format('y'); // 2-digit: 26
+                $count = static::whereYear('created_at', now()->year)
+                            ->whereNotNull('case_number')
+                            ->withTrashed()
+                            ->count() + 1;
+                $visit->case_number = $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+            }
+            // Field visits: case_number stays NULL — assigned later on sync
         });
     }
 

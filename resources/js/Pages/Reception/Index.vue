@@ -292,11 +292,21 @@ function currentData() {
                                     }">
                                     {{ visitTypeBadge[visit.visit_type]?.label }}
                                 </span>
+                                <span v-if="visit.case_number"
+                                    class="text-xs font-mono font-bold text-slate-500">
+                                    CN: {{ visit.case_number }}
+                                </span>
+                                <span v-else-if="visit.is_field_visit"
+                                    class="text-xs font-semibold px-1.5 py-0.5 rounded"
+                                    style="background:#fffbeb; color:#b45309; border:1px solid #fde68a;">
+                                    Field Visit
+                                </span>
                                 <span v-if="visit.employer_company" class="text-xs text-slate-400">
                                     {{ visit.employer_company }}
                                 </span>
                             </div>
                         </td>
+
 
                         <!-- Time -->
                         <td class="px-4 py-3">

@@ -170,7 +170,7 @@ function printReport() {
         <div class="flex gap-5 items-start">
 
             <!-- LEFT PANEL -->
-            <div class="w-64 flex-shrink-0 space-y-4">
+            <div class="w-100 flex-shrink-0 space-y-4">
 
                 <!-- Patient -->
                 <div class="bg-card rounded-xl border shadow-sm p-4">

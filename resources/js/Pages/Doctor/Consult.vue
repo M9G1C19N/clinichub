@@ -226,7 +226,7 @@ const bpStatus = computed(() => {
         <div class="flex gap-5 items-start">
 
             <!-- ── LEFT: Patient Summary ─────────── -->
-            <div class="w-72 flex-shrink-0 space-y-4">
+            <div class="w-100 flex-shrink-0 space-y-4">
 
                 <!-- Patient Info -->
                 <div class="bg-card rounded-xl border shadow-sm p-4">

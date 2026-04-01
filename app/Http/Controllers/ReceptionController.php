@@ -160,6 +160,8 @@ class ReceptionController extends Controller
             'employer_company' => $v->employer_company,
             'services_count'   => count($services),
             'services'         => $services,
+            'case_number'    => $v->case_number,
+            'is_field_visit' => $v->is_field_visit,
 
             // Invoice
             'invoice' => $v->invoice ? [
@@ -278,6 +280,7 @@ class ReceptionController extends Controller
             'queue_counter_id'   => ['required', 'exists:queue_counters,id'],
             'discount_amount'    => ['nullable', 'numeric', 'min:0'],
             'notes'              => ['nullable', 'string'],
+            'is_field_visit' => ['boolean'],
         ]);
 
         try {
@@ -294,6 +297,7 @@ class ReceptionController extends Controller
                     'status'             => 'pending',
                     'chief_complaint'    => $validated['chief_complaint'] ?? null,
                     'referral_validated' => $validated['referral_validated'] ?? false,
+                    'is_field_visit' => $validated['is_field_visit'] ?? false,
                     'created_by'         => Auth::id(),
                 ]);
 
@@ -405,6 +409,7 @@ class ReceptionController extends Controller
                 'status'           => $invoice->visit->status,
                 'employer_company' => $invoice->visit->employer_company,
                 'visit_date'       => $invoice->visit->visit_date->format('M d, Y h:i A'),
+                'is_field_visit' => $invoice->visit->is_field_visit,
             ],
             'items' => $invoice->items->map(fn($i) => [
                 'id'           => $i->id,

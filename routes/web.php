@@ -71,6 +71,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/',                 [\App\Http\Controllers\DoctorController::class, 'index'])->name('index');
             Route::get('/consult/{visit}',  [\App\Http\Controllers\DoctorController::class, 'consult'])->name('consult');
             Route::post('/consult/{visit}', [\App\Http\Controllers\DoctorController::class, 'store'])->name('store');
+            Route::get('/print/{visit}',    [\App\Http\Controllers\DoctorController::class, 'printExam'])->name('print');
         });
 
     // ── Laboratory ────────────────────────────────────
@@ -111,5 +112,5 @@ Route::middleware('auth')->group(function () {
             Route::post('/enter/{visit}', [\App\Http\Controllers\DrugTestController::class, 'save'])->name('save');
             Route::get('/print/{visit}',  [\App\Http\Controllers\DrugTestController::class, 'print'])->name('print');
         });
-    Route::get('/print/{visit}', [\App\Http\Controllers\DoctorController::class, 'printExam'])->name('print');
+
 });

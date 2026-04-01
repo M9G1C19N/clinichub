@@ -137,6 +137,14 @@ const visitTypeLabel = {
                         <p class="text-slate-400 text-xs mt-0.5">
                             Created {{ invoice.created_at }} by {{ invoice.created_by }}
                         </p>
+                        <div v-if="visit.case_number" class="text-xs text-slate-500">
+                            Case No.: <strong class="text-slate-800 font-mono text-sm">{{ visit.case_number }}</strong>
+                        </div>
+                        <div v-else-if="visit.is_field_visit"
+                            class="text-xs font-semibold px-2 py-0.5 rounded"
+                            style="background:#fffbeb; color:#b45309;">
+                            Field Visit — No case no. yet
+                        </div>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">

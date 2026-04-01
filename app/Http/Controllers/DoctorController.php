@@ -15,7 +15,9 @@ class DoctorController extends Controller
 
     public function index(Request $request)
     {
-        $filter = $request->get('filter', 'all');
+            $filter = $request->get('filter', 'all');
+            $search = $request->get('search', '');
+            $date   = $request->get('date', '');
 
         // ── 1. TODAY'S QUEUE — physically in clinic ───────
         $todayQueue = QueueRoomAssignment::with([
@@ -117,29 +119,71 @@ class DoctorController extends Controller
                 'visit_id'          => $c->patient_visit_id,
             ]);
 
+              // ── 4. HISTORY — all finalized consultations ─────
+            $historyQuery = Consultation::with(['patient', 'visit'])
+                ->where('is_finalized', true)
+                ->when($search, fn($q) =>
+                    $q->whereHas('patient', fn($p) =>
+                        $p->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name',  'like', "%{$search}%")
+                        ->orWhere('patient_code', 'like', "%{$search}%")
+                    )
+                )
+                ->when($date, fn($q) =>
+                    $q->whereDate('finalized_at', $date)
+                )
+                ->latest('finalized_at')
+                ->paginate(15, ['*'], 'history_page')
+                ->withQueryString();
+
+            $history = $historyQuery->getCollection()->map(fn($c) => [
+                'id'                => $c->id,
+                'visit_id'          => $c->patient_visit_id,
+                'patient_name'      => $c->patient->full_name,
+                'patient_code'      => $c->patient->patient_code,
+                'age_sex'           => $c->patient->age_sex,
+                'visit_type'        => $c->visit_type,
+                'employer_company'  => $c->employer_company,
+                'pe_classification' => $c->pe_classification,
+                'pe_class_label'    => $c->pe_classification_label,
+                'pe_class_color'    => $c->pe_classification_color,
+                'icd10_code'        => $c->icd10_code,
+                'icd10_description' => $c->icd10_description,
+                'essentially_normal'=> $c->essentially_normal,
+                'doctor_notes'      => $c->doctor_notes,
+                'finalized_at'      => $c->finalized_at?->format('M d, Y h:i A'),
+                'finalized_date'    => $c->finalized_at?->format('M d, Y'),
+            ]);
+            $historyQuery->setCollection($history);
+
+
         // ── SUMMARY COUNTS ────────────────────────────────
-        $summary = [
-            'today_queue'    => count($todayQueue),
-            'pending_total'  => PatientVisit::whereDoesntHave('consultation', fn($q) =>
-                                    $q->where('is_finalized', true)
-                                )->where('status', '!=', 'cancelled')
-                                ->whereIn('visit_type', ['opd', 'pre_employment', 'annual_pe', 'exit_pe', 'follow_up'])
-                                ->count(),
-            'pending_pe'     => PatientVisit::whereDoesntHave('consultation', fn($q) =>
-                                    $q->where('is_finalized', true)
-                                )->where('visit_type', 'pre_employment')
-                                ->where('status', '!=', 'cancelled')
-                                ->count(),
-            'completed_today'=> Consultation::whereDate('finalized_at', today())
-                                ->where('is_finalized', true)->count(),
-        ];
+            $summary = [
+                'today_queue'     => count($todayQueue),
+                'pending_total'   => PatientVisit::whereDoesntHave('consultation', fn($q) =>
+                                        $q->where('is_finalized', true))
+                                    ->where('status', '!=', 'cancelled')
+                                    ->whereIn('visit_type', ['opd','pre_employment','annual_pe','exit_pe','follow_up'])
+                                    ->count(),
+                'pending_pe'      => PatientVisit::whereDoesntHave('consultation', fn($q) =>
+                                        $q->where('is_finalized', true))
+                                    ->whereIn('visit_type', ['pre_employment','annual_pe','exit_pe'])
+                                    ->where('status', '!=', 'cancelled')
+                                    ->count(),
+                'completed_today' => Consultation::whereDate('finalized_at', today())
+                                    ->where('is_finalized', true)->count(),
+                'history_total' => Consultation::where('is_finalized', true)->count(),
+            ];
 
         return inertia('Doctor/Index', [
             'todayQueue' => $todayQueue,
             'pending'    => $pendingQuery,
             'completed'  => $completed,
+            'history'    => $historyQuery,
             'summary'    => $summary,
             'filter'     => $filter,
+            'search'     => $search,
+            'date'       => $date,
         ]);
     }
 
@@ -447,6 +491,27 @@ class DoctorController extends Controller
                 'visual_acuity_right'      => $vitals->visual_acuity_right,
                 'visual_acuity_left'       => $vitals->visual_acuity_left,
                 'ishihara_result'          => $vitals->ishihara_result,
+                'past_illnesses_flags'    => $vitals->past_illnesses_flags ?? [],
+                'past_illnesses_remarks'  => $vitals->past_illnesses_remarks,
+                'present_symptoms'        => $vitals->present_symptoms,
+                'family_history'          => $vitals->family_history,
+                'accidents_injuries'      => $vitals->accidents_injuries,
+                'surgical_history_detail' => $vitals->surgical_history_detail,
+                'allergies_flags'         => $vitals->allergies_flags ?? [],
+                'allergies_others'        => $vitals->allergies_others,
+                'menstrual_cycle'         => $vitals->menstrual_cycle,
+                'lmp'                     => $vitals->lmp,
+                'ob_gravida'              => $vitals->ob_gravida,
+                'ob_para'                 => $vitals->ob_para,
+                'ob_nulligravida'         => $vitals->ob_nulligravida,
+                'tobacco_use'             => $vitals->tobacco_use,
+                'alcohol_use'             => $vitals->alcohol_use,
+                'conversational_hearing'  => $vitals->conversational_hearing,
+                'visual_acuity_near_right'=> $vitals->visual_acuity_near_right,
+                'visual_acuity_near_left' => $vitals->visual_acuity_near_left,
+                'color_vision_result'     => $vitals->color_vision_result,
+                'pe_findings_normal'      => $vitals->pe_findings_normal ?? [],
+                'pe_findings_remarks'     => $vitals->pe_findings_remarks,
             ] : null,
             'consultation' => $consultation ? [
                 'pe_classification'    => $consultation->pe_classification,

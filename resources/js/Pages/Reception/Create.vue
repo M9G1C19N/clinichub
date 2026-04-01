@@ -17,6 +17,7 @@ import {
     User, CheckCircle2, AlertTriangle,
 } from 'lucide-vue-next'
 
+
 // ── SERVICE PACKAGES ──────────────────────────────
 const servicePackages = computed(() => {
     const vt = form.visit_type
@@ -277,33 +278,36 @@ function submit() {
                             <Label class="text-xs">Chief Complaint</Label>
                             <Input v-model="form.chief_complaint" placeholder="e.g. Fever, cough" class="h-8 text-xs"/>
                         </div>
-
-                        <!-- Visit Mode Toggle — In-Clinic vs Field Visit -->
-                        <div class="space-y-1.5">
+                        <!-- ── VISIT MODE TOGGLE ─────────────────── -->
+                        <div class="space-y-2">
                             <Label class="text-xs">Visit Mode</Label>
                             <div class="grid grid-cols-2 gap-2">
+
+                                <!-- In-Clinic -->
                                 <button type="button"
                                     @click="form.is_field_visit = false"
                                     :class="[
                                         'flex flex-col items-center gap-1 p-3 rounded-xl border-2 text-xs font-semibold transition-all',
                                         !form.is_field_visit
                                             ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                            : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                                            : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300'
                                     ]">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 8v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4"/>
                                     </svg>
                                     <span>In-Clinic</span>
-                                    <span class="text-xs font-normal opacity-70">Auto case no.</span>
+                                    <span class="font-normal opacity-60 text-xs">Auto case no.</span>
                                 </button>
+
+                                <!-- Field / Off-Site -->
                                 <button type="button"
                                     @click="form.is_field_visit = true"
                                     :class="[
                                         'flex flex-col items-center gap-1 p-3 rounded-xl border-2 text-xs font-semibold transition-all',
                                         form.is_field_visit
                                             ? 'border-amber-500 bg-amber-50 text-amber-700'
-                                            : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                                            : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300'
                                     ]">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -312,18 +316,21 @@ function submit() {
                                             d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
                                     </svg>
                                     <span>Field / Off-Site</span>
-                                    <span class="text-xs font-normal opacity-70">No case no. yet</span>
+                                    <span class="font-normal opacity-60 text-xs">No case no. yet</span>
                                 </button>
                             </div>
-                            <!-- Warning banner for field visits -->
+
+                            <!-- Warning shown when field mode selected -->
                             <div v-if="form.is_field_visit"
-                                class="flex items-start gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg mt-1">
-                                <svg class="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                class="flex items-start gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
+                                <svg class="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" fill="none"
+                                    stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                                 </svg>
-                                <p class="text-xs text-amber-700">
-                                    <strong>Field visit mode.</strong> Case number will not be assigned yet. Sync to clinic system later to assign case numbers.
+                                <p class="text-xs text-amber-700 leading-relaxed">
+                                    <strong>Field visit.</strong> Case number will not be assigned yet.
+                                    Sync to clinic system later to assign case numbers.
                                 </p>
                             </div>
                         </div>

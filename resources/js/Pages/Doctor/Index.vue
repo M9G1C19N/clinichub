@@ -18,7 +18,26 @@ const props = defineProps({
     completed:  Array,
     summary:    Object,
     filter:     String,
+    history: Object,
+    search:  String,
+    date:    String,
 })
+
+const searchInput = ref(props.search ?? '')
+const dateInput   = ref(props.date ?? '')
+
+function doSearch() {
+    router.get(route('doctor.index'), {
+        search: searchInput.value,
+        date:   dateInput.value,
+    }, { preserveState: true, replace: true })
+}
+
+function clearSearch() {
+    searchInput.value = ''
+    dateInput.value   = ''
+    doSearch()
+}
 
 // Active tab
 const activeTab = ref('pending') // 'today' | 'pending' | 'completed'
@@ -141,7 +160,21 @@ const peClassColor = {
                     <p class="text-2xl font-black text-slate-800">{{ summary.pending_pe }}</p>
                 </div>
             </div>
+
+            <div @click="activeTab = 'history'"
+                :class="['bg-card rounded-xl border shadow-sm p-4 flex items-center gap-3 cursor-pointer transition-all',
+                    activeTab === 'history' ? 'ring-2 ring-slate-400' : 'hover:shadow-md']">
+                <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                    <FileText class="w-5 h-5 text-slate-600"/>
+                </div>
+                <div>
+                    <p class="text-xs text-muted-foreground">History</p>
+                    <p class="text-2xl font-black text-slate-800">{{ summary.history_total ?? 0 }}</p>
+                </div>
+            </div>
+
         </div>
+
 
         <!-- ══════════════════════════════════════════════ -->
         <!-- TAB 1: TODAY'S QUEUE                           -->
@@ -283,6 +316,7 @@ const peClassColor = {
                     </button>
                 </div>
             </div>
+
 
             <!-- Empty -->
             <div v-if="!pending.data?.length"
@@ -487,11 +521,12 @@ const peClassColor = {
                                         </Button>
                                     </Link>
                                     <!-- Print button — visible to all authorized roles -->
-                                    <Button variant="outline" size="sm" class="text-xs gap-1.5"
-                                        onclick="window.print()">
-                                        <Printer class="w-3.5 h-3.5"/>
-                                        Print
-                                    </Button>
+                                    <a :href="route('doctor.print', c.visit_id)" target="_blank">
+                                        <Button variant="outline" size="sm" class="text-xs gap-1.5">
+                                            <Printer class="w-3.5 h-3.5"/>
+                                            Print
+                                        </Button>
+                                    </a>
                                 </div>
                             </td>
                         </tr>
@@ -499,6 +534,132 @@ const peClassColor = {
                 </table>
             </div>
         </div>
+         <!-- ══════════════════════════════════════════════ -->
+        <!-- TAB 4: HISTORY                                 -->
+        <!-- ══════════════════════════════════════════════ -->
+        <div v-if="activeTab === 'history'">
+
+            <!-- Search bar -->
+            <div class="flex items-center gap-3 mb-4 w-158">
+                <div class="relative flex-1">
+                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    <input v-model="searchInput" @keyup.enter="doSearch"
+                        placeholder="Search patient name or code..."
+                        class="w-full h-9 pl-9 pr-4 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"/>
+                </div>
+                <input v-model="dateInput" type="date" @change="doSearch"
+                    class="h-9 px-3 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                <Button v-if="searchInput || dateInput" variant="outline" size="sm"
+                    class="text-xs h-9" @click="clearSearch">
+                    Clear
+                </Button>
+                <Button size="sm" class="text-xs h-9 gap-1.5 text-white" style="background:#1B4F9B;"
+                    @click="doSearch">
+                    Search
+                </Button>
+            </div>
+
+            <!-- Empty state -->
+            <div v-if="!history?.data?.length"
+                class="bg-card rounded-xl border shadow-sm py-16 text-center">
+                <FileText class="w-12 h-12 text-slate-200 mx-auto mb-3"/>
+                <p class="text-slate-500 font-semibold">No history found</p>
+                <p class="text-slate-400 text-sm mt-1">Finalized consultations will appear here</p>
+            </div>
+
+            <!-- History table -->
+            <div v-else class="bg-card rounded-xl border shadow-sm overflow-hidden">
+                <table class="w-full">
+                    <thead>
+                        <tr style="background-color:#0F2044">
+                            <th class="text-left px-5 py-3 text-xs font-semibold text-white/70 uppercase tracking-wider">Patient</th>
+                            <th class="text-left px-4 py-3 text-xs font-semibold text-white/70 uppercase tracking-wider">Visit Type</th>
+                            <th class="text-left px-4 py-3 text-xs font-semibold text-white/70 uppercase tracking-wider">Classification</th>
+                            <th class="text-left px-4 py-3 text-xs font-semibold text-white/70 uppercase tracking-wider">Diagnosis</th>
+                            <th class="text-left px-4 py-3 text-xs font-semibold text-white/70 uppercase tracking-wider">Finalized</th>
+                            <th class="px-4 py-3"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr v-for="c in history.data" :key="c.id"
+                            class="hover:bg-slate-50 transition-colors group">
+                            <td class="px-5 py-3.5">
+                                <p class="font-bold text-slate-800 text-sm">{{ c.patient_name }}</p>
+                                <p class="text-xs font-mono text-slate-400">{{ c.patient_code }} · {{ c.age_sex }}</p>
+                                <p v-if="c.employer_company" class="text-xs text-purple-600 font-semibold mt-0.5">
+                                    {{ c.employer_company }}
+                                </p>
+                            </td>
+                            <td class="px-4 py-3.5">
+                                <span class="text-xs font-semibold px-2 py-0.5 rounded"
+                                    :style="{
+                                        background: visitTypeBadge[c.visit_type]?.bg,
+                                        color: visitTypeBadge[c.visit_type]?.color
+                                    }">
+                                    {{ visitTypeBadge[c.visit_type]?.label }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3.5">
+                                <span v-if="c.pe_classification"
+                                    class="text-xs font-bold px-2 py-1 rounded-lg"
+                                    :class="peClassColor[c.pe_classification]">
+                                    CLASS {{ c.pe_classification }}
+                                </span>
+                                <span v-else-if="c.essentially_normal"
+                                    class="text-xs text-emerald-600 font-semibold">
+                                    Normal
+                                </span>
+                                <span v-else class="text-xs text-slate-400">OPD</span>
+                            </td>
+                            <td class="px-4 py-3.5 max-w-xs">
+                                <p v-if="c.icd10_code" class="text-xs font-mono text-slate-600">{{ c.icd10_code }}</p>
+                                <p v-if="c.icd10_description" class="text-xs text-slate-500 truncate">{{ c.icd10_description }}</p>
+                                <p v-if="!c.icd10_code && !c.icd10_description" class="text-xs text-slate-300">—</p>
+                            </td>
+                            <td class="px-4 py-3.5 text-xs text-slate-500 whitespace-nowrap">
+                                {{ c.finalized_at }}
+                            </td>
+                            <td class="px-4 py-3.5">
+                                <div class="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Link :href="route('doctor.consult', c.visit_id)">
+                                        <Button variant="outline" size="sm" class="text-xs h-7 gap-1">
+                                            <Stethoscope class="w-3 h-3"/> View
+                                        </Button>
+                                    </Link>
+                                    <a :href="route('doctor.print', c.visit_id)" target="_blank">
+                                        <Button variant="outline" size="sm" class="text-xs h-7 gap-1">
+                                            <Printer class="w-3 h-3"/> Print
+                                        </Button>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- Pagination -->
+                <div class="px-5 py-3 border-t flex items-center justify-between text-xs text-slate-500">
+                    <span>{{ history.from }}–{{ history.to }} of {{ history.total }} records</span>
+                    <div class="flex items-center gap-1">
+                        <template v-for="link in history.links" :key="link.label">
+                            <Link v-if="link.url" :href="link.url" preserve-state
+                                class="px-2.5 py-1 rounded border text-xs transition-colors"
+                                :class="link.active
+                                    ? 'text-white border-transparent'
+                                    : 'border-slate-200 hover:border-slate-300'"
+                                :style="link.active ? 'background:#1B4F9B;' : ''"
+                                v-html="link.label"/>
+                            <span v-else class="px-2 py-1 text-slate-300" v-html="link.label"/>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+
 
     </AppLayout>
 </template>
