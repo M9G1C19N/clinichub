@@ -17,7 +17,7 @@ class DrugTestRequest extends Model
         'collector_name','collector_license','head_of_lab_name',
         'head_of_lab_license','collected_by','remarks',
         'result','result_remarks','certification_signed',
-        'certification_date','status','released_at','released_by',
+        'certification_date','status','released_at','released_by','specimen_date',
     ];
 
     protected $casts = [
@@ -27,6 +27,7 @@ class DrugTestRequest extends Model
         'temp_in_range'       => 'boolean',
         'certification_signed'=> 'boolean',
         'certification_date'  => 'date',
+        'specimen_date'       => 'date',
     ];
 
     // Auto-generate code number

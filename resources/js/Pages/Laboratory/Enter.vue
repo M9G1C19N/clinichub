@@ -38,6 +38,8 @@ const form = useForm({
     noted_by_license:    props.labRequest?.noted_by_license ?? '',
     general_remarks:     props.labRequest?.clinical_notes   ?? '',
     release: false,
+    result_date: props.labRequest?.result_date ?? new Date().toISOString().split('T')[0],
+    result_time: props.labRequest?.result_time ?? new Date().toTimeString().slice(0,5),
 })
 
 // Group tests by category for display
@@ -201,7 +203,7 @@ function printResults() {
         <div class="flex gap-5 items-start">
 
             <!-- ── LEFT: Patient Info ─────────── -->
-            <div class="w-56 flex-shrink-0 space-y-4">
+            <div class="w-100 flex-shrink-0 space-y-4">
 
                 <div class="bg-card rounded-xl border shadow-sm p-4">
                     <p class="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">Patient</p>
@@ -232,7 +234,47 @@ function printResults() {
                         </div>
                     </div>
                 </div>
-
+                <!-- Date & Time of Examination -->
+                <div class="bg-card rounded-xl border shadow-sm p-4 space-y-3">
+                    <p class="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                        Date & Time of Examination
+                    </p>
+                   <div class="space-y-3">
+                        <div class="space-y-1.5">
+                            <Label class="text-xs">Date Examined</Label>
+                            <div class="flex items-center gap-2">
+                                <Input v-model="form.result_date"
+                                    type="date"
+                                    class="h-8 text-xs flex-1"/>
+                                <button type="button"
+                                    @click="form.result_date = new Date().toISOString().split('T')[0]"
+                                    class="text-xs px-2 py-1 rounded border border-blue-300 text-blue-600 hover:bg-blue-50 whitespace-nowrap">
+                                    Today
+                                </button>
+                            </div>
+                        </div>
+                        <div class="space-y-1.5">
+                            <Label class="text-xs">Time Examined</Label>
+                            <div class="flex items-center gap-2">
+                                <Input v-model="form.result_time"
+                                    type="time"
+                                    class="h-8 text-xs flex-1"/>
+                                <button type="button"
+                                    @click="form.result_time = new Date().toTimeString().slice(0,5)"
+                                    class="text-xs px-2 py-1 rounded border border-blue-300 text-blue-600 hover:bg-blue-50 whitespace-nowrap">
+                                    Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Preview what will print -->
+                    <p class="text-xs text-slate-400">
+                        Will print as: <strong class="text-slate-600">
+                            {{ new Date(form.result_date).toLocaleDateString('en-PH', {weekday:'long', year:'numeric', month:'long', day:'numeric'}) }}
+                            {{ form.result_time ? '· ' + form.result_time : '' }}
+                        </strong>
+                    </p>
+                </div>
                 <!-- Staff Info -->
                 <div class="bg-card rounded-xl border shadow-sm p-4 space-y-3">
                     <p class="text-xs font-bold text-muted-foreground uppercase tracking-widest">Staff Details</p>

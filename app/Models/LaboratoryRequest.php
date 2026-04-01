@@ -16,11 +16,13 @@ class LaboratoryRequest extends Model
         'clinical_notes', 'released_at', 'released_by',
         'examined_by_name', 'examined_by_license',
         'noted_by_name', 'noted_by_license',
+        'result_date', 'result_time',
     ];
 
     protected $casts = [
         'request_date' => 'date',
         'released_at'  => 'datetime',
+        'result_date' => 'date',
     ];
 
     // ── Auto-generate request number ───────────────────

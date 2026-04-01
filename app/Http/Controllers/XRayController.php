@@ -196,6 +196,12 @@ class XRayController extends Controller
                 'rad_tech_license'     => $existing->rad_tech_license,
                 'radiologist_name'     => $existing->radiologist_name,
                 'radiologist_license'  => $existing->radiologist_license,
+                'exam_date' => $existing->exam_date
+                ? (is_string($existing->exam_date)
+                    ? $existing->exam_date
+                    : $existing->exam_date->format('Y-m-d'))
+                : now()->format('Y-m-d'),
+                'exam_time' => $existing->exam_time ?? now()->format('H:i'),
             ] : null,
             'currentUser' => [
                 'name'       => $currentUser->name,
@@ -218,6 +224,8 @@ class XRayController extends Controller
             'radiologist_name'      => ['nullable', 'string', 'max:100'],
             'radiologist_license'   => ['nullable', 'string', 'max:50'],
             'release'               => ['boolean'],
+            'exam_date'             => ['nullable', 'date'],
+            'exam_time'             => ['nullable', 'string', 'max:10'],
         ]);
 
         ImagingRequest::updateOrCreate(
@@ -236,6 +244,8 @@ class XRayController extends Controller
                 'status'                => $validated['release'] ? 'released' : 'processing',
                 'released_at'           => $validated['release'] ? now() : null,
                 'released_by'           => $validated['release'] ? Auth::id() : null,
+                'exam_date'             => $validated['exam_date'] ?? now()->format('Y-m-d'),
+                'exam_time'             => $validated['exam_time'] ?? now()->format('H:i'),
             ]
         );
 
@@ -286,6 +296,12 @@ class XRayController extends Controller
                 'radiologist_name'     => $imaging->radiologist_name,
                 'radiologist_license'  => $imaging->radiologist_license,
                 'status'               => $imaging->status,
+                'exam_date' => $imaging?->exam_date
+                    ? (is_string($imaging->exam_date)
+                        ? $imaging->exam_date
+                        : $imaging->exam_date->format('M d, Y'))
+                    : $visit->visit_date->format('M d, Y'),
+                'exam_time' => $imaging?->exam_time ?? '',
             ] : null,
             'requestingPhysician' => $requestingPhysician,
         ]);

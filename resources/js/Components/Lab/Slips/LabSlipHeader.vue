@@ -4,6 +4,7 @@ defineProps({
     title:   String,
     patient: Object,
     visit:   Object,
+    labRequest: Object,
 })
 </script>
 
@@ -33,11 +34,15 @@ defineProps({
                 </div>
                 <div style="flex:1;">
                     <span style="color:#555;">Date</span>
-                    <strong style="margin-left:6px;">{{ visit.visit_date }}</strong>
+                    <strong style="margin-left:6px;">
+                        {{ labRequest?.result_date ?? visit.visit_date }}
+                    </strong>
                 </div>
                 <div>
                     <span style="color:#555;">Time</span>
-                    <strong style="margin-left:6px;">{{ visit.visit_time ?? '' }}</strong>
+                    <strong style="margin-left:6px;">
+                        {{ labRequest?.result_time ?? visit.visit_time ?? '' }}
+                    </strong>
                 </div>
             </div>
             <div style="display:flex;gap:20px;margin-bottom:2px;font-size:9.5px;">

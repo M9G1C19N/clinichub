@@ -278,6 +278,8 @@ class LaboratoryController extends Controller
                 'examined_by_license' => $labRequest->examined_by_license,
                 'noted_by_name'       => $labRequest->noted_by_name,
                 'noted_by_license'    => $labRequest->noted_by_license,
+                'result_date' => $labRequest->result_date?->format('Y-m-d') ?? now()->format('Y-m-d'),
+                'result_time' => $labRequest->result_time ?? now()->format('H:i'),
             ] : null,
             'tests'      => $testData,
             'allTests'   => $allTests,
@@ -303,6 +305,8 @@ class LaboratoryController extends Controller
             'noted_by_license'     => ['nullable', 'string', 'max:50'],
             'general_remarks'       => ['nullable', 'string'],
             'release'              => ['boolean'],
+            'result_date' => ['nullable', 'date'],
+            'result_time' => ['nullable', 'string', 'max:10'],
         ]);
 
         DB::transaction(function () use ($validated, $visit) {
@@ -322,6 +326,8 @@ class LaboratoryController extends Controller
                     'released_at'         => $validated['release'] ? now() : null,
                     'released_by'         => $validated['release'] ? Auth::id() : null,
                     'clinical_notes'      => $validated['general_remarks'] ?? null,
+                    'result_date' => $validated['result_date'] ?? now()->format('Y-m-d'),
+                    'result_time' => $validated['result_time'] ?? now()->format('H:i'),
                 ]
             );
 
@@ -420,6 +426,8 @@ class LaboratoryController extends Controller
                 'noted_by_name'       => $labRequest->noted_by_name,
                 'noted_by_license'    => $labRequest->noted_by_license,
                 'remarks'             => $labRequest->remarks,
+                'result_date' => $labRequest->result_date?->format('M d, Y') ?? $visit->visit_date->format('M d, Y'),
+                'result_time' => $labRequest->result_time ?? '',
             ] : null,
             'results'    => $results,
             'categories' => $categories,

@@ -39,6 +39,7 @@ class RoomRoutingEngine
 
         // Drug Test — ALWAYS FIRST (urine specimen time-sensitive)
         'DRUGTEST'    => 'drug_test',
+        'DRUGTEST5'   => 'drug_test',
         'MET'         => 'drug_test',
         'THC'         => 'drug_test',
 

@@ -30,6 +30,8 @@ const form = useForm({
     rad_tech_license:       props.imagingRequest?.rad_tech_license      ?? props.currentUser?.prc_number ?? '',
     radiologist_name:       props.imagingRequest?.radiologist_name      ?? '',
     radiologist_license:    props.imagingRequest?.radiologist_license   ?? '',
+    exam_date: props.imagingRequest?.exam_date ?? todayStr(),
+    exam_time: props.imagingRequest?.exam_time ?? nowStr(),
     release:                false,
 })
 
@@ -71,7 +73,24 @@ function release() {
     form.release = true
     form.post(route('xray.save', props.visit.id))
 }
-
+function todayStr() {
+    const d = new Date()
+    return d.getFullYear() + '-' +
+        String(d.getMonth()+1).padStart(2,'0') + '-' +
+        String(d.getDate()).padStart(2,'0')
+}
+function nowStr() {
+    const d = new Date()
+    return String(d.getHours()).padStart(2,'0') + ':' +
+        String(d.getMinutes()).padStart(2,'0')
+}
+function formatDatePreview(dateStr) {
+    if (!dateStr) return ''
+    const [y, m, d] = dateStr.split('-').map(Number)
+    return new Date(y, m-1, d).toLocaleDateString('en-PH', {
+        weekday:'long', year:'numeric', month:'long', day:'numeric'
+    })
+}
 function printReport() {
     window.open(route('xray.print', props.visit.id), '_blank')
 }
@@ -129,7 +148,7 @@ function printReport() {
         <div class="flex gap-5 items-start">
 
             <!-- ── LEFT: Patient Info ─────────── -->
-            <div class="w-64 flex-shrink-0 space-y-4">
+            <div class="w-100 flex-shrink-0 space-y-4">
 
                 <!-- Patient -->
                 <div class="bg-card rounded-xl border shadow-sm p-4">
@@ -140,17 +159,40 @@ function printReport() {
                             <p class="text-muted-foreground font-mono">{{ patient.patient_code }}</p>
                         </div>
                         <Separator/>
-                        <div class="flex justify-between">
-                            <span class="text-muted-foreground">Age/Sex</span>
+                        <div class="flex justify-between w-21">
+                            <span class="text-muted-foreground">Age/Sex: </span>
                             <span class="font-semibold">{{ patient.age_sex }}</span>
                         </div>
+                        <Separator/>
                         <div v-if="visit.employer_company" class="flex justify-between">
                             <span class="text-muted-foreground">Company</span>
                             <span class="font-semibold text-purple-600 text-right text-xs">{{ visit.employer_company }}</span>
                         </div>
-                        <div class="flex justify-between">
-                            <span class="text-muted-foreground">Exam Date</span>
-                            <span class="font-semibold">{{ visit.visit_date }}</span>
+                        <div class="bg-card rounded-xl border shadow-sm p-3 space-y-2">
+                            <p class="text-xs font-bold text-muted-foreground uppercase tracking-widest">Date & Time of Exam</p>
+                            <div class="space-y-1.5">
+                                <Label class="text-xs">Date</Label>
+                                <div class="flex items-center gap-1.5">
+                                    <Input v-model="form.exam_date" type="date" class="h-8 text-xs flex-1"/>
+                                    <button type="button" @click="form.exam_date = todayStr()"
+                                        class="text-xs px-2 py-1 rounded border border-blue-300 text-blue-600 hover:bg-blue-50 whitespace-nowrap">
+                                        Today
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="space-y-1.5">
+                                <Label class="text-xs">Time</Label>
+                                <div class="flex items-center gap-1.5">
+                                    <Input v-model="form.exam_time" type="time" class="h-8 text-xs flex-1"/>
+                                    <button type="button" @click="form.exam_time = nowStr()"
+                                        class="text-xs px-2 py-1 rounded border border-blue-300 text-blue-600 hover:bg-blue-50 whitespace-nowrap">
+                                        Now
+                                    </button>
+                                </div>
+                            </div>
+                            <p class="text-xs text-slate-400">
+                                Prints as: <strong class="text-slate-600">{{ formatDatePreview(form.exam_date) }}</strong>
+                            </p>
                         </div>
                     </div>
                 </div>

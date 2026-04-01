@@ -139,7 +139,7 @@ class DrugTestController extends Controller
             ->pluck('service_code')->toArray();
 
         $drugsDefault = ['thc_met']; // default THC & MET
-        if (in_array('DRUGTEST_FULL', $orderedServices)) {
+        if (in_array('DRUGTEST5', $orderedServices)) {
             $drugsDefault = ['thc_coc_pcp_opi_amp'];
         }
 
@@ -189,6 +189,7 @@ class DrugTestController extends Controller
                 'certification_signed'=> $existing->certification_signed,
                 'certification_date'  => $existing->certification_date?->format('Y-m-d'),
                 'company'             => $existing->company,
+                'specimen_date'       => $existing->specimen_date?->format('Y-m-d') ?? now()->format('Y-m-d'),
             ] : null,
             'currentUser' => [
                 'name'       => $currentUser->name,
@@ -222,6 +223,7 @@ class DrugTestController extends Controller
             'certification_date'  => ['nullable','date'],
             'company'             => ['nullable','string'],
             'release'             => ['boolean'],
+            'specimen_date'       => ['nullable', 'date'],
         ]);
 
         DrugTestRequest::updateOrCreate(
@@ -253,6 +255,8 @@ class DrugTestController extends Controller
                 'status'              => $validated['release'] ? 'released' : 'processing',
                 'released_at'         => $validated['release'] ? now() : null,
                 'released_by'         => $validated['release'] ? Auth::id() : null,
+                'specimen_date'       => $validated['specimen_date'] ?? now()->format('Y-m-d'),
+
             ]
         );
 

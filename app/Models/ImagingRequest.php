@@ -16,11 +16,13 @@ class ImagingRequest extends Model
         'status', 'rad_tech_name', 'rad_tech_license',
         'radiologist_name', 'radiologist_license',
         'released_at', 'released_by',
+        'exam_date', 'exam_time',
     ];
 
     protected $casts = [
         'is_provisional' => 'boolean',
         'released_at'    => 'datetime',
+        'exam_date' => 'date',
     ];
 
     // ── Auto-generate request number ───────────────────

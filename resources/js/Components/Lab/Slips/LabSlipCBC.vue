@@ -17,7 +17,7 @@ const rs = (code) => isAb(code) ? 'font-weight:900;color:#dc2626;' : 'font-weigh
 <template>
     <div style="font-family:Arial,sans-serif;font-size:10px;color:#111;background:white;width:210mm;padding:5mm 7mm;box-sizing:border-box;">
 
-        <LabSlipHeader title="COMPLETE BLOOD COUNT" :patient="patient" :visit="visit"/>
+        <LabSlipHeader title="COMPLETE BLOOD COUNT" :patient="patient" :visit="visit" :lab-request="labRequest"/>
 
         <!-- RESULTS TABLE — 2 columns -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;margin-bottom:6px;">

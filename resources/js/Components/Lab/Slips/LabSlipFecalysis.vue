@@ -17,7 +17,7 @@ const rs = (code) => isAb(code) ? 'font-weight:900;color:#dc2626;' : 'font-weigh
 <template>
     <div style="font-family:Arial,sans-serif;font-size:10px;color:#111;background:white;width:210mm;padding:5mm 7mm;box-sizing:border-box;">
 
-        <LabSlipHeader title="FECALYSIS" :patient="patient" :visit="visit"/>
+        <LabSlipHeader title="FECALYSIS" :patient="patient" :visit="visit" :lab-request="labRequest"/>
 
         <!-- RESULTS — 2 columns: Macroscopic + Microscopic -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 20px;margin-bottom:10px;margin-top:8px;">

@@ -21,6 +21,26 @@ const props = defineProps({
     drugsDefault: Array,
 })
 
+// ── DATE HELPERS — must be defined BEFORE useForm ──
+function todayStr() {
+    const d = new Date()
+    return d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0')
+}
+function nowStr() {
+    const d = new Date()
+    return String(d.getHours()).padStart(2, '0') + ':' +
+        String(d.getMinutes()).padStart(2, '0')
+}
+function formatDatePreview(dateStr) {
+    if (!dateStr) return ''
+    const [y, m, d] = dateStr.split('-').map(Number)
+    return new Date(y, m - 1, d).toLocaleDateString('en-PH', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    })
+}
+
 const isReleased = props.drugTest?.status === 'released'
 
 const form = useForm({
@@ -43,6 +63,8 @@ const form = useForm({
     result_remarks:      props.drugTest?.result_remarks      ?? '',
     certification_signed: props.drugTest?.certification_signed ?? false,
     certification_date:  props.drugTest?.certification_date  ?? new Date().toISOString().slice(0,10),
+    specimen_date: props.drugTest?.specimen_date ?? todayStr(),
+    specimen_time: props.drugTest?.specimen_time ?? nowStr(),
     release: false,
 })
 
@@ -266,7 +288,31 @@ function printReport() {
                                 </SelectContent>
                             </Select>
                         </div>
+                        <div class="space-y-1.5">
+                            <Label class="text-xs">Date of Collection</Label>
+                            <div class="flex items-center gap-1.5">
+                                <Input v-model="form.specimen_date" type="date" class="h-8 text-xs flex-1"/>
+                                <button type="button" @click="form.specimen_date = todayStr()"
+                                    class="text-xs px-2 py-1 rounded border border-blue-300 text-blue-600 hover:bg-blue-50 whitespace-nowrap">
+                                    Today
+                                </button>
+                            </div>
+                        </div>
 
+                        <!-- EXISTING Time of Collection — also fix the Now button: -->
+                        <div class="space-y-1.5">
+                            <Label class="text-xs">Time of Collection</Label>
+                            <div class="flex items-center gap-1.5">
+                                <Input v-model="form.specimen_time" type="time" class="h-8 text-xs flex-1"/>
+                                <button type="button" @click="form.specimen_time = nowStr()"
+                                    class="text-xs px-2 py-1 rounded border border-blue-300 text-blue-600 hover:bg-blue-50 whitespace-nowrap">
+                                    Now
+                                </button>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-400">
+                            Prints as: <strong class="text-slate-600">{{ formatDatePreview(form.specimen_date) }} {{ form.specimen_time ? '· ' + form.specimen_time : '' }}</strong>
+                        </p>
                         <div class="space-y-1.5">
                             <Label class="text-xs">Time of Collection</Label>
                             <Input v-model="form.specimen_time" type="time"
