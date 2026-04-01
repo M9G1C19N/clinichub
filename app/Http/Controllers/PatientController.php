@@ -125,10 +125,126 @@ class PatientController extends Controller
     {
         $this->authorize('patients.view');
 
-        $patient->load([
-            'registeredBy',
-            'visits' => fn($q) => $q->with('vitals')->latest()->limit(10),
+        $patient->load(['registeredBy']);
+
+        // All visits with full related data
+        $visits = $patient->visits()
+            ->with([
+                'vitals',
+                'consultation',
+                'labRequest.results.labTest',
+                'imagingRequest',
+                'drugTestRequest',
+                'invoice.items',
+            ])
+            ->latest('visit_date')
+            ->get();
+
+        // Build visit history
+        $visitHistory = $visits->map(fn($v) => [
+            'id'               => $v->id,
+            'case_number'      => $v->case_number,
+            'visit_type'       => $v->visit_type,
+            'visit_date'       => $v->visit_date->format('M d, Y'),
+            'visit_date_full'  => $v->visit_date->format('M d, Y h:i A'),
+            'visit_date_sort'  => $v->visit_date->timestamp,
+            'status'           => $v->status,
+            'employer_company' => $v->employer_company,
+            'is_field_visit'   => $v->is_field_visit ?? false,
+            'services'         => collect($v->invoice?->items ?? [])
+                ->map(fn($i) => ['code' => $i->service_code, 'name' => $i->service_name, 'price' => $i->unit_price])
+                ->toArray(),
+            'total_amount'     => $v->invoice?->total_amount ?? 0,
+            'invoice_status'   => $v->invoice?->status ?? 'none',
+            // Vitals snapshot
+            'vitals' => $v->vitals ? [
+                'weight_kg'   => $v->vitals->weight_kg,
+                'height_cm'   => $v->vitals->height_cm,
+                'bmi'         => $v->vitals->bmi,
+                'bmi_category'=> $v->vitals->bmi_category,
+                'bp'          => $v->vitals->blood_pressure_systolic
+                    ? "{$v->vitals->blood_pressure_systolic}/{$v->vitals->blood_pressure_diastolic}"
+                    : null,
+                'pulse_rate'  => $v->vitals->pulse_rate,
+                'temperature' => $v->vitals->temperature_celsius,
+            ] : null,
+            // Lab summary
+            'lab' => $v->labRequest ? [
+                'status'        => $v->labRequest->status,
+                'has_abnormal'  => $v->labRequest->results->where('is_abnormal', true)->count() > 0,
+                'abnormal_count'=> $v->labRequest->results->where('is_abnormal', true)->count(),
+                'request_number'=> $v->labRequest->request_number,
+                'result_date'   => $v->labRequest->result_date?->format('M d, Y'),
+                'results'       => $v->labRequest->results->map(fn($r) => [
+                    'test_code'    => $r->labTest?->test_code,
+                    'test_name'    => $r->labTest?->test_name,
+                    'category'     => $r->labTest?->category,
+                    'result_value' => $r->result_value,
+                    'unit'         => $r->unit,
+                    'normal_range' => $r->normal_range_display,
+                    'is_abnormal'  => $r->is_abnormal,
+                    'flag'         => $r->abnormal_flag,
+                ])->sortBy(fn($r) => match($r['category']) {
+                    'hematology' => 1, 'chemistry' => 2,
+                    'urinalysis' => 3, 'stool' => 4, 'serology' => 5, default => 6
+                })->values()->toArray(),
+            ] : null,
+            // Imaging summary
+            'imaging' => $v->imagingRequest ? [
+                'status'          => $v->imagingRequest->status,
+                'imaging_type'    => $v->imagingRequest->imaging_type_label,
+                'impression'      => $v->imagingRequest->impression,
+                'is_provisional'  => $v->imagingRequest->is_provisional,
+                'request_number'  => $v->imagingRequest->request_number,
+                'exam_date'       => $v->imagingRequest->exam_date instanceof \Carbon\Carbon
+                    ? $v->imagingRequest->exam_date->format('M d, Y')
+                    : $v->imagingRequest->exam_date,
+            ] : null,
+            // Drug test summary
+            'drug_test' => $v->drugTestRequest ? [
+                'status'      => $v->drugTestRequest->status,
+                'result'      => $v->drugTestRequest->result,
+                'drugs_label' => $v->drugTestRequest->drugs_label,
+                'code_number' => $v->drugTestRequest->code_number,
+                'specimen_date'=> $v->drugTestRequest->specimen_date instanceof \Carbon\Carbon
+                    ? $v->drugTestRequest->specimen_date->format('M d, Y')
+                    : $v->drugTestRequest->specimen_date,
+            ] : null,
+            // Consultation summary
+            'consultation' => $v->consultation ? [
+                'is_finalized'      => $v->consultation->is_finalized,
+                'pe_classification' => $v->consultation->pe_classification,
+                'pe_classification_label' => $v->consultation->pe_classification_label,
+                'essentially_normal'=> $v->consultation->essentially_normal,
+                'pe_findings'       => $v->consultation->pe_findings,
+                'soap_assessment'   => $v->consultation->soap_assessment,
+                'icd10_code'        => $v->consultation->icd10_code,
+                'icd10_description' => $v->consultation->icd10_description,
+                'doctor_notes'      => $v->consultation->doctor_notes,
+                'finalized_at'      => $v->consultation->finalized_at?->format('M d, Y h:i A'),
+            ] : null,
         ]);
+
+         $prescriptions = \App\Models\Prescription::where('patient_id', $patient->id)
+        ->latest('rx_date')
+        ->get()
+        ->map(fn($rx) => [
+            'id'             => $rx->id,
+            'rx_number'      => $rx->rx_number,
+            'rx_date'        => $rx->rx_date->format('M d, Y'),
+            'items'          => $rx->items,
+            'items_count'    => count($rx->items ?? []),
+            'notes'          => $rx->notes,
+            'is_controlled'  => $rx->is_controlled,
+            'doctor_name'    => $rx->doctor_name,
+            'visit_id'       => $rx->patient_visit_id,
+        ]);
+
+        // Stats summary
+        $totalVisits    = $visits->count();
+        $lastVisit      = $visits->first();
+        $peCount        = $visits->whereIn('visit_type', ['pre_employment','annual_pe','exit_pe'])->count();
+        $labAbnormals   = $visits->sum(fn($v) => $v->labRequest?->results->where('is_abnormal',true)->count() ?? 0);
 
         return inertia('Patients/Show', [
             'patient' => [
@@ -138,7 +254,8 @@ class PatientController extends Controller
                 'first_name'               => $patient->first_name,
                 'last_name'                => $patient->last_name,
                 'middle_name'              => $patient->middle_name,
-                'date_of_birth'            => $patient->date_of_birth->format('Y-m-d'),
+                'date_of_birth'            => $patient->date_of_birth->format('M d, Y'),
+                'date_of_birth_raw'        => $patient->date_of_birth->format('Y-m-d'),
                 'age'                      => $patient->age,
                 'age_sex'                  => $patient->age_sex,
                 'sex'                      => $patient->sex,
@@ -151,19 +268,26 @@ class PatientController extends Controller
                 'occupation'               => $patient->occupation,
                 'emergency_contact_name'   => $patient->emergency_contact_name,
                 'emergency_contact_number' => $patient->emergency_contact_number,
-                'photo_path'               => $patient->photo_path,
+                'photo_path'               => $patient->photo_path
+                    ? asset('storage/' . $patient->photo_path)
+                    : null,
                 'visit_type_default'       => $patient->visit_type_default,
                 'is_active'                => $patient->is_active,
                 'registered_by'            => $patient->registeredBy?->name,
                 'created_at'               => $patient->created_at->format('M d, Y'),
-                        'visits' => $patient->visits->map(fn($v) => [
-                'id'         => $v->id,
-                'visit_type' => $v->visit_type,
-                'status'     => $v->status,
-                'visit_date' => $v->visit_date->format('M d, Y h:i A'),
-                'has_vitals' => $v->vitals !== null,
-            ]),
             ],
+            'visitHistory' => $visitHistory,
+            'stats' => [
+                'total_visits'   => $totalVisits,
+                'pe_count'       => $peCount,
+                'last_visit_date'=> $lastVisit?->visit_date->format('M d, Y'),
+                'last_visit_type'=> $lastVisit?->visit_type,
+                'lab_abnormals'  => $labAbnormals,
+                'companies'      => $visits->pluck('employer_company')
+                    ->filter()->unique()->values()->toArray(),
+                'rx_count' => $prescriptions->count(),
+            ],
+            'prescriptions' => $prescriptions,
         ]);
     }
 

@@ -15,6 +15,7 @@ import {
     Stethoscope, Activity, Eye, Heart,
     Thermometer, Save, CheckCircle2,
     AlertTriangle, FlaskConical, FileText, Printer,
+    ScanLine, TestTube,
 } from 'lucide-vue-next'
 import { IS_PE_TYPE } from '@/config/visitTypes.js'
 

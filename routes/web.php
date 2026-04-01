@@ -72,6 +72,11 @@ Route::middleware('auth')->group(function () {
             Route::get('/consult/{visit}',  [\App\Http\Controllers\DoctorController::class, 'consult'])->name('consult');
             Route::post('/consult/{visit}', [\App\Http\Controllers\DoctorController::class, 'store'])->name('store');
             Route::get('/print/{visit}',    [\App\Http\Controllers\DoctorController::class, 'printExam'])->name('print');
+
+            // ── Prescriptions ─────────────────────────
+            Route::post('/prescription/{visit}',        [\App\Http\Controllers\DoctorController::class, 'storePrescription'])->name('prescription.store');
+            Route::delete('/prescription/{prescription}',[\App\Http\Controllers\DoctorController::class, 'destroyPrescription'])->name('prescription.destroy');
+            Route::get('/prescription/{prescription}/print',[\App\Http\Controllers\DoctorController::class, 'printPrescription'])->name('prescription.print');
         });
 
     // ── Laboratory ────────────────────────────────────
@@ -112,5 +117,15 @@ Route::middleware('auth')->group(function () {
             Route::post('/enter/{visit}', [\App\Http\Controllers\DrugTestController::class, 'save'])->name('save');
             Route::get('/print/{visit}',  [\App\Http\Controllers\DrugTestController::class, 'print'])->name('print');
         });
+
+        // ── Prescriptions ─────────────────────────────────────
+Route::middleware('role:admin|doctor|nurse')
+    ->prefix('prescriptions')->name('prescriptions.')->group(function () {
+        Route::get('/',                    [\App\Http\Controllers\PrescriptionController::class, 'index'])->name('index');
+        Route::get('/create',              [\App\Http\Controllers\PrescriptionController::class, 'create'])->name('create');
+        Route::post('/',                   [\App\Http\Controllers\PrescriptionController::class, 'store'])->name('store');
+        Route::get('/print/{prescription}',[\App\Http\Controllers\PrescriptionController::class, 'print'])->name('print');
+        Route::delete('/{prescription}',   [\App\Http\Controllers\PrescriptionController::class, 'destroy'])->name('destroy');
+    });
 
 });

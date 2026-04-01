@@ -101,5 +101,8 @@ class PatientVisit extends Model
     {
         return $this->hasOne(DrugTestRequest::class, 'patient_visit_id');
     }
-
+    public function prescriptions()
+    {
+        return $this->hasMany(Prescription::class, 'patient_visit_id');
+    }
 }

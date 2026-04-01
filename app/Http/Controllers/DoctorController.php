@@ -8,7 +8,7 @@ use App\Models\PatientVital;
 use App\Models\QueueRoomAssignment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-
+use App\Models\Prescription;
 class DoctorController extends Controller
 {
     // ── DOCTOR DASHBOARD ──────────────────────────
@@ -198,9 +198,10 @@ class DoctorController extends Controller
             'vitals',
             'consultation',
             'invoice.items',
-            'labRequest.results.labTest',    // ← lab results
-            'imagingRequest',                // ← xray findings
-            'drugTestRequest',               // ← drug test result
+            'labRequest.results.labTest',
+            'imagingRequest',
+            'drugTestRequest',
+            'prescriptions',
         ]);
 
         $existing = $visit->consultation;
@@ -282,6 +283,15 @@ class DoctorController extends Controller
                 'chief_complaint'  => $visit->chief_complaint,
                 'services'         => $services,
             ],
+            'prescriptions' => $visit->prescriptions->map(fn($rx) => [
+                'id'            => $rx->id,
+                'rx_number'     => $rx->rx_number,
+                'items'         => $rx->items,
+                'notes'         => $rx->notes,
+                'rx_date'       => $rx->rx_date->format('M d, Y'),
+                'is_controlled' => $rx->is_controlled,
+                'doctor_name'   => $rx->doctor_name,
+            ]),
             'patient' => [
                 'id'           => $visit->patient->id,
                 'full_name'    => $visit->patient->full_name,
@@ -562,4 +572,72 @@ class DoctorController extends Controller
             ] : null,
         ]);
     }
+    public function storePrescription(Request $request, PatientVisit $visit)
+{
+    $validated = $request->validate([
+        'items'          => ['required', 'array', 'min:1'],
+        'items.*.drug'   => ['required', 'string', 'max:150'],
+        'items.*.dosage' => ['nullable', 'string', 'max:100'],
+        'items.*.form'   => ['nullable', 'string', 'max:50'],
+        'items.*.quantity'    => ['nullable', 'string', 'max:50'],
+        'items.*.frequency'   => ['nullable', 'string', 'max:100'],
+        'items.*.duration'    => ['nullable', 'string', 'max:100'],
+        'items.*.instructions'=> ['nullable', 'string'],
+        'notes'          => ['nullable', 'string'],
+        'is_controlled'  => ['boolean'],
+    ]);
+
+    $doctor = Auth::user();
+
+    Prescription::create([
+        'patient_id'          => $visit->patient_id,
+        'patient_visit_id'    => $visit->id,
+        'doctor_id'           => $doctor->id,
+        'items'               => $validated['items'],
+        'notes'               => $validated['notes'] ?? null,
+        'is_controlled'       => $validated['is_controlled'] ?? false,
+        'rx_date'             => now()->toDateString(),
+        'doctor_name'         => $doctor->name,
+        'doctor_prc'          => $doctor->prc_number,
+        'doctor_ptr'          => $doctor->ptr_number,
+        'doctor_s2'           => $doctor->s2_number,
+        'doctor_specialization' => $doctor->specialization,
+        'patient_name'        => $visit->patient->full_name,
+        'patient_age_sex'     => $visit->patient->age_sex,
+        'patient_address'     => $visit->patient->address,
+    ]);
+
+    return back()->with('success', 'Prescription saved.');
+}
+
+public function destroyPrescription(Prescription $prescription)
+{
+    $prescription->delete();
+    return back()->with('success', 'Prescription deleted.');
+}
+
+public function printPrescription(Prescription $prescription)
+{
+    return inertia('Doctor/PrintPrescription', [
+        'prescription' => [
+            'id'             => $prescription->id,
+            'rx_number'      => $prescription->rx_number,
+            'rx_date'        => $prescription->rx_date->format('M d, Y'),
+            'items'          => $prescription->items,
+            'notes'          => $prescription->notes,
+            'is_controlled'  => $prescription->is_controlled,
+            'doctor_name'    => $prescription->doctor_name,
+            'doctor_prc'     => $prescription->doctor_prc,
+            'doctor_ptr'     => $prescription->doctor_ptr,
+            'doctor_s2'      => $prescription->doctor_s2,
+            'doctor_specialization' => $prescription->doctor_specialization,
+        ],
+        'patient' => [
+            'full_name'    => $prescription->patient_name,
+            'age_sex'      => $prescription->patient_age_sex,
+            'address'      => $prescription->patient_address,
+            'patient_code' => $prescription->patient->patient_code,
+        ],
+    ]);
+}
 }

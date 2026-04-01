@@ -24,6 +24,7 @@ class User extends Authenticatable
         'photo_path',
         'is_active',
         'must_change_password', // Force change on first login
+        's2_number',
     ];
 
     protected $hidden = ['password', 'remember_token'];
