@@ -48,7 +48,7 @@ defineProps({
         <div style="display:grid; grid-template-columns:120px 1fr 120px 1fr; gap:6px 12px; margin-bottom:16px; font-size:10.5px;">
             <div style="color:#555; padding-top:3px;">Case No. :</div>
             <div style="border-bottom:1px solid #ccc; padding-bottom:2px; font-weight:700;">
-                {{ imagingRequest?.request_number ?? '—' }}
+                {{ visit.case_number ?? '—' }}
             </div>
             <div style="color:#555; padding-top:3px;">Chief Complaint :</div>
             <div style="border-bottom:1px solid #ccc; padding-bottom:2px; font-weight:700;">
@@ -102,17 +102,18 @@ defineProps({
         </div>
 
         <!-- ── FINDINGS ───────────────────────────── -->
-        <div style="margin-bottom:40px;">
-            <div style="display:flex; gap:16px; margin-bottom:8px;">
-                <div style="width:140px; flex-shrink:0; font-weight:700; color:#333;">
+        <div style="display:flex; flex-direction:column;">
+
+            <div style="display:flex; gap:16px; min-height:250px; margin-bottom:8px;">
+                <div style="width:130px; flex-shrink:0; font-weight:700; color:#333; font-size:11.5px; padding-top:2px;">
                     Radiographic<br/>Findings:
                 </div>
-                <div style="flex:1; line-height:1.8; font-size:11px;">
+                <div style="flex:1; line-height:2; font-size:11.5px;">
                     <div v-if="imagingRequest?.is_provisional"
                         style="font-weight:700; font-style:italic;">
                         **SEE ATTACHED CXR OFFICIAL READING**
                     </div>
-                    <div v-else style="white-space: pre-line;">
+                    <div v-else style="white-space:pre-line;">
                         {{ imagingRequest?.radiographic_findings ?? '' }}
                     </div>
                 </div>
@@ -120,7 +121,7 @@ defineProps({
         </div>
 
         <!-- ── IMPRESSION ─────────────────────────── -->
-        <div style="margin-bottom:50px; border-top:1px solid #ccc; padding-top:12px;">
+        <div style="margin-bottom:50px; border-top:1px solid #ccc; padding-top:12px; min-height:220px;">
             <div style="display:flex; gap:16px;">
                 <div style="width:140px; flex-shrink:0; font-weight:900; font-size:12px; color:#111;">
                     IMPRESSION:

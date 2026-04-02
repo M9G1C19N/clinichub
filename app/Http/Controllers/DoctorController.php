@@ -301,6 +301,9 @@ class DoctorController extends Controller
                 'sex'          => $visit->patient->sex,
                 'birthdate'    => $visit->patient->birthdate?->format('M d, Y'),
                 'address'      => $visit->patient->address,
+                'photo_url'    => $visit->patient->photo_path   // ← add this
+                        ? asset('storage/' . $visit->patient->photo_path)
+                        : null,
             ],
             'vitals' => $visit->vitals ? [
                 'weight_kg'                => $visit->vitals->weight_kg,
@@ -489,6 +492,9 @@ class DoctorController extends Controller
                 'civil_status' => $patient->civil_status ?? '',
                 'address'      => $patient->address ?? '',
                 'patient_code' => $patient->patient_code,
+                 'photo_path'               => $patient->photo_path
+                    ? asset('storage/' . $patient->photo_path)
+                    : null,
             ],
             'vitals' => $vitals ? [
                 'weight_kg'                => $vitals->weight_kg,
@@ -573,42 +579,42 @@ class DoctorController extends Controller
         ]);
     }
     public function storePrescription(Request $request, PatientVisit $visit)
-{
-    $validated = $request->validate([
-        'items'          => ['required', 'array', 'min:1'],
-        'items.*.drug'   => ['required', 'string', 'max:150'],
-        'items.*.dosage' => ['nullable', 'string', 'max:100'],
-        'items.*.form'   => ['nullable', 'string', 'max:50'],
-        'items.*.quantity'    => ['nullable', 'string', 'max:50'],
-        'items.*.frequency'   => ['nullable', 'string', 'max:100'],
-        'items.*.duration'    => ['nullable', 'string', 'max:100'],
-        'items.*.instructions'=> ['nullable', 'string'],
-        'notes'          => ['nullable', 'string'],
-        'is_controlled'  => ['boolean'],
-    ]);
+    {
+        $validated = $request->validate([
+            'items'          => ['required', 'array', 'min:1'],
+            'items.*.drug'   => ['required', 'string', 'max:150'],
+            'items.*.dosage' => ['nullable', 'string', 'max:100'],
+            'items.*.form'   => ['nullable', 'string', 'max:50'],
+            'items.*.quantity'    => ['nullable', 'string', 'max:50'],
+            'items.*.frequency'   => ['nullable', 'string', 'max:100'],
+            'items.*.duration'    => ['nullable', 'string', 'max:100'],
+            'items.*.instructions'=> ['nullable', 'string'],
+            'notes'          => ['nullable', 'string'],
+            'is_controlled'  => ['boolean'],
+        ]);
 
-    $doctor = Auth::user();
+        $doctor = Auth::user();
 
-    Prescription::create([
-        'patient_id'          => $visit->patient_id,
-        'patient_visit_id'    => $visit->id,
-        'doctor_id'           => $doctor->id,
-        'items'               => $validated['items'],
-        'notes'               => $validated['notes'] ?? null,
-        'is_controlled'       => $validated['is_controlled'] ?? false,
-        'rx_date'             => now()->toDateString(),
-        'doctor_name'         => $doctor->name,
-        'doctor_prc'          => $doctor->prc_number,
-        'doctor_ptr'          => $doctor->ptr_number,
-        'doctor_s2'           => $doctor->s2_number,
-        'doctor_specialization' => $doctor->specialization,
-        'patient_name'        => $visit->patient->full_name,
-        'patient_age_sex'     => $visit->patient->age_sex,
-        'patient_address'     => $visit->patient->address,
-    ]);
+        Prescription::create([
+            'patient_id'          => $visit->patient_id,
+            'patient_visit_id'    => $visit->id,
+            'doctor_id'           => $doctor->id,
+            'items'               => $validated['items'],
+            'notes'               => $validated['notes'] ?? null,
+            'is_controlled'       => $validated['is_controlled'] ?? false,
+            'rx_date'             => now()->toDateString(),
+            'doctor_name'         => $doctor->name,
+            'doctor_prc'          => $doctor->prc_number,
+            'doctor_ptr'          => $doctor->ptr_number,
+            'doctor_s2'           => $doctor->s2_number,
+            'doctor_specialization' => $doctor->specialization,
+            'patient_name'        => $visit->patient->full_name,
+            'patient_age_sex'     => $visit->patient->age_sex,
+            'patient_address'     => $visit->patient->address,
+        ]);
 
-    return back()->with('success', 'Prescription saved.');
-}
+        return back()->with('success', 'Prescription saved.');
+    }
 
 public function destroyPrescription(Prescription $prescription)
 {

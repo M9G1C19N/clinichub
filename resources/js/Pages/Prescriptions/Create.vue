@@ -34,7 +34,8 @@ async function searchPatients() {
     try {
         const res  = await fetch(route('queue.search-patient') + '?q=' + encodeURIComponent(patientSearch.value))
         const data = await res.json()
-        patientResults.value = data.patients ?? []
+        // QueueController returns plain array, not { patients: [] }
+        patientResults.value = Array.isArray(data) ? data : (data.patients ?? [])
     } catch { patientResults.value = [] }
 }
 

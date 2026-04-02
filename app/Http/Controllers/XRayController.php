@@ -169,6 +169,7 @@ class XRayController extends Controller
         return inertia('XRay/Enter', [
             'visit' => [
                 'id'               => $visit->id,
+                'case_number'      => $visit->case_number,
                 'visit_type'       => $visit->visit_type,
                 'visit_date'       => $visit->visit_date->format('M d, Y'),
                 'employer_company' => $visit->employer_company,
@@ -271,6 +272,7 @@ class XRayController extends Controller
         return inertia('XRay/Print', [
             'visit' => [
                 'id'               => $visit->id,
+                'case_number'      => $visit->case_number,
                 'visit_type'       => $visit->visit_type,
                 'visit_date'       => $visit->visit_date->format('M d, Y'),
                 'employer_company' => $visit->employer_company,

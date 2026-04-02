@@ -122,6 +122,10 @@ function printReport() {
                         </div>
                         <p class="text-slate-400 text-xs mt-0.5">
                             {{ patient.full_name }} · {{ patient.patient_code }} · {{ visit.visit_date }}
+                            <span v-if="visit.case_number"
+                                class="ml-1 font-mono font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                                Case #{{ visit.case_number }}
+                            </span>
                         </p>
                     </div>
                 </div>

@@ -172,7 +172,7 @@ const formatAmount = (val) =>
                     <tr>
                         <td style="padding:2px 6px; text-align:right; color:#555;">Subtotal:</td>
                         <td style="padding:2px 6px; text-align:right; font-weight:600; border-bottom:1px solid #ccc; min-width:90px;">
-                            ₱ {{ formatAmount(invoice.total_amount + (invoice.discount_amount ?? 0)) }}
+                            ₱ {{ formatAmount(Number(invoice.total_amount) + Number(invoice.discount_amount ?? 0)) }}
                         </td>
                     </tr>
                     <tr v-if="invoice.discount_amount > 0">

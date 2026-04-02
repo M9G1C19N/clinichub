@@ -2,7 +2,11 @@
 import { ref } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
-import { Button } from '@/components/ui/button'
+import { Button,} from '@/components/ui/button'
+import {
+    Select, SelectContent, SelectItem,
+    SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 import { Pill, Plus, Search, Printer, Trash2, ClipboardList, Calendar, AlertTriangle } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -13,12 +17,12 @@ const props = defineProps({
 })
 
 const searchInput  = ref(props.search ?? '')
-const statusFilter = ref(props.status ?? '')
+const statusFilter = ref(props.status ?? 'all')
 
 function doSearch() {
     router.get(route('prescriptions.index'), {
         search: searchInput.value,
-        status: statusFilter.value,
+        status: statusFilter.value === 'all' ? '' : statusFilter.value,
     }, { preserveState: true, replace: true })
 }
 
@@ -71,12 +75,17 @@ function deleteRx(id) {
                     placeholder="Search patient or Rx number..."
                     class="w-full h-9 pl-9 pr-4 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"/>
             </div>
-            <select v-model="statusFilter" @change="doSearch"
-                class="h-9 px-3 text-sm border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">All Types</option>
-                <option value="regular">Regular</option>
-                <option value="controlled">S2 / Controlled</option>
-            </select>
+           <Select v-model="statusFilter" @update:modelValue="doSearch">
+                <SelectTrigger class="h-9 px-3 text-sm border border-slate-200 rounded-xl bg-white">
+                    <SelectValue placeholder="All Types" />
+                </SelectTrigger>
+
+                <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="regular">Regular</SelectItem>
+                    <SelectItem value="controlled">S2 / Controlled</SelectItem>
+                </SelectContent>
+            </Select>
             <Button size="sm" class="h-9 text-xs text-white" style="background:#1B4F9B;" @click="doSearch">
                 Search
             </Button>

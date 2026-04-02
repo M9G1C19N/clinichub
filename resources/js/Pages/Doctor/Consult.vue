@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { useForm, Link } from '@inertiajs/vue3'
+import { useForm, Link, router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,19 +15,20 @@ import {
     Stethoscope, Activity, Eye, Heart,
     Thermometer, Save, CheckCircle2,
     AlertTriangle, FlaskConical, FileText, Printer,
-    ScanLine, TestTube,
+    ScanLine, TestTube, Pill, Trash2, Plus,
 } from 'lucide-vue-next'
 import { IS_PE_TYPE } from '@/config/visitTypes.js'
 
 const props = defineProps({
-    visit:        Object,
-    patient:      Object,
-    vitals:       Object,
-    consultation: Object,
-    doctor:       Object,
+    visit:          Object,
+    patient:        Object,
+    vitals:         Object,
+    consultation:   Object,
+    doctor:         Object,
     labResults:     Object,
     imagingResult:  Object,
     drugTestResult: Object,
+    prescriptions:  { type: Array, default: () => [] },
 })
 
 const isPreEmployment = IS_PE_TYPE(props.visit.visit_type)
@@ -102,6 +103,74 @@ const commonICD10 = [
 
 const showICD10Picker = ref(false)
 
+
+// ── Inline Prescription form ───────────────────────────
+const showRxForm = ref(false)
+const rxForm = useForm({
+    items: [
+        { drug: '', dosage: '', form: '', quantity: '', frequency: '', duration: '', instructions: '' },
+    ],
+    notes:         '',
+    is_controlled: false,
+})
+
+const commonDrugs = [
+    { drug:'Amoxicillin',    dosage:'500mg', form:'Capsule', quantity:'21',  frequency:'3x daily',   duration:'7 days'  },
+    { drug:'Paracetamol',    dosage:'500mg', form:'Tablet',  quantity:'20',  frequency:'q4h PRN',    duration:'5 days'  },
+    { drug:'Ibuprofen',      dosage:'400mg', form:'Tablet',  quantity:'15',  frequency:'3x daily',   duration:'5 days'  },
+    { drug:'Metformin',      dosage:'500mg', form:'Tablet',  quantity:'60',  frequency:'Twice daily',duration:'30 days' },
+    { drug:'Amlodipine',     dosage:'5mg',   form:'Tablet',  quantity:'30',  frequency:'Once daily', duration:'30 days' },
+    { drug:'Omeprazole',     dosage:'20mg',  form:'Capsule', quantity:'14',  frequency:'Twice daily',duration:'7 days'  },
+    { drug:'Azithromycin',   dosage:'500mg', form:'Tablet',  quantity:'3',   frequency:'Once daily', duration:'3 days'  },
+    { drug:'Mefenamic Acid', dosage:'500mg', form:'Capsule', quantity:'20',  frequency:'3x daily',   duration:'5 days'  },
+]
+
+const showRxPicker = ref(false)
+
+function addRxItem() {
+    rxForm.items.push({ drug: '', dosage: '', form: '', quantity: '', frequency: '', duration: '', instructions: '' })
+}
+function removeRxItem(i) {
+    if (rxForm.items.length === 1) return
+    rxForm.items.splice(i, 1)
+}
+function addRxFromPicker(drug) {
+    const empty = rxForm.items.find(m => !m.drug)
+    if (empty) Object.assign(empty, drug)
+    else rxForm.items.push({ ...drug, instructions: '' })
+    showRxPicker.value = false
+}
+function saveRx() {
+    // Remove rows where drug name is empty
+    const filledItems = rxForm.items.filter(i => i.drug?.trim())
+    if (filledItems.length === 0) {
+        alert('Please enter at least one medication.')
+        return
+    }
+    rxForm.items = filledItems
+
+    rxForm.post(route('doctor.prescription.store', props.visit.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            showRxForm.value = false
+            rxForm.reset()
+            rxForm.items = [{ drug: '', dosage: '', form: '', quantity: '', frequency: '', duration: '', instructions: '' }]
+            showRxPicker.value = false
+        },
+        onError: (errors) => {
+            console.error('Rx save errors:', errors)
+            // Restore empty item if all were filtered
+            if (rxForm.items.length === 0) {
+                rxForm.items = [{ drug: '', dosage: '', form: '', quantity: '', frequency: '', duration: '', instructions: '' }]
+            }
+        },
+    })
+}
+
+function deleteRx(id) {
+    if (!confirm('Delete this prescription?')) return
+    router.delete(route('doctor.prescription.destroy', id), { preserveScroll: true })
+}
 function selectICD10(item) {
     form.icd10_code        = item.code
     form.icd10_description = item.desc
@@ -232,11 +301,20 @@ const bpStatus = computed(() => {
                 <!-- Patient Info -->
                 <div class="bg-card rounded-xl border shadow-sm p-4">
                     <p class="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">Patient</p>
-                    <div class="flex items-center gap-3 mb-3">
-                        <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold flex-shrink-0"
-                            style="background:#1B4F9B">
-                            {{ patient.full_name.charAt(0) }}
-                        </div>
+                     <div class="flex items-center gap-3 mb-3">
+                            <!-- Photo or fallback initial -->
+                            <div class="w-12 h-12 rounded-xl flex-shrink-0 overflow-hidden border border-slate-200">
+                                <img v-if="patient.photo_url"
+                                    :src="patient.photo_url"
+                                    class="w-full h-full object-cover"
+                                    crossorigin="anonymous"
+                                />
+                                <div v-else
+                                    class="w-full h-full flex items-center justify-center text-white font-bold text-lg"
+                                    style="background:#1B4F9B">
+                                    {{ patient.full_name.charAt(0) }}
+                                </div>
+                            </div>
                         <div>
                             <p class="text-sm font-bold text-slate-800">{{ patient.full_name }}</p>
                             <p class="text-xs text-muted-foreground">{{ patient.patient_code }}</p>
@@ -947,27 +1025,196 @@ const bpStatus = computed(() => {
                 </div>
 
                 <!-- Finalized notice -->
-                <div v-if="consultation?.is_finalized" class="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+            <div v-if="consultation?.is_finalized" class="space-y-4">
+
+                <!-- Green finalized card -->
+                <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
                     <div class="flex items-center gap-3 mb-3">
-                        <CheckCircle2 class="w-8 h-8 text-emerald-500"/>
-                        <div>
+                        <CheckCircle2 class="w-8 h-8 text-emerald-500 flex-shrink-0"/>
+                        <div class="flex-1">
                             <p class="text-sm font-bold text-emerald-700">Consultation Finalized</p>
                             <p class="text-xs text-emerald-600">Results are linked to patient profile</p>
                         </div>
-                        <a v-if="isPreEmployment"
-                            :href="route('doctor.print', visit.id)"
-                            target="_blank" class="ml-auto">
+                    </div>
+                    <!-- Action buttons -->
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <a :href="route('doctor.print', visit.id)" target="_blank">
                             <Button variant="outline" class="gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-100">
                                 <Printer class="w-4 h-4"/>
-                                Print Medical Exam Report
+                                {{ isPreEmployment ? 'Medical Exam Report' : 'Print Summary' }}
                             </Button>
                         </a>
+                        <Button class="gap-2 text-white" style="background:#8B5CF6;"
+                            @click="showRxForm = !showRxForm">
+                            <Pill class="w-4 h-4"/>
+                            {{ showRxForm ? 'Cancel Rx' : 'Write Prescription' }}
+                        </Button>
                     </div>
                     <div class="border-t border-emerald-200 pt-3 mt-3 text-xs text-slate-600">
                         <p class="font-bold">{{ doctor.name }}, M.D.</p>
                         <p>Lic. No.: {{ doctor.prc_number }} · PTR No.: {{ doctor.ptr_number }}</p>
                     </div>
                 </div>
+
+                <!-- ── Existing Prescriptions ──────────────── -->
+                <div v-if="prescriptions.length > 0" class="bg-card rounded-xl border shadow-sm overflow-hidden">
+                    <div class="px-5 py-3.5 border-b flex items-center gap-2">
+                        <Pill class="w-4 h-4 text-purple-600"/>
+                        <h3 class="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                            Prescriptions ({{ prescriptions.length }})
+                        </h3>
+                    </div>
+                    <div class="divide-y">
+                        <div v-for="rx in prescriptions" :key="rx.id"
+                            class="flex items-start justify-between px-5 py-3 hover:bg-slate-50 transition-colors"
+                            :class="rx.is_controlled ? 'bg-amber-50/30' : ''">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="font-mono font-bold text-blue-700 text-xs">{{ rx.rx_number }}</span>
+                                    <span v-if="rx.is_controlled"
+                                        class="text-xs font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">
+                                        S2
+                                    </span>
+                                    <span class="text-xs text-slate-400">{{ rx.rx_date }}</span>
+                                </div>
+                                <div class="space-y-0.5">
+                                    <p v-for="item in rx.items?.slice(0, 3)" :key="item.drug"
+                                        class="text-xs text-slate-700">
+                                        <span class="font-semibold">{{ item.drug }}</span>
+                                        <span v-if="item.dosage" class="text-slate-500"> {{ item.dosage }}</span>
+                                        <span v-if="item.form" class="text-slate-400"> · {{ item.form }}</span>
+                                        <span v-if="item.frequency" class="text-slate-500 italic"> — {{ item.frequency }}</span>
+                                    </p>
+                                    <p v-if="rx.items?.length > 3" class="text-xs text-slate-400">
+                                        +{{ rx.items.length - 3 }} more
+                                    </p>
+                                </div>
+                                <p v-if="rx.notes" class="text-xs text-slate-400 italic mt-1">{{ rx.notes }}</p>
+                            </div>
+                            <div class="flex items-center gap-1.5 flex-shrink-0 ml-3">
+                                <a :href="route('doctor.prescription.print', rx.id)" target="_blank">
+                                    <Button variant="outline" size="sm" class="text-xs h-7 gap-1">
+                                        <Printer class="w-3 h-3"/> Print
+                                    </Button>
+                                </a>
+                                <Button variant="outline" size="sm"
+                                    class="text-xs h-7 gap-1 text-red-600 border-red-200 hover:bg-red-50"
+                                    @click="deleteRx(rx.id)">
+                                    <Trash2 class="w-3 h-3"/>
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Write Prescription Form ─────────────── -->
+                <div v-if="showRxForm" class="bg-card rounded-xl border-2 border-purple-200 shadow-sm overflow-hidden">
+                    <div class="px-5 py-3.5 border-b bg-purple-50 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <Pill class="w-4 h-4 text-purple-600"/>
+                            <h3 class="text-xs font-bold text-purple-700 uppercase tracking-widest">
+                                New Prescription
+                            </h3>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <!-- S2 toggle -->
+                            <label class="flex items-center gap-2 text-xs cursor-pointer">
+                                <input type="checkbox" v-model="rxForm.is_controlled"
+                                    class="w-3.5 h-3.5 accent-amber-500"/>
+                                <span :class="rxForm.is_controlled ? 'font-bold text-amber-700' : 'text-slate-500'">
+                                    S2 Controlled
+                                </span>
+                            </label>
+                            <!-- Quick drug picker -->
+                            <Button type="button" variant="outline" size="sm"
+                                class="text-xs h-7 gap-1 text-purple-700 border-purple-200"
+                                @click="showRxPicker = !showRxPicker">
+                                <Pill class="w-3 h-3"/> Quick Add
+                            </Button>
+                            <!-- Add row -->
+                            <Button type="button" variant="outline" size="sm"
+                                class="text-xs h-7 gap-1" @click="addRxItem">
+                                <Plus class="w-3 h-3"/> Row
+                            </Button>
+                        </div>
+                    </div>
+
+                    <!-- Quick picker -->
+                    <div v-if="showRxPicker" class="px-5 py-3 bg-purple-50/50 border-b">
+                        <div class="flex flex-wrap gap-1.5">
+                            <button v-for="drug in commonDrugs" :key="drug.drug"
+                                type="button" @click="addRxFromPicker(drug)"
+                                class="text-xs px-2 py-1 bg-white border border-purple-200 rounded-lg
+                                    hover:bg-purple-100 transition-colors font-semibold text-purple-800">
+                                {{ drug.drug }} {{ drug.dosage }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Medication rows -->
+                    <div class="p-4 space-y-2">
+                        <div v-for="(item, i) in rxForm.items" :key="i"
+                            class="border rounded-xl overflow-hidden bg-slate-50">
+                            <!-- Drug name row -->
+                            <div class="flex items-center gap-2 px-3 py-2 border-b bg-white">
+                                <span class="w-5 h-5 rounded flex items-center justify-center text-xs font-black text-white flex-shrink-0"
+                                    style="background:#8B5CF6">{{ i + 1 }}</span>
+                                <input v-model="item.drug" placeholder="Drug name (e.g. Amoxicillin)"
+                                    class="flex-1 text-sm font-bold bg-transparent border-0 outline-none placeholder:font-normal placeholder:text-slate-400"/>
+                                <button type="button" @click="removeRxItem(i)" :disabled="rxForm.items.length === 1"
+                                    class="text-slate-300 hover:text-red-500 disabled:opacity-30">
+                                    <Trash2 class="w-3.5 h-3.5"/>
+                                </button>
+                            </div>
+                            <!-- Fields row -->
+                            <div class="grid grid-cols-6 gap-2 p-3 text-xs">
+                                <div v-for="f in [
+                                    {key:'dosage',       ph:'500mg'},
+                                    {key:'form',         ph:'Tablet/Cap'},
+                                    {key:'quantity',     ph:'Qty'},
+                                    {key:'frequency',    ph:'3x daily'},
+                                    {key:'duration',     ph:'7 days'},
+                                ]" :key="f.key" class="space-y-0.5">
+                                    <label class="text-slate-400 capitalize">{{ f.key }}</label>
+                                    <input v-model="item[f.key]" :placeholder="f.ph"
+                                        class="w-full h-7 px-2 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-purple-400"/>
+                                </div>
+                                <div class="space-y-0.5">
+                                    <label class="text-slate-400">Sig</label>
+                                    <input v-model="item.instructions" placeholder="Instructions"
+                                        class="w-full h-7 px-2 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-purple-400"/>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Add more button -->
+                        <button type="button" @click="addRxItem"
+                            class="w-full py-2 border-2 border-dashed border-purple-200 rounded-xl text-xs text-purple-400
+                                hover:border-purple-400 hover:text-purple-600 transition-colors flex items-center justify-center gap-1.5">
+                            <Plus class="w-3 h-3"/> Add medication
+                        </button>
+                    </div>
+
+                    <!-- Notes + Save -->
+                    <div class="px-4 pb-4 space-y-3">
+                        <textarea v-model="rxForm.notes" rows="2"
+                            placeholder="Additional notes / instructions (e.g. rest for 3 days, drink plenty of fluids)..."
+                            class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white"/>
+                        <div class="flex items-center justify-end gap-2">
+                            <Button variant="outline" size="sm" class="text-xs" @click="showRxForm = false">
+                                Cancel
+                            </Button>
+                            <Button size="sm" class="text-xs gap-2 text-white" style="background:#8B5CF6;"
+                                :disabled="rxForm.processing || !rxForm.items.some(i => i.drug)"
+                                @click="saveRx">
+                                <Save class="w-3.5 h-3.5"/>
+                                {{ rxForm.processing ? 'Saving...' : 'Save Prescription' }}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
             </div>
         </div>
 

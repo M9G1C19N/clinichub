@@ -152,7 +152,7 @@ const invoiceStatusConfig = {
             <div style="min-width:200px; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
                 <div style="display:flex; justify-content:space-between; padding:5px 12px; border-bottom:1px solid #e2e8f0; font-size:10px;">
                     <span style="color:#555;">Subtotal</span>
-                    <span>₱ {{ formatAmount((invoice.total_amount ?? 0) + (invoice.discount_amount ?? 0)) }}</span>
+                    <span>₱{{ formatAmount(Number(invoice.total_amount) + Number(invoice.discount_amount ?? 0)) }}</span>
                 </div>
                 <div v-if="invoice.discount_amount > 0"
                     style="display:flex; justify-content:space-between; padding:5px 12px; border-bottom:1px solid #e2e8f0; font-size:10px;">
