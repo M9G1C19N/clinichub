@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Patient;
 use App\Models\PatientVisit;
 use App\Models\Prescription;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -62,7 +63,9 @@ class PrescriptionController extends Controller
     // ── CREATE FORM ───────────────────────────────────────
     public function create(Request $request)
     {
-        $doctor  = Auth::user();
+        $authUser = Auth::user();
+        $isNurse  = $authUser->department === 'nursing';
+
         $visit   = null;
         $patient = null;
 
@@ -83,6 +86,32 @@ class PrescriptionController extends Controller
                 ?? '';
         }
 
+        // List of doctors for nurse to pick from
+        $doctors = User::where('department', 'doctor')
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get()
+            ->map(fn($d) => [
+                'id'             => $d->id,
+                'name'           => $d->name,
+                'prc_number'     => $d->prc_number     ?? '',
+                'ptr_number'     => $d->ptr_number     ?? '',
+                's2_number'      => $d->s2_number      ?? '',
+                'specialization' => $d->specialization ?? 'General Practitioner',
+            ]);
+
+        // Default doctor: the auth user if doctor, else first in list
+        $defaultDoctor = $isNurse
+            ? ($doctors->first() ?? ['id' => null, 'name' => '', 'prc_number' => '', 'ptr_number' => '', 's2_number' => '', 'specialization' => ''])
+            : [
+                'id'             => $authUser->id,
+                'name'           => $authUser->name,
+                'prc_number'     => $authUser->prc_number     ?? '',
+                'ptr_number'     => $authUser->ptr_number     ?? '',
+                's2_number'      => $authUser->s2_number      ?? '',
+                'specialization' => $authUser->specialization ?? 'General Practitioner',
+            ];
+
         return inertia('Prescriptions/Create', [
             'visit' => $visit ? [
                 'id'               => $visit->id,
@@ -101,14 +130,9 @@ class PrescriptionController extends Controller
                 'birthdate'    => $patient->date_of_birth->format('M d, Y'),
                 'address'      => $patient->address ?? '',
             ] : null,
-            'doctor' => [
-                'id'             => $doctor->id,
-                'name'           => $doctor->name,
-                'prc_number'     => $doctor->prc_number ?? '',
-                'ptr_number'     => $doctor->ptr_number ?? '',
-                's2_number'      => $doctor->s2_number  ?? '',
-                'specialization' => $doctor->specialization ?? 'General Practitioner',
-            ],
+            'doctor'   => $defaultDoctor,
+            'doctors'  => $doctors,
+            'is_nurse' => $isNurse,
         ]);
     }
 
@@ -117,7 +141,8 @@ class PrescriptionController extends Controller
     {
         $validated = $request->validate([
             'patient_id'       => ['required', 'exists:patients,id'],
-            'patient_visit_id' => ['required', 'exists:patient_visits,id'],
+            'patient_visit_id' => ['nullable', 'exists:patient_visits,id'],
+            'doctor_id'        => ['nullable', 'exists:users,id'],
             'rx_date'          => ['required', 'date'],
             'items'            => ['required', 'array', 'min:1'],
             'items.*.drug'     => ['required', 'string', 'max:200'],
@@ -131,12 +156,14 @@ class PrescriptionController extends Controller
             'is_controlled'    => ['boolean'],
         ]);
 
-        $doctor  = Auth::user();
-        $patient = Patient::findOrFail($validated['patient_id']);
+        // Nurse may submit a selected doctor_id; otherwise use the auth user
+        $doctorId = $validated['doctor_id'] ?? Auth::id();
+        $doctor   = User::findOrFail($doctorId);
+        $patient  = Patient::findOrFail($validated['patient_id']);
 
         $rx = Prescription::create([
             'patient_id'          => $validated['patient_id'],
-            'patient_visit_id'    => $validated['patient_visit_id'],
+            'patient_visit_id'    => $validated['patient_visit_id'] ?? null,
             'doctor_id'           => $doctor->id,
             'rx_date'             => $validated['rx_date'],
             'items'               => $validated['items'],

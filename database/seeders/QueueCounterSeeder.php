@@ -31,6 +31,18 @@ class QueueCounterSeeder extends Seeder
                 'assigned_types' => ['lab_only'],
                 'is_active'      => true,
             ],
+            [
+                'counter_name'   => 'Counter 4 — Annual PE',
+                'counter_code'   => 'D',
+                'assigned_types' => ['annual_pe'],
+                'is_active'      => true,
+            ],
+            [
+                'counter_name'   => 'Counter 5 — Exit PE',
+                'counter_code'   => 'E',
+                'assigned_types' => ['exit_pe'],
+                'is_active'      => true,
+            ],
         ];
 
         foreach ($counters as $counter) {

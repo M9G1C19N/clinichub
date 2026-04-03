@@ -35,9 +35,10 @@ const navMap = {
         { label: 'Billing',        href: '/billing',          icon: Receipt },
         { label: 'Reports',        href: '/reports',          icon: BarChart3 },
         { divider: true },
-        { label: 'Service Catalog',href: '/admin/services',   icon: Settings },
-        { label: 'Users & Staff',  href: '/admin/users',      icon: UserCog },
-        { label: 'Audit Logs',     href: '/admin/audit',      icon: ShieldCheck },
+        { label: 'Service Catalog',href: '/admin/services',        icon: Settings },
+        { label: 'Users & Staff',  href: '/admin/users',          icon: UserCog },
+        { label: 'Booking Photos', href: '/admin/booking-photos', icon: Monitor },
+        { label: 'Audit Logs',     href: '/admin/audit',          icon: ShieldCheck },
     ],
 
     receptionist: [
@@ -96,6 +97,14 @@ const navMap = {
         { label: 'Drug Test Screen',href: '/queue/room/drug_test', icon: Monitor, badge: 'Room Screen' },
         { label: 'Drug Test Queue',href: '/drug-test',        icon: TestTube },
     ],
+
+    billing: [
+        { label: 'Dashboard',      href: '/dashboard',        icon: LayoutDashboard },
+        { label: 'Billing',        href: '/billing',          icon: Receipt },
+        { label: 'Reports',        href: '/billing/reports',  icon: BarChart3 },
+        { label: 'Appointments',   href: '/appointments',     icon: Calendar },
+        { label: 'Patients',       href: '/patients',         icon: Users },
+    ],
 }
 
 const navItems = computed(() => {
@@ -125,6 +134,7 @@ const roleBadgeColor = {
     lab_technician:  'bg-amber-500',
     xray_tech:       'bg-orange-500',
     drug_test_staff: 'bg-rose-500',
+    billing:         'bg-teal-600',
 }
 
 const roleLabel = {
@@ -135,6 +145,7 @@ const roleLabel = {
     lab_technician:  'Lab Tech',
     xray_tech:       'X-Ray Tech',
     drug_test_staff: 'Drug Test',
+    billing:         'Billing',
 }
 </script>
 

@@ -131,6 +131,15 @@ class RolePermissionSeeder extends Seeder
             'drug_tests.view', 'drug_tests.create', 'drug_tests.enter', 'drug_tests.release',
         ]);
 
+        // BILLING STAFF
+        $billing = Role::firstOrCreate(['name' => 'billing']);
+        $billing->syncPermissions([
+            'patients.view', 'patient_visits.view',
+            'invoices.view', 'invoices.edit',
+            'payments.view', 'payments.create',
+            'reports.view',
+        ]);
+
         $this->command->info('✅ Roles and permissions seeded.');
     }
 }

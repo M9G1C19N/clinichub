@@ -6,17 +6,20 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Pill, Plus, Trash2, Save, Search, User, AlertTriangle } from 'lucide-vue-next'
+import { Pill, Plus, Trash2, Save, Search, User, AlertTriangle, Stethoscope } from 'lucide-vue-next'
 
 const props = defineProps({
-    visit:   Object,
-    patient: Object,
-    doctor:  Object,
+    visit:    Object,
+    patient:  Object,
+    doctor:   Object,
+    doctors:  Array,
+    is_nurse: Boolean,
 })
 
 const form = useForm({
-    patient_id:       props.patient?.id ?? '',
-    patient_visit_id: props.visit?.id   ?? '',
+    patient_id:       props.patient?.id  ?? '',
+    patient_visit_id: props.visit?.id    ?? '',
+    doctor_id:        props.doctor?.id   ?? '',
     rx_date:          new Date().toISOString().split('T')[0],
     items: [
         { drug: '', dosage: '', form: '', quantity: '', frequency: '', duration: '', instructions: '' },
@@ -24,6 +27,15 @@ const form = useForm({
     notes:         props.visit?.diagnosis_hint ?? '',
     is_controlled: false,
 })
+
+// Selected doctor object (reactive, for display)
+const selectedDoctor = ref(props.doctor ?? null)
+
+function selectDoctor(id) {
+    const d = props.doctors?.find(d => d.id === Number(id))
+    if (d) selectedDoctor.value = d
+    form.doctor_id = id
+}
 
 const patientSearch   = ref('')
 const patientResults  = ref([])
@@ -95,13 +107,19 @@ function submit() { form.post(route('prescriptions.store')) }
                     <div>
                         <h1 class="text-xl font-bold text-slate-800">Write Prescription</h1>
                         <p class="text-xs text-slate-400 mt-0.5">
-                            Dr. {{ doctor.name }}
-                            <span v-if="doctor.prc_number">· PRC {{ doctor.prc_number }}</span>
-                            <span v-if="doctor.s2_number" class="text-amber-600 font-semibold">· S2 {{ doctor.s2_number }}</span>
+                            <template v-if="is_nurse">
+                                Nurse: {{ doctor.name }}
+                                <span v-if="selectedDoctor?.name" class="text-blue-600 font-semibold ml-1">· Rx by Dr. {{ selectedDoctor.name }}</span>
+                            </template>
+                            <template v-else>
+                                Dr. {{ doctor.name }}
+                                <span v-if="doctor.prc_number">· PRC {{ doctor.prc_number }}</span>
+                                <span v-if="doctor.s2_number" class="text-amber-600 font-semibold">· S2 {{ doctor.s2_number }}</span>
+                            </template>
                         </p>
                     </div>
                 </div>
-                <Button @click="submit" :disabled="form.processing || !form.patient_id || !form.patient_visit_id"
+                <Button @click="submit" :disabled="form.processing || !form.patient_id || (is_nurse && !form.doctor_id)"
                     class="gap-2 text-white" style="background:#1B4F9B;">
                     <Save class="w-4 h-4"/>
                     {{ form.processing ? 'Saving...' : 'Save & Print' }}
@@ -152,6 +170,29 @@ function submit() { form.post(route('prescriptions.store')) }
                             Best to write Rx from the Consult page — visit context is required.
                         </div>
                     </div>
+                </div>
+
+                <!-- Doctor selector — only shown to nurses -->
+                <div v-if="is_nurse" class="bg-card rounded-xl border shadow-sm p-4">
+                    <p class="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                        <Stethoscope class="w-3.5 h-3.5"/> Prescribing Doctor
+                    </p>
+                    <select v-model="form.doctor_id" @change="selectDoctor(form.doctor_id)"
+                        class="w-full h-9 px-3 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                        <option value="" disabled>— Select doctor —</option>
+                        <option v-for="d in doctors" :key="d.id" :value="d.id">
+                            {{ d.name }}
+                        </option>
+                    </select>
+                    <div v-if="selectedDoctor?.prc_number" class="mt-2 text-xs text-slate-500 bg-slate-50 px-3 py-2 rounded-lg border space-y-0.5">
+                        <p>PRC: <strong>{{ selectedDoctor.prc_number }}</strong></p>
+                        <p v-if="selectedDoctor.ptr_number">PTR: <strong>{{ selectedDoctor.ptr_number }}</strong></p>
+                        <p v-if="selectedDoctor.s2_number" class="text-amber-600">S2: <strong>{{ selectedDoctor.s2_number }}</strong></p>
+                        <p>{{ selectedDoctor.specialization }}</p>
+                    </div>
+                    <p v-if="!form.doctor_id" class="mt-2 text-xs text-red-500 flex items-center gap-1">
+                        <AlertTriangle class="w-3 h-3"/> Please select a doctor.
+                    </p>
                 </div>
 
                 <div class="bg-card rounded-xl border shadow-sm p-4 space-y-3">
@@ -275,7 +316,7 @@ function submit() { form.post(route('prescriptions.store')) }
                             <Button variant="outline">Cancel</Button>
                         </Link>
                         <Button @click="submit"
-                            :disabled="form.processing || !form.patient_id || !form.patient_visit_id"
+                            :disabled="form.processing || !form.patient_id || (is_nurse && !form.doctor_id)"
                             class="gap-2 text-white" style="background:#1B4F9B;">
                             <Save class="w-4 h-4"/>
                             {{ form.processing ? 'Saving...' : 'Save & Print' }}

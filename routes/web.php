@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\QueueController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\AppointmentController;
 use Illuminate\Support\Facades\Route;
 
 // ── Public Routes ────────────────────────────────────
@@ -16,6 +17,10 @@ Route::middleware('guest')->group(function () {
 
 // TV Display Board — public kiosk, no auth needed
 Route::get('/queue-display', [QueueController::class, 'display'])->name('queue.display');
+
+// Online Appointment Booking — public, no auth needed
+Route::get('/book-appointment',  [AppointmentController::class, 'bookingForm'])->name('appointments.book');
+Route::post('/book-appointment', [AppointmentController::class, 'bookingStore'])->name('appointments.book.store');
 
 // ── Authenticated Routes ─────────────────────────────
 Route::middleware('auth')->group(function () {
@@ -80,13 +85,18 @@ Route::middleware('auth')->group(function () {
         });
 
     // ── Laboratory ────────────────────────────────────
-    Route::middleware('role:admin|lab_technician|doctor')
+    Route::middleware('role:admin|lab_technician|doctor|nurse')
         ->prefix('laboratory')->name('laboratory.')->group(function () {
             Route::get('/',               [\App\Http\Controllers\LaboratoryController::class, 'index'])->name('index');
             Route::get('/enter/{visit}',  [\App\Http\Controllers\LaboratoryController::class, 'enter'])->name('enter');
             Route::post('/enter/{visit}', [\App\Http\Controllers\LaboratoryController::class, 'saveResults'])->name('save');
             Route::get('/print/{visit}',  [\App\Http\Controllers\LaboratoryController::class, 'print'])->name('print'); // ← INSIDE prefix now
         });
+
+    // ── Reports ───────────────────────────────────────
+    Route::middleware('role:admin')
+        ->get('/reports', [\App\Http\Controllers\ReportController::class, 'index'])
+        ->name('reports');
 
     // ── Admin ─────────────────────────────────────────
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
@@ -98,6 +108,14 @@ Route::middleware('auth')->group(function () {
         Route::patch('/services/{service}/toggle-active', [\App\Http\Controllers\Admin\ServiceCatalogController::class, 'toggleActive'])->name('services.toggle-active');
 
         Route::get('/audit', fn() => inertia('Admin/Audit'))->name('audit');
+
+        // Booking page photo management
+        Route::get('/booking-photos',                      [\App\Http\Controllers\Admin\BookingPhotoController::class, 'index'])->name('booking-photos.index');
+        Route::post('/booking-photos',                     [\App\Http\Controllers\Admin\BookingPhotoController::class, 'store'])->name('booking-photos.store');
+        Route::patch('/booking-photos/{photo}',            [\App\Http\Controllers\Admin\BookingPhotoController::class, 'update'])->name('booking-photos.update');
+        Route::patch('/booking-photos/{photo}/toggle',     [\App\Http\Controllers\Admin\BookingPhotoController::class, 'toggleActive'])->name('booking-photos.toggle');
+        Route::post('/booking-photos/reorder',             [\App\Http\Controllers\Admin\BookingPhotoController::class, 'reorder'])->name('booking-photos.reorder');
+        Route::delete('/booking-photos/{photo}',           [\App\Http\Controllers\Admin\BookingPhotoController::class, 'destroy'])->name('booking-photos.destroy');
     });
 
     // ── X-Ray & Ultrasound ────────────────────────────
@@ -119,13 +137,34 @@ Route::middleware('auth')->group(function () {
         });
 
         // ── Prescriptions ─────────────────────────────────────
-Route::middleware('role:admin|doctor|nurse')
-    ->prefix('prescriptions')->name('prescriptions.')->group(function () {
-        Route::get('/',                    [\App\Http\Controllers\PrescriptionController::class, 'index'])->name('index');
-        Route::get('/create',              [\App\Http\Controllers\PrescriptionController::class, 'create'])->name('create');
-        Route::post('/',                   [\App\Http\Controllers\PrescriptionController::class, 'store'])->name('store');
-        Route::get('/print/{prescription}',[\App\Http\Controllers\PrescriptionController::class, 'print'])->name('print');
-        Route::delete('/{prescription}',   [\App\Http\Controllers\PrescriptionController::class, 'destroy'])->name('destroy');
-    });
+    Route::middleware('role:admin|doctor|nurse')
+        ->prefix('prescriptions')->name('prescriptions.')->group(function () {
+            Route::get('/',                    [\App\Http\Controllers\PrescriptionController::class, 'index'])->name('index');
+            Route::get('/create',              [\App\Http\Controllers\PrescriptionController::class, 'create'])->name('create');
+            Route::post('/',                   [\App\Http\Controllers\PrescriptionController::class, 'store'])->name('store');
+            Route::get('/print/{prescription}',[\App\Http\Controllers\PrescriptionController::class, 'print'])->name('print');
+            Route::delete('/{prescription}',   [\App\Http\Controllers\PrescriptionController::class, 'destroy'])->name('destroy');
+        });
+        // ── Billing ───────────────────────────────────────────
+    Route::middleware('role:admin|receptionist|billing')
+        ->prefix('billing')->name('billing.')->group(function () {
+            Route::get('/',                          [\App\Http\Controllers\BillingController::class, 'index'])->name('index');
+            Route::get('/reports',                   [\App\Http\Controllers\BillingReportController::class, 'index'])->name('reports');
+            Route::get('/invoice/{invoice}',         [\App\Http\Controllers\BillingController::class, 'show'])->name('show');
+            Route::post('/invoice/{invoice}/payment',[\App\Http\Controllers\BillingController::class, 'recordPayment'])->name('payment');
+            Route::post('/invoice/{invoice}/discount',[\App\Http\Controllers\BillingController::class, 'applyDiscount'])->name('discount');
+            Route::post('/invoice/{invoice}/void',   [\App\Http\Controllers\BillingController::class, 'voidInvoice'])->name('void');
+        });
+
+    // ── Appointments (Staff Management) ──────────────────
+    Route::middleware('role:admin|receptionist|billing|doctor|nurse')
+        ->prefix('appointments')->name('appointments.')->group(function () {
+            Route::get('/',                                  [AppointmentController::class, 'index'])->name('index');
+            Route::post('/{appointment}/confirm',            [AppointmentController::class, 'confirm'])->name('confirm');
+            Route::post('/{appointment}/cancel',             [AppointmentController::class, 'cancel'])->name('cancel');
+            Route::post('/{appointment}/complete',           [AppointmentController::class, 'complete'])->name('complete');
+            Route::post('/{appointment}/no-show',            [AppointmentController::class, 'noShow'])->name('no-show');
+            Route::post('/{appointment}/notes',              [AppointmentController::class, 'updateNotes'])->name('notes');
+        });
 
 });

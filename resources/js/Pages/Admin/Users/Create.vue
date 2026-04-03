@@ -38,6 +38,7 @@ const roleDefaults = {
     lab_technician:  { department: 'laboratory' },
     xray_tech:       { department: 'xray_utz' },
     drug_test_staff: { department: 'drug_test' },
+    billing:         { department: 'billing' },
 }
 
 function onRoleChange(val) {
@@ -60,6 +61,7 @@ const roleLabel = {
     lab_technician:  'Laboratory Technician',
     xray_tech:       'X-Ray / UTZ Technician',
     drug_test_staff: 'Drug Test Staff',
+    billing:         'Billing Staff',
 }
 
 const departments = [
@@ -70,6 +72,7 @@ const departments = [
     { value: 'nursing',   label: 'Nursing' },
     { value: 'admin',     label: 'Admin' },
     { value: 'doctor',    label: 'Doctor' },
+    { value: 'billing',   label: 'Billing' },
 ]
 
 function togglePermission(perm) {

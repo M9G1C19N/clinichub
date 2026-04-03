@@ -22,6 +22,15 @@ const props = defineProps({
     patient: Object,
 })
 
+const visitTypeOptions = [
+    { value: 'opd',            label: 'OPD',            desc: 'Out-patient',       color: '#1d4ed8' },
+    { value: 'pre_employment', label: 'Pre-Employment', desc: 'Company referral',  color: '#7c3aed' },
+    { value: 'annual_pe',      label: 'Annual PE',      desc: 'Yearly check-up',   color: '#15803d' },
+    { value: 'exit_pe',        label: 'Exit PE',        desc: 'End of employment', color: '#c2410c' },
+    { value: 'follow_up',      label: 'Follow-up',      desc: 'Return visit',      color: '#b45309' },
+    { value: 'lab_only',       label: 'Lab Only',       desc: 'Lab requests only', color: '#0f766e' },
+]
+
 const form = useForm({
     first_name:               props.patient.first_name,
     last_name:                props.patient.last_name,
@@ -234,35 +243,32 @@ function submit() {
 
                     <!-- Visit Type -->
                     <div class="bg-card rounded-xl border shadow-sm p-4">
-                        <p class="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">Visit Type</p>
-                        <div class="space-y-2">
-                            <button type="button" @click="form.visit_type_default = 'opd'"
-                                :class="['w-full flex items-center gap-2.5 p-3 rounded-lg border-2 transition-all text-left',
-                                    form.visit_type_default === 'opd'
-                                        ? 'border-blue-500 bg-blue-50'
-                                        : 'border-border hover:border-slate-300 hover:bg-muted/50']">
-                                <div :class="['w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0',
-                                    form.visit_type_default === 'opd' ? 'border-blue-500' : 'border-muted-foreground/30']">
-                                    <div v-if="form.visit_type_default === 'opd'" class="w-2 h-2 rounded-full bg-blue-500"/>
+                        <p class="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">Default Visit Type</p>
+                        <div class="space-y-1.5">
+                            <button v-for="vt in visitTypeOptions" :key="vt.value"
+                                type="button"
+                                @click="form.visit_type_default = vt.value"
+                                :class="['w-full flex items-center gap-2.5 p-2.5 rounded-lg border-2 transition-all text-left',
+                                    form.visit_type_default === vt.value
+                                        ? 'border-current'
+                                        : 'border-border hover:border-slate-300 hover:bg-muted/50']"
+                                :style="form.visit_type_default === vt.value
+                                    ? { borderColor: vt.color, background: vt.color + '12' }
+                                    : {}">
+                                <div class="w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all"
+                                    :style="form.visit_type_default === vt.value
+                                        ? { borderColor: vt.color }
+                                        : { borderColor: '#cbd5e1' }">
+                                    <div v-if="form.visit_type_default === vt.value"
+                                        class="w-2 h-2 rounded-full"
+                                        :style="{ background: vt.color }"/>
                                 </div>
                                 <div>
-                                    <p :class="['text-xs font-bold', form.visit_type_default === 'opd' ? 'text-blue-700' : 'text-foreground']">OPD</p>
-                                    <p class="text-xs text-muted-foreground">Out-patient</p>
-                                </div>
-                            </button>
-
-                            <button type="button" @click="form.visit_type_default = 'pre_employment'"
-                                :class="['w-full flex items-center gap-2.5 p-3 rounded-lg border-2 transition-all text-left',
-                                    form.visit_type_default === 'pre_employment'
-                                        ? 'border-purple-500 bg-purple-50'
-                                        : 'border-border hover:border-slate-300 hover:bg-muted/50']">
-                                <div :class="['w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0',
-                                    form.visit_type_default === 'pre_employment' ? 'border-purple-500' : 'border-muted-foreground/30']">
-                                    <div v-if="form.visit_type_default === 'pre_employment'" class="w-2 h-2 rounded-full bg-purple-500"/>
-                                </div>
-                                <div>
-                                    <p :class="['text-xs font-bold', form.visit_type_default === 'pre_employment' ? 'text-purple-700' : 'text-foreground']">Pre-Employment</p>
-                                    <p class="text-xs text-muted-foreground">Company referral</p>
+                                    <p class="text-xs font-bold"
+                                        :style="form.visit_type_default === vt.value ? { color: vt.color } : {}">
+                                        {{ vt.label }}
+                                    </p>
+                                    <p class="text-xs text-muted-foreground">{{ vt.desc }}</p>
                                 </div>
                             </button>
                         </div>
@@ -295,11 +301,13 @@ function submit() {
                             </div>
                             <div class="flex justify-between items-center gap-2">
                                 <span class="text-xs text-muted-foreground">Type</span>
-                                <Badge :class="form.visit_type_default === 'pre_employment'
-                                    ? 'bg-purple-100 text-purple-700 hover:bg-purple-100'
-                                    : 'bg-blue-100 text-blue-700 hover:bg-blue-100'" class="text-xs">
-                                    {{ form.visit_type_default === 'pre_employment' ? 'Pre-Emp' : 'OPD' }}
-                                </Badge>
+                                <span class="text-xs font-semibold px-2 py-0.5 rounded"
+                                    :style="{
+                                        background: visitTypeOptions.find(v => v.value === form.visit_type_default)?.color + '20',
+                                        color: visitTypeOptions.find(v => v.value === form.visit_type_default)?.color,
+                                    }">
+                                    {{ visitTypeOptions.find(v => v.value === form.visit_type_default)?.label ?? form.visit_type_default }}
+                                </span>
                             </div>
                         </div>
                     </div>

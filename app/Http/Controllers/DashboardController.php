@@ -32,6 +32,7 @@ class DashboardController extends Controller
             'lab_technician'  => 'Dashboard/Laboratory',
             'xray_tech'       => 'Dashboard/XRay',
             'drug_test_staff' => 'Dashboard/DrugTest',
+            'billing'         => 'Dashboard/Billing',
         ];
 
         $component = $dashboardMap[$role] ?? 'Dashboard/Admin';
@@ -50,6 +51,7 @@ class DashboardController extends Controller
             'lab_technician'  => $this->labData(),
             'xray_tech'       => $this->xrayData(),
             'drug_test_staff' => $this->drugTestData(),
+            'billing'         => $this->billingData(),
             default           => $this->adminData(),
         };
     }
@@ -645,6 +647,84 @@ class DashboardController extends Controller
             'resultDistribution'  => $resultDistribution,
             'tempInRangeCount'    => $tempInRange,
             'totalSpecimens'      => $totalSpecimens,
+        ];
+    }
+
+    // ── BILLING ───────────────────────────────────────────────────────────
+
+    private function billingData(): array
+    {
+        $today = today();
+
+        $totalToday     = Payment::whereDate('created_at', $today)->sum('amount');
+        $billedToday    = Invoice::whereDate('created_at', $today)->sum('total_amount');
+        $unpaidCount    = Invoice::where('status', 'unpaid')->count();
+        $unpaidBalance  = Invoice::where('status', 'unpaid')->sum('balance');
+        $partialCount   = Invoice::where('status', 'partial')->count();
+        $partialBalance = Invoice::where('status', 'partial')->sum('balance');
+        $paidToday      = Invoice::where('status', 'paid')->whereDate('paid_at', $today)->count();
+
+        // Revenue last 7 days
+        $revenueTrend = Payment::selectRaw('DATE(created_at) as date, SUM(amount) as total')
+            ->whereBetween('created_at', [now()->subDays(6)->startOfDay(), now()->endOfDay()])
+            ->groupBy('date')->orderBy('date')
+            ->get()
+            ->map(fn($r) => [
+                'date'  => \Carbon\Carbon::parse($r->date)->format('M d'),
+                'total' => (float) $r->total,
+            ]);
+
+        // By payment method today
+        $byMethod = Payment::whereDate('created_at', $today)
+            ->selectRaw('method, SUM(amount) as total')
+            ->groupBy('method')
+            ->pluck('total', 'method')
+            ->toArray();
+
+        // Recent unpaid/partial invoices
+        $pendingInvoices = Invoice::with('patient')
+            ->whereIn('status', ['unpaid', 'partial'])
+            ->latest()->limit(10)
+            ->get()
+            ->map(fn($inv) => [
+                'id'             => $inv->id,
+                'invoice_number' => $inv->invoice_number,
+                'patient_name'   => $inv->patient->full_name,
+                'patient_code'   => $inv->patient->patient_code,
+                'total_amount'   => (float) $inv->total_amount,
+                'balance'        => (float) $inv->balance,
+                'status'         => $inv->status,
+                'created_at'     => $inv->created_at->format('M d, Y'),
+            ]);
+
+        // Recent payments
+        $recentPayments = Payment::with(['invoice.patient'])
+            ->whereDate('created_at', $today)
+            ->latest()->limit(10)
+            ->get()
+            ->map(fn($p) => [
+                'id'             => $p->id,
+                'amount'         => (float) $p->amount,
+                'method'         => $p->method,
+                'invoice_number' => $p->invoice->invoice_number,
+                'patient_name'   => $p->invoice->patient->full_name,
+                'created_at'     => $p->created_at->format('h:i A'),
+            ]);
+
+        return [
+            'stats' => [
+                'collected_today'  => (float) $totalToday,
+                'billed_today'     => (float) $billedToday,
+                'paid_today'       => $paidToday,
+                'unpaid_count'     => $unpaidCount,
+                'unpaid_balance'   => (float) $unpaidBalance,
+                'partial_count'    => $partialCount,
+                'partial_balance'  => (float) $partialBalance,
+            ],
+            'revenueTrend'    => $revenueTrend,
+            'byMethod'        => $byMethod,
+            'pendingInvoices' => $pendingInvoices,
+            'recentPayments'  => $recentPayments,
         ];
     }
 }
