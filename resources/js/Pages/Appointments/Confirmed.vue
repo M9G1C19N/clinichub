@@ -104,7 +104,7 @@ const props = defineProps({
                             class="flex-1 text-center text-sm font-bold py-2.5 rounded-xl border-2 border-slate-200 text-slate-600 hover:border-slate-300 transition-colors">
                             Book Another
                         </a>
-                        <a href="/"
+                        <a href="/book-appointment"
                             class="flex-1 text-center text-sm font-bold py-2.5 rounded-xl text-white transition-colors hover:opacity-90"
                             style="background:#1B4F9B">
                             Back to Home

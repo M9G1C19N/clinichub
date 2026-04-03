@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Consultation;
+use App\Models\Esignature;
 use App\Models\PatientVisit;
 use App\Models\PatientVital;
 use App\Models\QueueRoomAssignment;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Prescription;
@@ -355,16 +357,34 @@ class DoctorController extends Controller
             'current_medications' => $existing->current_medications,
             'family_history'      => $existing->family_history,
             // Common
-            'essentially_normal' => $existing->essentially_normal,
-            'doctor_notes'       => $existing->doctor_notes,
-            'follow_up_date'     => $existing->follow_up_date?->format('Y-m-d'),
-            'is_finalized'       => $existing->is_finalized,
+            'essentially_normal'    => $existing->essentially_normal,
+            'doctor_notes'          => $existing->doctor_notes,
+            'follow_up_date'        => $existing->follow_up_date?->format('Y-m-d'),
+            'is_finalized'          => $existing->is_finalized,
+            // ECG
+            'ecg_impression'        => $existing->ecg_impression,
+            'ecg_findings'          => $existing->ecg_findings,
+            'ecg_noted_by_user_id'  => $existing->ecg_noted_by_user_id,
+            'ecg_noted_by_name'     => $existing->ecg_noted_by_name,
+            'ecg_noted_by_license'  => $existing->ecg_noted_by_license,
+            'ecg_noted_by_signature'=> $existing->ecg_noted_by_signature,
         ] : null,
             'doctor' => [
                 'name'       => $doctor->name,
                 'prc_number' => $doctor->prc_number ?? '',
                 'ptr_number' => $doctor->ptr_number ?? '',
             ],
+            // Users with e-signatures for ECG / CXR "Noted by" dropdown
+            'signatories' => Esignature::with('user')
+                ->where('is_active', true)
+                ->get()
+                ->map(fn($sig) => [
+                    'user_id'        => $sig->user_id,
+                    'name'           => $sig->user?->name ?? '',
+                    'title'          => $sig->title ?? '',
+                    'license_number' => $sig->license_number ?? '',
+                    'signature_url'  => $sig->signature_url,
+                ]),
         ]);
     }
 
@@ -404,26 +424,47 @@ class DoctorController extends Controller
             'allergies'           => ['nullable', 'string'],
             'current_medications' => ['nullable', 'string'],
             'family_history'      => ['nullable', 'string'],
-            'doctor_notes'        => ['nullable', 'string'],
-            'is_finalized'        => ['boolean'],
-            'essentially_normal'  => ['boolean'],
-            'follow_up_date'      => ['nullable', 'date'],
+            'doctor_notes'           => ['nullable', 'string'],
+            'is_finalized'           => ['boolean'],
+            'essentially_normal'     => ['boolean'],
+            'follow_up_date'         => ['nullable', 'date'],
+            // ECG
+            'ecg_impression'         => ['nullable', 'string'],
+            'ecg_findings'           => ['nullable', 'string'],
+            'ecg_noted_by_user_id'   => ['nullable', 'integer', 'exists:users,id'],
         ];
 
         $validated = $request->validate($rules);
+
+        // Resolve ECG signatory details for denormalized storage
+        $ecgExtra = [];
+        if (!empty($validated['ecg_noted_by_user_id'])) {
+            $ecgSig = Esignature::with('user')
+                ->where('user_id', $validated['ecg_noted_by_user_id'])
+                ->where('is_active', true)
+                ->first();
+            if ($ecgSig) {
+                $ecgExtra = [
+                    'ecg_noted_by_name'      => $ecgSig->user?->name,
+                    'ecg_noted_by_license'   => $ecgSig->license_number,
+                    'ecg_noted_by_signature' => $ecgSig->signature_path,
+                ];
+            }
+        }
 
         $consultation = Consultation::updateOrCreate(
             ['patient_visit_id' => $visit->id],
             [
                 ...$validated,
+                ...$ecgExtra,
                 'patient_id'       => $visit->patient_id,
                 'visit_type'       => $visit->visit_type,
                 'employer_company' => $visit->employer_company,
                 'doctor_id'        => Auth::id(),
                 'finalized_at'     => $validated['is_finalized'] ? now() : null,
-                'soap_assessment'   => $validated['essentially_normal']
-                ? '***ESSENTIALLY NORMAL FINDINGS***'
-                : ($validated['soap_assessment'] ?? null),
+                'soap_assessment'  => $validated['essentially_normal']
+                    ? '***ESSENTIALLY NORMAL FINDINGS***'
+                    : ($validated['soap_assessment'] ?? null),
             ]
         );
 
@@ -552,25 +593,40 @@ class DoctorController extends Controller
                 'family_history'       => $consultation->family_history,
                 'doctor_notes'         => $consultation->doctor_notes,
                 'finalized_at'         => $consultation->finalized_at?->format('M d, Y'),
-                'doctor_name'          => $consultation->doctor?->name ?? Auth::user()->name,
-                'doctor_prc'           => $consultation->doctor?->prc_number ?? '',
-                'doctor_ptr'           => $consultation->doctor?->ptr_number ?? '',
-                'doctor_signature'     => $this->sigUrl($consultation->doctor?->esignature?->signature_path),
+                'doctor_name'            => $consultation->doctor?->name ?? Auth::user()->name,
+                'doctor_prc'             => $consultation->doctor?->prc_number ?? '',
+                'doctor_ptr'             => $consultation->doctor?->ptr_number ?? '',
+                'doctor_signature'       => $this->sigUrl($consultation->doctor?->esignature?->signature_path),
+                // ECG
+                'ecg_impression'         => $consultation->ecg_impression,
+                'ecg_findings'           => $consultation->ecg_findings,
+                'ecg_noted_by_name'      => $consultation->ecg_noted_by_name,
+                'ecg_noted_by_license'   => $consultation->ecg_noted_by_license,
+                'ecg_noted_by_signature' => $this->sigUrl($consultation->ecg_noted_by_signature),
             ] : null,
             'labResults' => $labResultMap,
             'labRequest' => $labRequest ? [
-                'status'           => $labRequest->status,
-                'examined_by_name' => $labRequest->examined_by_name,
-                'noted_by_name'    => $labRequest->noted_by_name,
+                'status'               => $labRequest->status,
+                'examined_by_name'     => $labRequest->examined_by_name,
+                'examined_by_license'  => $labRequest->examined_by_license,
+                'examined_by_signature'=> $this->sigUrl($labRequest->examined_by_signature),
+                'noted_by_name'        => $labRequest->noted_by_name,
+                'noted_by_license'     => $labRequest->noted_by_license,
+                'noted_by_signature'   => $this->sigUrl($labRequest->noted_by_signature),
             ] : null,
+            // CXR fields remapped to match what the print template expects
             'imaging' => $imaging ? [
-                'imaging_type_label'    => $imaging->imaging_type_label,
-                'radiographic_findings' => $imaging->radiographic_findings,
-                'impression'            => $imaging->impression,
-                'is_provisional'        => $imaging->is_provisional,
-                'request_number'        => $imaging->request_number,
-                'rad_tech_name'         => $imaging->rad_tech_name,
-                'radiologist_name'      => $imaging->radiologist_name,
+                'request_number'          => $imaging->request_number,
+                'imaging_type_label'      => $imaging->imaging_type_label,
+                'radiographic_findings'   => $imaging->radiographic_findings,
+                'impression'              => $imaging->impression,
+                'is_provisional'          => $imaging->is_provisional,
+                'rad_tech_name'           => $imaging->rad_tech_name,
+                'radiologist_name'        => $imaging->radiologist_name,
+                'radiologist_license'     => $imaging->radiologist_license,
+                'radiologist_signature'   => $imaging->radiologist_signature
+                    ? $this->sigUrl($imaging->radiologist_signature)
+                    : null,
             ] : null,
             'drugTest' => $drugTest ? [
                 'result'      => $drugTest->result,

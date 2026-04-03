@@ -88,7 +88,7 @@ defineProps({
 
             <div style="color:#555; padding-top:3px;">Address/<br/>Company :</div>
             <div style="border-bottom:1px solid #ccc; padding-bottom:2px; font-weight:700;">
-                {{ visit.employer_company ?? patient.address ?? '—' }}
+                {{ [patient.address, visit.employer_company].filter(Boolean).join(' / ') }}
             </div>
             <div style="color:#555; padding-top:3px;">Req. Physician :</div>
             <div style="border-bottom:1px solid #ccc; padding-bottom:2px; font-weight:700;">

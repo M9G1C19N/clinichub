@@ -29,6 +29,7 @@ const props = defineProps({
     imagingResult:  Object,
     drugTestResult: Object,
     prescriptions:  { type: Array, default: () => [] },
+    signatories:    { type: Array, default: () => [] },
 })
 
 const isPreEmployment = IS_PE_TYPE(props.visit.visit_type)
@@ -74,6 +75,11 @@ const form = useForm({
     is_finalized:       false,
     essentially_normal: props.consultation?.essentially_normal ?? false,
     follow_up_date:     props.consultation?.follow_up_date     ?? '',
+
+    // ECG (only for pre-employment visits, optional)
+    ecg_impression:       props.consultation?.ecg_impression       ?? '',
+    ecg_findings:         props.consultation?.ecg_findings         ?? '',
+    ecg_noted_by_user_id: props.consultation?.ecg_noted_by_user_id ?? null,
 })
 
 // "Fill Normal" for PE — fills all exam fields with "Normal"
@@ -857,6 +863,71 @@ const bpStatus = computed(() => {
                     </div>
 
                 </template>
+
+                <!-- ─── ECG (Pre-Employment only, optional) ─── -->
+                <div v-if="isPreEmployment" class="bg-card rounded-xl border border-blue-100 shadow-sm">
+                    <div class="px-5 py-3.5 border-b border-blue-100 flex items-center justify-between" style="background:#EFF6FF">
+                        <div class="flex items-center gap-2">
+                            <Activity class="w-4 h-4 text-blue-600"/>
+                            <h3 class="text-xs font-bold text-blue-700 uppercase tracking-widest">
+                                Electrocardiography (ECG)
+                            </h3>
+                            <span class="text-xs text-blue-500 font-medium">(Optional)</span>
+                        </div>
+                        <span class="text-xs text-blue-500 bg-blue-100 px-2 py-0.5 rounded-full font-semibold">
+                            Required for HTN / Heart Disease
+                        </span>
+                    </div>
+                    <div class="p-5 space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="space-y-1.5">
+                                <Label class="text-xs">ECG Impression</Label>
+                                <Input v-model="form.ecg_impression"
+                                    placeholder="e.g. Normal Sinus Rhythm, Sinus Tachycardia..."
+                                    class="h-8 text-xs"
+                                    :disabled="consultation?.is_finalized"/>
+                            </div>
+                            <div class="space-y-1.5">
+                                <Label class="text-xs">Noted By</Label>
+                                <Select
+                                    :model-value="form.ecg_noted_by_user_id?.toString() ?? '__none__'"
+                                    :disabled="consultation?.is_finalized"
+                                    @update:model-value="form.ecg_noted_by_user_id = ($event && $event !== '__none__') ? Number($event) : null">
+                                    <SelectTrigger class="h-8 text-xs">
+                                        <SelectValue placeholder="— Select signatory —"/>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="__none__">— None —</SelectItem>
+                                        <SelectItem
+                                            v-for="sig in signatories"
+                                            :key="sig.user_id"
+                                            :value="sig.user_id.toString()">
+                                            {{ sig.name }}{{ sig.title ? ' — ' + sig.title : '' }}
+                                            {{ sig.license_number ? ' (Lic. ' + sig.license_number + ')' : '' }}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <!-- E-signature preview -->
+                                <div v-if="form.ecg_noted_by_user_id" class="mt-1.5">
+                                    <template v-if="signatories.find(s => s.user_id === form.ecg_noted_by_user_id)?.signature_url">
+                                        <img
+                                            :src="signatories.find(s => s.user_id === form.ecg_noted_by_user_id).signature_url"
+                                            class="h-10 object-contain border border-slate-200 rounded-lg p-1.5 bg-white"
+                                            alt="E-Signature"/>
+                                    </template>
+                                    <span v-else class="text-xs text-slate-400 italic">No e-signature on file for this user</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="space-y-1.5">
+                            <Label class="text-xs">ECG Findings / Details</Label>
+                            <Textarea v-model="form.ecg_findings" :rows="3"
+                                placeholder="Additional ECG findings and interpretations (optional)..."
+                                class="resize-none text-xs"
+                                :disabled="consultation?.is_finalized"/>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- ─── Examination Details ─── -->
                     <div class="bg-card rounded-xl border shadow-sm">

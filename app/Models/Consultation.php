@@ -24,6 +24,10 @@ class Consultation extends Model
         // Medical History
         'past_illnesses', 'surgical_history', 'allergies',
         'current_medications', 'family_history',
+        // ECG (stored in consultation, no separate module)
+        'ecg_impression', 'ecg_findings',
+        'ecg_noted_by_user_id', 'ecg_noted_by_name',
+        'ecg_noted_by_license', 'ecg_noted_by_signature',
         // Common
         'doctor_notes', 'is_finalized', 'finalized_at',
         'doctor_id', 'consultation_date', 'follow_up_date',
