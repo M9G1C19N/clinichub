@@ -112,7 +112,12 @@ function triggerPrint() {
 
                 <!-- DOCTOR SIGNATURE -->
                 <div style="position:absolute;bottom:8mm;right:9mm;text-align:center;">
-                    <div style="min-height:22px;"></div>
+                    <div style="min-height:22px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:2px;">
+                        <img v-if="doctor.signature_url"
+                            :src="doctor.signature_url"
+                            style="max-height:40px;max-width:150px;object-fit:contain;"
+                            alt="Signature"/>
+                    </div>
                     <div style="border-top:1px solid #333;min-width:170px;padding-top:3px;">
                         <div style="font-weight:900;font-size:10px;">{{ doctor.name?.toUpperCase() }}, MD</div>
                         <div v-if="doctor.specialization" style="font-size:7.5px;color:#555;">{{ doctor.specialization }}</div>

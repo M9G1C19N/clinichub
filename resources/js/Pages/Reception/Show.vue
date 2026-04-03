@@ -1,6 +1,6 @@
 <script setup>
-import { ref } from 'vue'
-import { Link, router, useForm } from '@inertiajs/vue3'
+import { ref, onMounted } from 'vue'
+import { Link, router, useForm, usePage } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,8 +14,11 @@ import {
 } from '@/components/ui/select'
 import {
     Receipt, CreditCard, CheckCircle2,
-    Clock, User, Building2, Printer,
+    Clock, User, Building2, Printer, Hash,
 } from 'lucide-vue-next'
+import { printQueueSlip } from '@/utils/printQueueSlip.js'
+
+const page = usePage()
 
 function printBillingInvoice() {
     const content = document.getElementById('billing-invoice-area')
@@ -71,6 +74,20 @@ const props = defineProps({
     visit:   Object,
     items:   Array,
     payments:Array,
+    ticket:  { type: Object, default: null },
+})
+
+// ── Queue Slip Print Modal ──────────────────────────────
+const showSlipModal = ref(false)
+const slipTicket    = ref(props.ticket)
+
+// Auto-show print dialog when a new ticket was just created (flash)
+onMounted(() => {
+    const flashTicket = page.props.flash?.newTicket
+    if (flashTicket) {
+        slipTicket.value    = flashTicket
+        showSlipModal.value = true
+    }
 })
 
 const showPaymentForm = ref(false)
@@ -148,6 +165,12 @@ const visitTypeLabel = {
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
+                    <Button v-if="slipTicket" variant="outline" size="sm"
+                        class="gap-2 no-print"
+                        @click="showSlipModal = true">
+                        <Hash class="w-4 h-4"/>
+                        Queue Slip
+                    </Button>
                     <Button variant="outline" size="sm" class="gap-2 no-print" @click="printBillingInvoice">
                         <Printer class="w-4 h-4"/>
                         BIR Invoice
@@ -402,4 +425,76 @@ const visitTypeLabel = {
         :payments="payments"
     />
 </div>
+
+<!-- ── Queue Slip Print Modal ──────────────────────────── -->
+<Teleport to="body">
+    <div v-if="showSlipModal && slipTicket"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 no-print"
+        style="background:rgba(0,0,0,.55)">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden">
+            <!-- Header -->
+            <div class="px-5 py-4 border-b flex items-center justify-between" style="background:#0F2044">
+                <div class="flex items-center gap-2">
+                    <Printer class="w-4 h-4 text-white"/>
+                    <h2 class="text-sm font-bold text-white">Queue Slip</h2>
+                </div>
+                <button @click="showSlipModal = false"
+                    class="text-white/60 hover:text-white text-xl leading-none w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10">
+                    &times;
+                </button>
+            </div>
+
+            <!-- Slip Preview -->
+            <div class="p-5">
+                <div class="border-2 border-slate-200 rounded-xl p-4 text-center space-y-2 bg-slate-50">
+                    <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Saint Peter Diagnostics</p>
+                    <div class="text-5xl font-black text-slate-800 tracking-wider font-mono leading-none py-2">
+                        {{ slipTicket.ticket_number }}
+                    </div>
+                    <span class="inline-block text-xs font-bold px-3 py-1 rounded-full text-white"
+                        :style="{
+                            background: slipTicket.priority === 'urgent'   ? '#dc2626' :
+                                        slipTicket.priority === 'pregnant' ? '#db2777' :
+                                        slipTicket.priority === 'pwd'      ? '#2563eb' :
+                                        slipTicket.priority === 'senior'   ? '#d97706' : '#64748b'
+                        }">
+                        {{ (slipTicket.priority ?? 'regular').toUpperCase() }}
+                    </span>
+                    <p class="text-sm font-bold text-slate-800 pt-1">{{ slipTicket.patient_name }}</p>
+                    <p class="text-xs text-slate-400 font-mono">{{ slipTicket.patient_code }}</p>
+                    <div class="flex flex-wrap gap-1 justify-center pt-1">
+                        <span v-for="svc in slipTicket.services" :key="svc"
+                            class="text-xs px-2 py-0.5 rounded bg-slate-200 text-slate-600 font-semibold">
+                            {{ svc }}
+                        </span>
+                    </div>
+                    <div v-if="slipTicket.rooms?.length"
+                        class="flex items-center justify-center gap-2 pt-1 flex-wrap">
+                        <template v-for="(r, i) in slipTicket.rooms" :key="r.room">
+                            <span v-if="i > 0" class="text-slate-300 text-xs">→</span>
+                            <div class="text-center">
+                                <div class="text-xs text-slate-500">{{ r.room.replace('_',' ') }}</div>
+                                <div class="text-sm font-black text-slate-700 font-mono">{{ r.queue_number }}</div>
+                            </div>
+                        </template>
+                    </div>
+                    <p class="text-xs text-slate-400 pt-1">{{ slipTicket.issued_at }}</p>
+                </div>
+            </div>
+
+            <div class="px-5 pb-5 flex gap-3">
+                <button @click="showSlipModal = false"
+                    class="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-600 hover:bg-slate-50 font-semibold transition-colors">
+                    Close
+                </button>
+                <button @click="printQueueSlip(slipTicket)"
+                    class="flex-1 py-2.5 text-white rounded-xl text-sm font-bold transition-colors hover:opacity-90 flex items-center justify-center gap-2"
+                    style="background:#1B4F9B">
+                    <Printer class="w-4 h-4"/>
+                    Print Slip
+                </button>
+            </div>
+        </div>
+    </div>
+</Teleport>
 </template>

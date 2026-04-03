@@ -1,283 +1,184 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { router, Link } from '@inertiajs/vue3'
+import { computed, onMounted, onUnmounted } from 'vue'
+import { router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
-import StatCard from '@/Components/Dashboard/StatCard.vue'
-import QueueBadge from '@/Components/Dashboard/QueueBadge.vue'
-import VisitTypeBadge from '@/Components/Dashboard/VisitTypeBadge.vue'
-import {
-    Stethoscope, AlertCircle, CheckCircle2, Activity,
-    FlaskConical, Scan, ShieldCheck, Clock, AlertTriangle,
-    RefreshCw, Wifi, ChevronRight, ArrowRight
-} from 'lucide-vue-next'
+import { Stethoscope, AlertTriangle, CheckCircle2, FlaskConical, ScanLine, TestTube, Pill, ChevronRight, Wifi, Clock, AlertCircle } from 'lucide-vue-next'
 
 const props = defineProps({
-    user: Object,
-    role: String,
+    user: Object, role: String,
     stats: Object,
     pending: Array,
     completedToday: Array,
     classificationSummary: Object,
 })
 
-const classConfig = {
-    A: { label: 'Class A', desc: 'Physically fit', color: '#059669', bg: '#D1FAE5' },
-    B: { label: 'Class B', desc: 'Fit with minor ailment', color: '#0369A1', bg: '#DBEAFE' },
-    C: { label: 'Class C', desc: 'Conditional', color: '#D97706', bg: '#FEF3C7' },
-    D: { label: 'Class D', desc: 'Not fit', color: '#DC2626', bg: '#FEE2E2' },
-    E: { label: 'Class E', desc: 'Needs evaluation', color: '#7C3AED', bg: '#EDE9FE' },
-}
+const statusDot  = { none:'#cbd5e1', pending:'#f59e0b', processing:'#3b82f6', released:'#22c55e' }
+const visitLabel = { pre_employment:'Pre-Emp', annual_pe:'Annual PE', exit_pe:'Exit PE', opd:'OPD', follow_up:'Follow-up' }
+const classLabel = { fit:'FIT', unfit:'UNFIT', fit_with_remarks:'Fit w/ Remarks', deferred:'Deferred', for_treatment:'For Treatment' }
+const classColor = { fit:'#16A34A', unfit:'#DC2626', fit_with_remarks:'#D97706', deferred:'#7C3AED', for_treatment:'#0369A1' }
+const classBg    = { fit:'#F0FDF4', unfit:'#FEF2F2', fit_with_remarks:'#FFFBEB', deferred:'#FAF5FF', for_treatment:'#F0F9FF' }
 
-const readyPatients = computed(() => props.pending?.filter(p => p.all_results_in) ?? [])
-const pendingResults = computed(() => props.pending?.filter(p => !p.all_results_in) ?? [])
+const readyList    = computed(() => (props.pending??[]).filter(p=>p.all_results_in))
+const waitingList  = computed(() => (props.pending??[]).filter(p=>!p.all_results_in))
+const totalClass   = computed(() => Math.max(Object.values(props.classificationSummary??{}).reduce((s,v)=>s+Number(v),0),1))
 
-const formatWait = (mins) => {
-    if (mins < 60) return `${mins}m ago`
-    return `${Math.floor(mins / 60)}h ${mins % 60}m ago`
-}
-
-const serviceIcons = {
-    CBC: 'blood', UA: 'urine', CXRPA: 'xray', DRUGTEST: 'drug', DRUGTEST5: 'drug',
-    OPD: 'consult', PE_CONSULT: 'consult', ANNUAL_PE: 'consult',
-}
-
-let timer = null
-onMounted(() => {
-    timer = setInterval(() => {
-        router.reload({ only: ['stats', 'pending', 'completedToday'] })
-    }, 20000)
-})
-onUnmounted(() => clearInterval(timer))
-
-const refresh = () => router.reload({ only: ['stats', 'pending', 'completedToday', 'classificationSummary'] })
-
-const resultBadge = (status) => ({
-    released:  { icon: '✓', class: 'text-emerald-600 bg-emerald-50', label: '✓' },
-    processing:{ icon: '◷', class: 'text-blue-500 bg-blue-50', label: '◷' },
-    pending:   { icon: '○', class: 'text-amber-500 bg-amber-50', label: '○' },
-    none:      { icon: '—', class: 'text-slate-300 bg-slate-50', label: '—' },
-})[status] ?? { icon: '—', class: 'text-slate-300 bg-slate-50', label: '—' }
-
-const totalPE = computed(() => Object.values(props.classificationSummary ?? {}).reduce((a, b) => a + b, 0))
+let t = null
+onMounted(() => { t = setInterval(()=>router.reload({only:['stats','pending','completedToday','classificationSummary']}),25000) })
+onUnmounted(() => clearInterval(t))
 </script>
 
 <template>
-    <AppLayout title="Doctor Dashboard">
-        <!-- Header -->
-        <div class="flex items-center justify-between mb-6">
+<AppLayout title="Doctor Dashboard">
+    <template #header>
+        <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-2xl font-black text-[#0F2044]">Doctor's Workspace</h1>
-                <p class="text-sm text-slate-400 mt-0.5">Consultations and PE classifications</p>
+                <h1 class="text-xl font-bold text-slate-800">Doctor's Station</h1>
+                <p class="text-xs text-slate-400 mt-0.5">{{ new Date().toLocaleDateString('en-PH',{weekday:'long',year:'numeric',month:'long',day:'numeric'}) }}</p>
             </div>
-            <div class="flex items-center gap-3">
-                <div class="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full">
-                    <Wifi class="w-3 h-3" /> <span class="font-semibold">Live</span>
-                </div>
-                <button @click="refresh" class="p-2 text-slate-400 hover:text-[#1B4F9B] hover:bg-slate-50 rounded-lg transition-colors">
-                    <RefreshCw class="w-4 h-4" />
-                </button>
+            <div class="flex items-center gap-2">
+                <span class="flex items-center gap-1 text-xs text-emerald-600 font-semibold"><Wifi class="w-3.5 h-3.5"/> Live</span>
+                <a :href="route('doctor.index')" class="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg text-white" style="background:#7C3AED">
+                    <Stethoscope class="w-3.5 h-3.5"/> Open Consultations
+                </a>
             </div>
         </div>
+    </template>
 
-        <!-- Stats -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <StatCard label="Ready for Review" :value="stats.ready_for_review" :icon="Stethoscope" color="#1B4F9B" :warning="stats.ready_for_review > 0" sub="All results in" />
-            <StatCard label="Pending Total" :value="stats.pending_total" :icon="Clock" color="#D97706" sub="All pending consultations" />
-            <StatCard label="Completed Today" :value="stats.completed_today" :icon="CheckCircle2" color="#059669" :success="stats.completed_today > 0" />
-            <StatCard label="Abnormal Results" :value="stats.abnormal_today" :icon="AlertTriangle" color="#DC2626" :danger="stats.abnormal_today > 0" sub="Flagged lab results today" />
+    <div class="space-y-5">
+        <!-- KPI -->
+        <div class="grid grid-cols-2 lg:grid-cols-6 gap-3">
+            <div class="bg-white rounded-2xl border border-emerald-100 shadow-sm p-4 col-span-1">
+                <p class="text-3xl font-black text-emerald-600">{{ stats.ready_for_review }}</p>
+                <p class="text-xs text-slate-500 mt-0.5 font-semibold">Ready to Review</p>
+                <p class="text-xs text-slate-400">All results in</p>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                <p class="text-3xl font-black text-slate-800">{{ stats.pending_total }}</p>
+                <p class="text-xs text-slate-500 mt-0.5 font-semibold">Total Pending</p>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                <p class="text-3xl font-black" style="color:#1D4ED8">{{ stats.completed_today }}</p>
+                <p class="text-xs text-slate-500 mt-0.5 font-semibold">Completed</p>
+                <p class="text-xs text-slate-400">today</p>
+            </div>
+            <div class="bg-white rounded-2xl border border-red-100 shadow-sm p-4">
+                <p class="text-3xl font-black text-red-600">{{ stats.abnormal_today }}</p>
+                <p class="text-xs text-slate-500 mt-0.5 font-semibold">Abnormal Results</p>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                <p class="text-3xl font-black" style="color:#7C3AED">{{ stats.pe_done_today }}</p>
+                <p class="text-xs text-slate-500 mt-0.5 font-semibold">PE Completed</p>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                <p class="text-3xl font-black" style="color:#16A34A">{{ stats.my_prescriptions_today }}</p>
+                <p class="text-xs text-slate-500 mt-0.5 font-semibold">My Rx Today</p>
+                <p class="text-xs text-slate-400">All: {{ stats.all_prescriptions_today }}</p>
+            </div>
         </div>
 
         <div class="grid grid-cols-3 gap-5">
-            <!-- Main panel: Pending patients -->
-            <div class="col-span-3 lg:col-span-2 space-y-5">
+            <!-- Pending patients -->
+            <div class="col-span-2 space-y-4">
 
                 <!-- Ready for Review -->
-                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm">
-                    <div class="p-5 border-b border-slate-50 flex items-center gap-2">
-                        <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <h3 class="font-bold text-[#0F2044] flex-1">Ready for Review <span class="text-emerald-600">({{ readyPatients.length }})</span></h3>
-                        <p class="text-xs text-slate-400">All results released</p>
+                <div class="bg-white rounded-2xl border border-emerald-100 shadow-sm overflow-hidden">
+                    <div class="px-5 py-3 border-b border-emerald-100 flex items-center gap-2" style="background:#F0FDF4">
+                        <CheckCircle2 class="w-4 h-4 text-emerald-600"/>
+                        <h3 class="text-xs font-bold text-emerald-700 uppercase tracking-widest">Ready for Review</h3>
+                        <span class="ml-auto text-xs font-black text-emerald-700 bg-emerald-200 px-2 py-0.5 rounded-full">{{ readyList.length }}</span>
                     </div>
-                    <div class="divide-y divide-slate-50">
-                        <div
-                            v-for="p in readyPatients" :key="p.id"
-                            class="flex items-center gap-4 px-5 py-4 hover:bg-emerald-50/30 transition-colors"
-                        >
-                            <!-- Patient -->
+                    <div v-if="!readyList.length" class="py-8 text-center text-sm text-slate-400">No patients ready yet</div>
+                    <div v-else class="divide-y divide-slate-50">
+                        <div v-for="p in readyList" :key="p.id" class="px-4 py-2.5 flex items-center gap-3 hover:bg-emerald-50/30 transition-colors">
                             <div class="flex-1 min-w-0">
-                                <div class="flex items-center gap-2 mb-0.5">
-                                    <p class="font-bold text-[#0F2044]">{{ p.patient_name }}</p>
-                                    <span v-if="p.abnormal_count > 0" class="flex items-center gap-1 text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
-                                        <AlertTriangle class="w-3 h-3" /> {{ p.abnormal_count }} abnormal
+                                <div class="flex items-center gap-2">
+                                    <p class="text-sm font-bold text-slate-800 truncate">{{ p.patient_name }}</p>
+                                    <span v-if="p.abnormal_count>0" class="flex items-center gap-0.5 text-xs font-bold text-red-600">
+                                        <AlertTriangle class="w-3 h-3"/>{{ p.abnormal_count }} abnormal
                                     </span>
                                 </div>
-                                <div class="flex items-center gap-2">
-                                    <p class="text-xs text-slate-400 font-mono">{{ p.patient_code }}</p>
-                                    <span class="text-slate-300">·</span>
-                                    <p class="text-xs text-slate-400">{{ p.age_sex }}</p>
-                                    <span v-if="p.employer" class="text-slate-300">·</span>
-                                    <p v-if="p.employer" class="text-xs text-slate-400 truncate max-w-32">{{ p.employer }}</p>
-                                </div>
+                                <p class="text-xs text-slate-400">{{ p.patient_code }} · {{ p.age_sex }}</p>
+                                <p v-if="p.employer" class="text-xs text-violet-500 truncate">{{ p.employer }}</p>
                             </div>
-
-                            <!-- Type + Results -->
-                            <div class="flex-shrink-0 flex items-center gap-2">
-                                <VisitTypeBadge :type="p.visit_type" size="xs" />
-                                <!-- Result icons -->
-                                <div class="flex gap-1">
-                                    <span
-                                        v-if="p.lab_status !== 'none'"
-                                        class="text-xs px-1.5 py-0.5 rounded font-mono font-bold"
-                                        :class="resultBadge(p.lab_status).class"
-                                        title="Lab"
-                                    >L</span>
-                                    <span
-                                        v-if="p.xray_status !== 'none'"
-                                        class="text-xs px-1.5 py-0.5 rounded font-mono font-bold"
-                                        :class="resultBadge(p.xray_status).class"
-                                        title="X-Ray"
-                                    >X</span>
-                                    <span
-                                        v-if="p.drug_status !== 'none'"
-                                        class="text-xs px-1.5 py-0.5 rounded font-mono font-bold"
-                                        :class="resultBadge(p.drug_status).class"
-                                        title="Drug"
-                                    >D</span>
-                                </div>
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 flex-shrink-0">{{ visitLabel[p.visit_type]??p.visit_type }}</span>
+                            <div class="flex items-center gap-1 flex-shrink-0">
+                                <span title="Lab" class="w-2 h-2 rounded-full" :style="{background:statusDot[p.lab_status]}"/>
+                                <span title="X-Ray" class="w-2 h-2 rounded-full" :style="{background:statusDot[p.xray_status]}"/>
+                                <span title="Drug" class="w-2 h-2 rounded-full" :style="{background:statusDot[p.drug_status]}"/>
                             </div>
-
-                            <!-- Wait time -->
-                            <div class="flex-shrink-0 text-right w-20">
-                                <p class="text-xs text-slate-400">Registered</p>
-                                <p class="text-xs font-semibold text-slate-600">{{ p.registered_at }}</p>
-                            </div>
-
-                            <!-- CTA -->
-                            <Link
-                                :href="route('doctor.consult', p.id)"
-                                class="flex-shrink-0 bg-[#1B4F9B] text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-[#0F2044] transition-colors"
-                            >
-                                {{ p.has_draft ? 'Continue' : 'Consult' }}
-                            </Link>
-                        </div>
-
-                        <div v-if="!readyPatients.length" class="py-8 text-center text-slate-300">
-                            <CheckCircle2 class="w-10 h-10 mx-auto mb-2" />
-                            <p class="text-sm">No patients ready for review yet</p>
+                            <a :href="route('doctor.enter',p.id)" class="flex-shrink-0 text-xs font-bold px-2.5 py-1.5 rounded-lg text-white flex items-center gap-1" style="background:#7C3AED">
+                                Consult <ChevronRight class="w-3 h-3"/>
+                            </a>
                         </div>
                     </div>
                 </div>
 
-                <!-- Waiting on Results -->
-                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm">
-                    <div class="p-5 border-b border-slate-50">
-                        <h3 class="font-bold text-[#0F2044]">Waiting for Results <span class="text-amber-600">({{ pendingResults.length }})</span></h3>
+                <!-- Waiting (results pending) -->
+                <div v-if="waitingList.length" class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div class="px-5 py-3 border-b flex items-center gap-2">
+                        <Clock class="w-4 h-4 text-amber-500"/>
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Awaiting Results</h3>
+                        <span class="ml-auto text-xs font-black text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">{{ waitingList.length }}</span>
                     </div>
-                    <div class="divide-y divide-slate-50 max-h-72 overflow-y-auto">
-                        <div
-                            v-for="p in pendingResults" :key="p.id"
-                            class="flex items-center gap-4 px-5 py-3 hover:bg-slate-50 transition-colors"
-                        >
+                    <div class="divide-y divide-slate-50">
+                        <div v-for="p in waitingList" :key="p.id" class="px-4 py-2.5 flex items-center gap-3 hover:bg-slate-50/30">
                             <div class="flex-1 min-w-0">
-                                <p class="font-semibold text-sm text-[#0F2044]">{{ p.patient_name }}</p>
+                                <p class="text-sm font-semibold text-slate-800 truncate">{{ p.patient_name }}</p>
                                 <p class="text-xs text-slate-400">{{ p.patient_code }} · {{ p.age_sex }}</p>
                             </div>
-                            <VisitTypeBadge :type="p.visit_type" size="xs" />
-                            <div class="flex gap-1">
-                                <span v-if="p.lab_status !== 'none'" class="text-xs px-1.5 py-0.5 rounded font-mono font-bold" :class="resultBadge(p.lab_status).class">L</span>
-                                <span v-if="p.xray_status !== 'none'" class="text-xs px-1.5 py-0.5 rounded font-mono font-bold" :class="resultBadge(p.xray_status).class">X</span>
-                                <span v-if="p.drug_status !== 'none'" class="text-xs px-1.5 py-0.5 rounded font-mono font-bold" :class="resultBadge(p.drug_status).class">D</span>
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 flex-shrink-0">{{ visitLabel[p.visit_type]??p.visit_type }}</span>
+                            <div class="flex items-center gap-1.5 flex-shrink-0 text-xs text-slate-500">
+                                <span title="Lab"   class="w-2 h-2 rounded-full" :style="{background:statusDot[p.lab_status]}"/>
+                                <span title="X-Ray" class="w-2 h-2 rounded-full" :style="{background:statusDot[p.xray_status]}"/>
+                                <span title="Drug"  class="w-2 h-2 rounded-full" :style="{background:statusDot[p.drug_status]}"/>
                             </div>
-                            <p class="text-xs text-slate-400 flex-shrink-0">{{ p.registered_at }}</p>
-                        </div>
-                        <div v-if="!pendingResults.length" class="py-6 text-center text-slate-300 text-sm">
-                            All pending patients have complete results
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Completed Today -->
-                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm">
-                    <div class="p-5 border-b border-slate-50">
-                        <h3 class="font-bold text-[#0F2044]">Finalized Today <span class="text-slate-400">({{ completedToday?.length ?? 0 }})</span></h3>
-                    </div>
-                    <div class="divide-y divide-slate-50 max-h-64 overflow-y-auto">
-                        <div v-for="c in completedToday" :key="c.id" class="flex items-center gap-4 px-5 py-3 hover:bg-slate-50">
-                            <div class="flex-1 min-w-0">
-                                <p class="font-semibold text-sm text-[#0F2044]">{{ c.patient_name }}</p>
-                                <p class="text-xs text-slate-400">{{ c.icd10_description ?? 'PE Classification' }}</p>
-                            </div>
-                            <VisitTypeBadge :type="c.visit_type" size="xs" />
-                            <span v-if="c.pe_classification" class="text-xs font-black px-2 py-1 rounded-lg" :style="{ background: classConfig[c.pe_classification]?.bg, color: classConfig[c.pe_classification]?.color }">
-                                Class {{ c.pe_classification }}
-                            </span>
-                            <p class="text-xs text-slate-400 flex-shrink-0">{{ c.finalized_at }}</p>
-                            <Link :href="route('doctor.consult', c.visit_id)" class="text-slate-400 hover:text-[#1B4F9B]">
-                                <ChevronRight class="w-4 h-4" />
-                            </Link>
-                        </div>
-                        <div v-if="!completedToday?.length" class="py-6 text-center text-slate-300 text-sm">
-                            No consultations finalized yet today
+                            <span class="text-xs text-amber-600 font-semibold flex-shrink-0">{{ p.wait_mins }}m</span>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Right panel -->
-            <div class="col-span-3 lg:col-span-1 space-y-4">
-                <!-- PE Classification Summary -->
-                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                    <h3 class="font-bold text-[#0F2044] mb-1">PE Classifications Today</h3>
-                    <p class="text-xs text-slate-400 mb-4">{{ stats.pe_done_today }} finalized</p>
-                    <div class="space-y-3">
-                        <div v-for="(config, cls) in classConfig" :key="cls" class="flex items-center gap-3">
-                            <div
-                                class="w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm flex-shrink-0"
-                                :style="{ background: config.bg, color: config.color }"
-                            >
-                                {{ cls }}
+            <div class="space-y-4">
+                <!-- PE Classification -->
+                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">PE Classification Today</h3>
+                    <div class="space-y-2">
+                        <div v-for="(count,cls) in classificationSummary" :key="cls">
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="font-bold" :style="{color:classColor[cls]??'#475569'}">{{ classLabel[cls]??cls }}</span>
+                                <span class="font-black text-slate-800">{{ count }}</span>
                             </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-xs font-semibold text-slate-700">{{ config.label }}</p>
-                                <p class="text-xs text-slate-400 truncate">{{ config.desc }}</p>
+                            <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                                <div class="h-full rounded-full" :style="{width:(Number(count)/totalClass*100)+'%',background:classColor[cls]??'#94a3b8'}"/>
                             </div>
-                            <p class="font-black text-[#0F2044] text-lg tabular-nums">{{ classificationSummary?.[cls] ?? 0 }}</p>
                         </div>
-                    </div>
-                    <div class="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
-                        <span class="text-xs text-slate-400 font-semibold">TOTAL</span>
-                        <span class="text-xl font-black text-[#1B4F9B]">{{ totalPE }}</span>
+                        <p v-if="!Object.keys(classificationSummary??{}).length" class="text-xs text-slate-400 text-center py-2">No PE done today</p>
                     </div>
                 </div>
 
-                <!-- Result status legend -->
-                <div class="bg-slate-50 rounded-2xl p-5">
-                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Result Status</h4>
-                    <div class="space-y-2 text-sm">
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs px-2 py-0.5 rounded font-mono font-bold text-emerald-600 bg-emerald-50">✓</span>
-                            <span class="text-slate-600">Released</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs px-2 py-0.5 rounded font-mono font-bold text-blue-500 bg-blue-50">◷</span>
-                            <span class="text-slate-600">In Progress</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs px-2 py-0.5 rounded font-mono font-bold text-amber-500 bg-amber-50">○</span>
-                            <span class="text-slate-600">Pending Entry</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs px-2 py-0.5 rounded font-mono font-bold text-slate-300 bg-slate-50">—</span>
-                            <span class="text-slate-600">Not Ordered</span>
-                        </div>
-                        <div class="mt-3 pt-3 border-t border-slate-200 text-xs text-slate-500">
-                            <span class="font-bold text-slate-400">L</span> = Lab &nbsp;
-                            <span class="font-bold text-slate-400">X</span> = X-Ray &nbsp;
-                            <span class="font-bold text-slate-400">D</span> = Drug Test
+                <!-- Completed Today -->
+                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div class="px-4 py-3 border-b flex items-center gap-2">
+                        <span class="w-1 h-4 rounded-full inline-block bg-blue-500"></span>
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Completed Today</h3>
+                    </div>
+                    <div class="divide-y divide-slate-50 overflow-y-auto" style="max-height:280px;">
+                        <p v-if="!completedToday?.length" class="py-6 text-center text-xs text-slate-400">None yet</p>
+                        <div v-for="c in completedToday" :key="c.id" class="px-4 py-2.5">
+                            <p class="text-xs font-bold text-slate-800 truncate">{{ c.patient_name }}</p>
+                            <div class="flex items-center gap-2 mt-0.5">
+                                <span v-if="c.pe_classification" class="text-xs font-bold" :style="{color:classColor[c.pe_classification]??'#475569'}">
+                                    {{ classLabel[c.pe_classification]??c.pe_classification }}
+                                </span>
+                                <span v-else-if="c.icd10_code" class="text-xs text-blue-600 font-mono">{{ c.icd10_code }}</span>
+                                <span class="text-xs text-slate-400 ml-auto">{{ c.finalized_at }}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </AppLayout>
+    </div>
+</AppLayout>
 </template>

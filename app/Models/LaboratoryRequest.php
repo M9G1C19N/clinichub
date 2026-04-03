@@ -14,8 +14,8 @@ class LaboratoryRequest extends Model
         'request_number', 'patient_id', 'patient_visit_id',
         'requested_by', 'request_date', 'priority', 'status',
         'clinical_notes', 'released_at', 'released_by',
-        'examined_by_name', 'examined_by_license',
-        'noted_by_name', 'noted_by_license',
+        'examined_by_name', 'examined_by_license', 'examined_by_signature',
+        'noted_by_name', 'noted_by_license', 'noted_by_signature',
         'result_date', 'result_time',
     ];
 

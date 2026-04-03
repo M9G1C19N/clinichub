@@ -61,11 +61,19 @@ const hasFilters = () =>
 const visitTypeBadge = {
     opd:            'bg-blue-100 text-blue-700 hover:bg-blue-100',
     pre_employment: 'bg-purple-100 text-purple-700 hover:bg-purple-100',
+    annual_pe:      'bg-green-100 text-green-700 hover:bg-green-100',
+    exit_pe:        'bg-orange-100 text-orange-700 hover:bg-orange-100',
+    follow_up:      'bg-sky-100 text-sky-700 hover:bg-sky-100',
+    lab_only:       'bg-violet-100 text-violet-700 hover:bg-violet-100',
 }
 
 const visitTypeLabel = {
     opd:            'OPD',
     pre_employment: 'Pre-Employment',
+    annual_pe:      'Annual PE',
+    exit_pe:        'Exit PE',
+    follow_up:      'Follow-Up',
+    lab_only:       'Lab Only',
 }
 
 </script>
@@ -123,6 +131,10 @@ const visitTypeLabel = {
                         <SelectItem value="all">All Types</SelectItem>
                         <SelectItem value="opd">OPD</SelectItem>
                         <SelectItem value="pre_employment">Pre-Employment</SelectItem>
+                        <SelectItem value="annual_pe">Annual PE</SelectItem>
+                        <SelectItem value="exit_pe">Exit PE</SelectItem>
+                        <SelectItem value="follow_up">Follow-Up</SelectItem>
+                        <SelectItem value="lab_only">Lab Only</SelectItem>
                     </SelectContent>
                 </Select>
 

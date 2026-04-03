@@ -11,12 +11,15 @@ import {
     SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { ScanLine, Save, CheckCircle2, Printer } from 'lucide-vue-next'
+import StaffSignatorySelect from '@/Components/StaffSignatorySelect.vue'
 
 const props = defineProps({
-    visit:          Object,
-    patient:        Object,
-    imagingRequest: Object,
-    currentUser:    Object,
+    visit:           Object,
+    patient:         Object,
+    imagingRequest:  Object,
+    currentUser:     Object,
+    staffList:       { type: Array, default: () => [] },
+    radiologistList: { type: Array, default: () => [] },
 })
 
 const isReleased = props.imagingRequest?.status === 'released'
@@ -26,10 +29,12 @@ const form = useForm({
     radiographic_findings:  props.imagingRequest?.radiographic_findings ?? '',
     impression:             props.imagingRequest?.impression            ?? '',
     is_provisional:         props.imagingRequest?.is_provisional        ?? false,
-    rad_tech_name:          props.imagingRequest?.rad_tech_name         ?? props.currentUser?.name ?? '',
-    rad_tech_license:       props.imagingRequest?.rad_tech_license      ?? props.currentUser?.prc_number ?? '',
-    radiologist_name:       props.imagingRequest?.radiologist_name      ?? '',
-    radiologist_license:    props.imagingRequest?.radiologist_license   ?? '',
+    rad_tech_name:          props.imagingRequest?.rad_tech_name          ?? props.currentUser?.name ?? '',
+    rad_tech_license:       props.imagingRequest?.rad_tech_license       ?? props.currentUser?.esignature?.license_number ?? props.currentUser?.prc_number ?? '',
+    rad_tech_signature:     props.imagingRequest?.rad_tech_signature     ?? props.currentUser?.esignature?.signature_url ?? '',
+    radiologist_name:       props.imagingRequest?.radiologist_name       ?? '',
+    radiologist_license:    props.imagingRequest?.radiologist_license    ?? '',
+    radiologist_signature:  props.imagingRequest?.radiologist_signature  ?? '',
     exam_date: props.imagingRequest?.exam_date ?? todayStr(),
     exam_time: props.imagingRequest?.exam_time ?? nowStr(),
     release:                false,
@@ -217,32 +222,28 @@ function printReport() {
                 </div>
 
                 <!-- Staff Details -->
-                <div class="bg-card rounded-xl border shadow-sm p-4 space-y-3">
+                <div class="bg-card rounded-xl border shadow-sm p-4 space-y-4" :class="isReleased && 'opacity-60 pointer-events-none'">
                     <p class="text-xs font-bold text-muted-foreground uppercase tracking-widest">Staff Details</p>
 
-                    <div class="space-y-1.5">
-                        <Label class="text-xs">Radiologic Technologist</Label>
-                        <Input v-model="form.rad_tech_name" placeholder="Full name"
-                            class="text-xs h-8" :disabled="isReleased"/>
-                    </div>
-                    <div class="space-y-1.5">
-                        <Label class="text-xs">License No.</Label>
-                        <Input v-model="form.rad_tech_license" placeholder="PRC License No."
-                            class="text-xs h-8 font-mono" :disabled="isReleased"/>
-                    </div>
+                    <StaffSignatorySelect
+                        label="Radiologic Technologist"
+                        :staffList="staffList"
+                        :currentUser="currentUser"
+                        v-model:modelName="form.rad_tech_name"
+                        v-model:modelLicense="form.rad_tech_license"
+                        v-model:modelSig="form.rad_tech_signature"
+                    />
 
                     <Separator/>
 
-                    <div class="space-y-1.5">
-                        <Label class="text-xs">Radiologist (Noted By)</Label>
-                        <Input v-model="form.radiologist_name" placeholder="Full name"
-                            class="text-xs h-8" :disabled="isReleased"/>
-                    </div>
-                    <div class="space-y-1.5">
-                        <Label class="text-xs">License No.</Label>
-                        <Input v-model="form.radiologist_license" placeholder="License No."
-                            class="text-xs h-8 font-mono" :disabled="isReleased"/>
-                    </div>
+                    <StaffSignatorySelect
+                        label="Radiologist (Noted By)"
+                        :staffList="radiologistList"
+                        :currentUser="null"
+                        v-model:modelName="form.radiologist_name"
+                        v-model:modelLicense="form.radiologist_license"
+                        v-model:modelSig="form.radiologist_signature"
+                    />
                 </div>
 
             </div>

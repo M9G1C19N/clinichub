@@ -450,7 +450,13 @@ const isResult = (val) =>
             <!-- Signatures -->
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:8px 6px 6px;">
                 <div>
-                    <div style="border-bottom:1px solid #333; min-height:20px; margin-bottom:2px;"></div>
+                    <div style="min-height:32px; display:flex; align-items:flex-end; margin-bottom:2px;">
+                        <img v-if="drugTest?.head_of_lab_signature"
+                            :src="drugTest.head_of_lab_signature"
+                            style="max-height:30px; max-width:120px; object-fit:contain;"
+                            alt="Signature"/>
+                    </div>
+                    <div style="border-bottom:1px solid #333; min-height:4px; margin-bottom:2px;"></div>
                     <div style="font-size:8.5px;">X &nbsp; (PRINT) Signature &amp; Name of Analyst (First, MI, Last)</div>
                     <div style="border-bottom:1px solid #555; min-height:14px; margin-top:4px; margin-bottom:2px;">
                         {{ drugTest?.head_of_lab_name ?? '' }}

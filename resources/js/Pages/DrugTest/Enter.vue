@@ -12,13 +12,16 @@ import {
     SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { TestTube, Save, CheckCircle2, Printer } from 'lucide-vue-next'
+import StaffSignatorySelect from '@/Components/StaffSignatorySelect.vue'
 
 const props = defineProps({
-    visit:       Object,
-    patient:     Object,
-    drugTest:    Object,
-    currentUser: Object,
-    drugsDefault: Array,
+    visit:          Object,
+    patient:        Object,
+    drugTest:       Object,
+    currentUser:    Object,
+    drugsDefault:   Array,
+    collectorList:  { type: Array, default: () => [] },
+    headOfLabList:  { type: Array, default: () => [] },
 })
 
 // ── DATE HELPERS — must be defined BEFORE useForm ──
@@ -53,10 +56,12 @@ const form = useForm({
     specimen_appearance: props.drugTest?.specimen_appearance ?? 'Yellow',
     specimen_sampling:   props.drugTest?.specimen_sampling   ?? 'single',
     specimen_collection: props.drugTest?.specimen_collection ?? 'unobserved',
-    collector_name:      props.drugTest?.collector_name      ?? props.currentUser?.name ?? '',
-    collector_license:   props.drugTest?.collector_license   ?? props.currentUser?.prc_number ?? '',
-    head_of_lab_name:    props.drugTest?.head_of_lab_name    ?? '',
-    head_of_lab_license: props.drugTest?.head_of_lab_license ?? '',
+    collector_name:        props.drugTest?.collector_name        ?? props.currentUser?.name ?? '',
+    collector_license:     props.drugTest?.collector_license     ?? props.currentUser?.esignature?.license_number ?? props.currentUser?.prc_number ?? '',
+    collector_signature:   props.drugTest?.collector_signature   ?? props.currentUser?.esignature?.signature_url ?? '',
+    head_of_lab_name:      props.drugTest?.head_of_lab_name      ?? '',
+    head_of_lab_license:   props.drugTest?.head_of_lab_license   ?? '',
+    head_of_lab_signature: props.drugTest?.head_of_lab_signature ?? '',
     company:             props.drugTest?.company             ?? props.visit.employer_company ?? '',
     remarks:             props.drugTest?.remarks             ?? '',
     result:              props.drugTest?.result              ?? '',
@@ -240,26 +245,28 @@ function printReport() {
                 </div>
 
                 <!-- Staff -->
-                <div class="bg-card rounded-xl border shadow-sm p-4 space-y-3">
-                    <p class="text-xs font-bold text-muted-foreground uppercase tracking-widest">Collector</p>
-                    <div class="space-y-1.5">
-                        <Label class="text-xs">Name</Label>
-                        <Input v-model="form.collector_name" class="text-xs h-8" :disabled="isReleased"/>
-                    </div>
-                    <div class="space-y-1.5">
-                        <Label class="text-xs">License No.</Label>
-                        <Input v-model="form.collector_license" class="text-xs h-8 font-mono" :disabled="isReleased"/>
-                    </div>
+                <div class="bg-card rounded-xl border shadow-sm p-4 space-y-4" :class="isReleased && 'opacity-60 pointer-events-none'">
+                    <p class="text-xs font-bold text-muted-foreground uppercase tracking-widest">Staff Details</p>
+
+                    <StaffSignatorySelect
+                        label="Collector"
+                        :staffList="collectorList"
+                        :currentUser="currentUser"
+                        v-model:modelName="form.collector_name"
+                        v-model:modelLicense="form.collector_license"
+                        v-model:modelSig="form.collector_signature"
+                    />
+
                     <Separator/>
-                    <p class="text-xs font-bold text-muted-foreground uppercase tracking-widest">Head of Lab</p>
-                    <div class="space-y-1.5">
-                        <Label class="text-xs">Name</Label>
-                        <Input v-model="form.head_of_lab_name" class="text-xs h-8" :disabled="isReleased"/>
-                    </div>
-                    <div class="space-y-1.5">
-                        <Label class="text-xs">License No.</Label>
-                        <Input v-model="form.head_of_lab_license" class="text-xs h-8 font-mono" :disabled="isReleased"/>
-                    </div>
+
+                    <StaffSignatorySelect
+                        label="Head of Laboratory"
+                        :staffList="headOfLabList"
+                        :currentUser="null"
+                        v-model:modelName="form.head_of_lab_name"
+                        v-model:modelLicense="form.head_of_lab_license"
+                        v-model:modelSig="form.head_of_lab_signature"
+                    />
                 </div>
 
             </div>

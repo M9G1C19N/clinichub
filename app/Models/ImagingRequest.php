@@ -13,8 +13,8 @@ class ImagingRequest extends Model
         'request_number', 'patient_id', 'patient_visit_id',
         'imaging_type', 'requested_by',
         'radiographic_findings', 'impression', 'is_provisional',
-        'status', 'rad_tech_name', 'rad_tech_license',
-        'radiologist_name', 'radiologist_license',
+        'status', 'rad_tech_name', 'rad_tech_license', 'rad_tech_signature',
+        'radiologist_name', 'radiologist_license', 'radiologist_signature',
         'released_at', 'released_by',
         'exam_date', 'exam_time',
     ];

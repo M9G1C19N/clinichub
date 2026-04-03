@@ -445,7 +445,7 @@ class DoctorController extends Controller
         $visit->load([
             'patient',
             'vitals',
-            'consultation.doctor',
+            'consultation.doctor.esignature',
             'labRequest.results.labTest',
             'imagingRequest',
             'drugTestRequest',
@@ -555,6 +555,7 @@ class DoctorController extends Controller
                 'doctor_name'          => $consultation->doctor?->name ?? Auth::user()->name,
                 'doctor_prc'           => $consultation->doctor?->prc_number ?? '',
                 'doctor_ptr'           => $consultation->doctor?->ptr_number ?? '',
+                'doctor_signature'     => $this->sigUrl($consultation->doctor?->esignature?->signature_path),
             ] : null,
             'labResults' => $labResultMap,
             'labRequest' => $labRequest ? [
@@ -645,5 +646,17 @@ public function printPrescription(Prescription $prescription)
             'patient_code' => $prescription->patient->patient_code,
         ],
     ]);
+}
+
+private function sigUrl(?string $val): ?string
+{
+    if (!$val) return null;
+    if (str_starts_with($val, 'http')) {
+        if (preg_match('#/storage/(.+)$#', $val, $m)) {
+            return asset('storage/' . $m[1]);
+        }
+        return $val;
+    }
+    return asset('storage/' . $val);
 }
 }

@@ -11,6 +11,7 @@ import {
     AlertTriangle, Printer,
 } from 'lucide-vue-next'
 import PrintableLabResult from '@/Components/Lab/PrintableLabResult.vue'
+import StaffSignatorySelect from '@/Components/StaffSignatorySelect.vue'
 import { VISIT_TYPE_LABEL } from '@/config/visitTypes.js'
 const props = defineProps({
     visit:      Object,
@@ -19,6 +20,7 @@ const props = defineProps({
     tests:       Array,
     allTests:    Array,
     currentUser: Object,
+    staffList:   { type: Array, default: () => [] },
 })
 
 const isReleased = props.labRequest?.status === 'released'
@@ -30,12 +32,12 @@ const form = useForm({
         value:   t.result_value ?? '',
         remarks: t.remarks ?? '',
     })),
-     examined_by_name:    props.labRequest?.examined_by_name
-                            ?? props.currentUser?.name ?? '',
-    examined_by_license: props.labRequest?.examined_by_license
-                            ?? props.currentUser?.prc_number ?? '',
-    noted_by_name:       props.labRequest?.noted_by_name    ?? '',
-    noted_by_license:    props.labRequest?.noted_by_license ?? '',
+    examined_by_name:      props.labRequest?.examined_by_name    ?? props.currentUser?.name ?? '',
+    examined_by_license:   props.labRequest?.examined_by_license ?? props.currentUser?.esignature?.license_number ?? props.currentUser?.prc_number ?? '',
+    examined_by_signature: props.labRequest?.examined_by_signature ?? props.currentUser?.esignature?.signature_url ?? '',
+    noted_by_name:         props.labRequest?.noted_by_name    ?? '',
+    noted_by_license:      props.labRequest?.noted_by_license ?? '',
+    noted_by_signature:    props.labRequest?.noted_by_signature ?? '',
     general_remarks:     props.labRequest?.clinical_notes   ?? '',
     release: false,
     result_date: props.labRequest?.result_date ?? new Date().toISOString().split('T')[0],
@@ -276,36 +278,28 @@ function printResults() {
                     </p>
                 </div>
                 <!-- Staff Info -->
-                <div class="bg-card rounded-xl border shadow-sm p-4 space-y-3">
+                <div class="bg-card rounded-xl border shadow-sm p-4 space-y-4" :class="isReleased && 'opacity-60 pointer-events-none'">
                     <p class="text-xs font-bold text-muted-foreground uppercase tracking-widest">Staff Details</p>
 
-                    <div class="space-y-1.5">
-                        <Label class="text-xs">Examined By (Med Tech)</Label>
-                        <Input v-model="form.examined_by_name"
-                            placeholder="Full name" class="text-xs h-8"
-                            :disabled="isReleased"/>
-                    </div>
-                    <div class="space-y-1.5">
-                        <Label class="text-xs">License No.</Label>
-                        <Input v-model="form.examined_by_license"
-                            placeholder="PRC License No." class="text-xs h-8 font-mono"
-                            :disabled="isReleased"/>
-                    </div>
+                    <StaffSignatorySelect
+                        label="Examined By (Med Tech)"
+                        :staffList="staffList"
+                        :currentUser="currentUser"
+                        v-model:modelName="form.examined_by_name"
+                        v-model:modelLicense="form.examined_by_license"
+                        v-model:modelSig="form.examined_by_signature"
+                    />
 
                     <Separator/>
 
-                    <div class="space-y-1.5">
-                        <Label class="text-xs">Noted By (Pathologist)</Label>
-                        <Input v-model="form.noted_by_name"
-                            placeholder="Full name" class="text-xs h-8"
-                            :disabled="isReleased"/>
-                    </div>
-                    <div class="space-y-1.5">
-                        <Label class="text-xs">License No.</Label>
-                        <Input v-model="form.noted_by_license"
-                            placeholder="PRC License No." class="text-xs h-8 font-mono"
-                            :disabled="isReleased"/>
-                    </div>
+                    <StaffSignatorySelect
+                        label="Noted By (Pathologist / Doctor)"
+                        :staffList="staffList"
+                        :currentUser="null"
+                        v-model:modelName="form.noted_by_name"
+                        v-model:modelLicense="form.noted_by_license"
+                        v-model:modelSig="form.noted_by_signature"
+                    />
                 </div>
 
                 <!-- Abnormal summary -->

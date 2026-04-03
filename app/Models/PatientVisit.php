@@ -105,4 +105,8 @@ class PatientVisit extends Model
     {
         return $this->hasMany(Prescription::class, 'patient_visit_id');
     }
+    public function queueTicket()
+    {
+        return $this->hasOne(\App\Models\QueueTicket::class, 'patient_visit_id');
+    }
 }

@@ -6,7 +6,7 @@ import {
     Radiation, TestTube, Stethoscope, Receipt, Calendar,
     Settings, BarChart3, ShieldCheck, UserCog, Pill,
     ChevronLeft, ChevronRight, LogOut, Activity, Monitor,
-    Microscope, ScanLine, Syringe, HeartPulse,
+    Microscope, ScanLine, Syringe, HeartPulse, PenLine,
 } from 'lucide-vue-next'
 import { CLINIC_LOGO, CLINIC_INFO } from '@/config/clinic.js'
 
@@ -37,6 +37,7 @@ const navMap = {
         { divider: true },
         { label: 'Service Catalog',href: '/admin/services',        icon: Settings },
         { label: 'Users & Staff',  href: '/admin/users',          icon: UserCog },
+        { label: 'E-Signatures',   href: '/admin/esignatures',    icon: PenLine },
         { label: 'Booking Photos', href: '/admin/booking-photos', icon: Monitor },
         { label: 'Audit Logs',     href: '/admin/audit',          icon: ShieldCheck },
     ],

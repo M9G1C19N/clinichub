@@ -134,9 +134,24 @@ class QueueController extends Controller
         $routing = $this->engine->getRoutingSummary($ticket);
         $roomCount = count($routing);
 
-        return back()->with('success',
-            "Ticket {$ticket->ticket_number} issued! Routed to {$roomCount} room(s)."
-        );
+        $patient = $ticket->patient;
+        $rooms   = $ticket->roomAssignments->map(fn($a) => [
+            'room'         => $a->room,
+            'queue_number' => $a->queue_number,
+        ])->values()->toArray();
+
+        return back()
+            ->with('success', "Ticket {$ticket->ticket_number} issued! Routed to {$roomCount} room(s).")
+            ->with('newTicket', [
+                'ticket_number'  => $ticket->ticket_number,
+                'patient_name'   => $patient->full_name,
+                'patient_code'   => $patient->patient_code,
+                'visit_type'     => $ticket->visit_type,
+                'priority'       => $ticket->priority,
+                'services'       => $ticket->services_requested ?? [],
+                'rooms'          => $rooms,
+                'issued_at'      => $ticket->issued_at->format('M d, Y h:i A'),
+            ]);
     }
 
     // ── ROOM SCREEN ───────────────────────────────────

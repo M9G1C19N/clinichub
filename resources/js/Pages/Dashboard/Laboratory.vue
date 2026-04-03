@@ -1,18 +1,11 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { router, Link } from '@inertiajs/vue3'
+import { computed, onMounted, onUnmounted } from 'vue'
+import { router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
-import StatCard from '@/Components/Dashboard/StatCard.vue'
-import QueueBadge from '@/Components/Dashboard/QueueBadge.vue'
-import VisitTypeBadge from '@/Components/Dashboard/VisitTypeBadge.vue'
-import {
-    FlaskConical, AlertTriangle, CheckCircle2, Clock,
-    RefreshCw, Wifi, ChevronRight, Activity, BarChart3
-} from 'lucide-vue-next'
+import { FlaskConical, AlertTriangle, CheckCircle2, ChevronRight, Wifi, Clock } from 'lucide-vue-next'
 
 const props = defineProps({
-    user: Object,
-    role: String,
+    user: Object, role: String,
     stats: Object,
     queue: Array,
     testVolume: Object,
@@ -20,220 +13,179 @@ const props = defineProps({
     backlog: Array,
 })
 
-const categoryLabels = {
-    hematology: 'Hematology',
-    chemistry:  'Chemistry',
-    urinalysis: 'Urinalysis',
-    serology:   'Serology',
-    stool:      'Stool',
-    thyroid:    'Thyroid',
-    other:      'Other',
+const priorityStyle = {
+    urgent:  { bg:'#FEF2F2', text:'#DC2626' },
+    pregnant:{ bg:'#FDF2F8', text:'#DB2777' },
+    pwd:     { bg:'#EFF6FF', text:'#1D4ED8' },
+    senior:  { bg:'#FFFBEB', text:'#D97706' },
+    regular: { bg:'#F8FAFC', text:'#475569' },
 }
-
-const categoryColors = {
-    hematology: '#DC2626',
-    chemistry:  '#0369A1',
-    urinalysis: '#D97706',
-    serology:   '#059669',
-    stool:      '#7C3AED',
-    thyroid:    '#0EA5E9',
-    other:      '#94A3B8',
+const visitLabel = { pre_employment:'Pre-Emp', annual_pe:'Annual PE', exit_pe:'Exit PE', opd:'OPD', follow_up:'Follow-up', lab_only:'Lab Only' }
+const labStatusStyle = {
+    pending:    { bg:'#FFFBEB', text:'#D97706' },
+    processing: { bg:'#EFF6FF', text:'#1D4ED8' },
+    released:   { bg:'#F0FDF4', text:'#16A34A' },
 }
+const catColor = { hematology:'#3b82f6', urinalysis:'#8b5cf6', chemistry:'#f59e0b', stool:'#84cc16', serology:'#ec4899', other:'#94a3b8' }
+const totalVol = computed(() => Math.max(Object.values(props.testVolume??{}).reduce((s,v)=>s+Number(v),0),1))
+const activeQ  = computed(() => (props.queue??[]).filter(q=>['waiting','calling','serving'].includes(q.status)))
+const doneQ    = computed(() => (props.queue??[]).filter(q=>q.status==='completed').length)
 
-const maxVolume = Math.max(...Object.values(props.testVolume ?? { _: 1 }))
-
-const priorityDot = {
-    urgent:   'bg-red-500',
-    senior:   'bg-amber-500',
-    pwd:      'bg-purple-500',
-    pregnant: 'bg-pink-500',
-    regular:  'bg-slate-300',
-}
-
-let timer = null
-onMounted(() => {
-    timer = setInterval(() => {
-        router.reload({ only: ['stats', 'queue', 'recentReleases'] })
-    }, 10000)
-})
-onUnmounted(() => clearInterval(timer))
-
-const refresh = () => router.reload({ only: ['stats', 'queue', 'recentReleases', 'testVolume'] })
+let t = null
+onMounted(() => { t = setInterval(()=>router.reload({only:['stats','queue','testVolume','recentReleases','backlog']}),20000) })
+onUnmounted(() => clearInterval(t))
 </script>
 
 <template>
-    <AppLayout title="Laboratory Dashboard">
-        <!-- Header -->
-        <div class="flex items-center justify-between mb-6">
+<AppLayout title="Laboratory Dashboard">
+    <template #header>
+        <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-2xl font-black text-[#0F2044]">Laboratory</h1>
-                <p class="text-sm text-slate-400 mt-0.5">Result entry and release management</p>
+                <h1 class="text-xl font-bold text-slate-800">Laboratory</h1>
+                <p class="text-xs text-slate-400 mt-0.5">{{ new Date().toLocaleDateString('en-PH',{weekday:'long',year:'numeric',month:'long',day:'numeric'}) }}</p>
             </div>
-            <div class="flex items-center gap-3">
-                <div class="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full">
-                    <Wifi class="w-3 h-3" /> <span class="font-semibold">Live — 10s</span>
-                </div>
-                <button @click="refresh" class="p-2 text-slate-400 hover:text-[#1B4F9B] hover:bg-slate-50 rounded-lg transition-colors">
-                    <RefreshCw class="w-4 h-4" />
-                </button>
-                <Link :href="route('laboratory.index')" class="flex items-center gap-2 text-sm text-[#1B4F9B] font-semibold border border-[#1B4F9B] px-3 py-2 rounded-xl hover:bg-[#1B4F9B] hover:text-white transition-colors">
-                    Full View <ChevronRight class="w-4 h-4" />
-                </Link>
+            <div class="flex items-center gap-2">
+                <span class="flex items-center gap-1 text-xs text-emerald-600 font-semibold"><Wifi class="w-3.5 h-3.5"/> Live</span>
+                <a :href="route('laboratory.index')" class="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg text-white" style="background:#3b82f6">
+                    <FlaskConical class="w-3.5 h-3.5"/> Lab Requests
+                </a>
             </div>
         </div>
+    </template>
 
-        <!-- Stats -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <StatCard label="In Queue" :value="stats.in_queue" :icon="Activity" color="#1B4F9B" />
-            <StatCard label="Pending Entry" :value="stats.pending_entry" :icon="Clock" color="#D97706" :warning="stats.pending_entry > 0" />
-            <StatCard label="Released Today" :value="stats.released_today" :icon="CheckCircle2" color="#059669" :success="stats.released_today > 0" />
-            <StatCard label="Abnormal Flags" :value="stats.abnormal_today" :icon="AlertTriangle" color="#DC2626" :danger="stats.abnormal_today > 0" />
+    <div class="space-y-5">
+        <!-- KPI -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:#EFF6FF">
+                    <FlaskConical class="w-5 h-5" style="color:#3b82f6"/>
+                </div>
+                <div><p class="text-3xl font-black text-slate-800">{{ stats.in_queue }}</p><p class="text-xs text-slate-400">In Queue</p></div>
+            </div>
+            <div class="bg-white rounded-2xl border border-amber-100 shadow-sm p-4 flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:#FFFBEB">
+                    <Clock class="w-5 h-5" style="color:#D97706"/>
+                </div>
+                <div><p class="text-3xl font-black" style="color:#D97706">{{ stats.pending_entry }}</p><p class="text-xs text-slate-400">Pending Entry</p></div>
+            </div>
+            <div class="bg-white rounded-2xl border border-emerald-100 shadow-sm p-4 flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:#F0FDF4">
+                    <CheckCircle2 class="w-5 h-5" style="color:#16A34A"/>
+                </div>
+                <div><p class="text-3xl font-black" style="color:#16A34A">{{ stats.released_today }}</p><p class="text-xs text-slate-400">Released Today</p></div>
+            </div>
+            <div class="bg-white rounded-2xl border border-red-100 shadow-sm p-4 flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:#FEF2F2">
+                    <AlertTriangle class="w-5 h-5" style="color:#DC2626"/>
+                </div>
+                <div><p class="text-3xl font-black text-red-600">{{ stats.abnormal_today }}</p><p class="text-xs text-slate-400">Abnormal Results</p></div>
+            </div>
         </div>
 
         <div class="grid grid-cols-3 gap-5">
             <!-- Queue -->
-            <div class="col-span-3 lg:col-span-2 space-y-5">
-                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm">
-                    <div class="p-5 border-b border-slate-50 flex items-center gap-2">
-                        <FlaskConical class="w-4 h-4 text-[#1B4F9B]" />
-                        <h3 class="font-bold text-[#0F2044] flex-1">Today's Lab Queue</h3>
-                        <span class="text-xs text-slate-400">{{ queue?.length ?? 0 }} patient(s)</span>
+            <div class="col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div class="px-5 py-3.5 border-b flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-1 h-4 rounded-full inline-block bg-blue-500"></span>
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Lab Queue</h3>
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold">{{ activeQ.length }} active</span>
                     </div>
-
-                    <div class="divide-y divide-slate-50">
-                        <div
-                            v-for="entry in queue" :key="entry.id"
-                            class="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors"
-                        >
-                            <!-- Priority + queue number -->
-                            <div class="flex-shrink-0 text-center w-16">
-                                <p class="text-lg font-black text-[#0F2044]">{{ entry.queue_number }}</p>
-                                <QueueBadge :status="entry.status" size="xs" />
+                    <span class="text-xs text-slate-400">{{ doneQ }} done today</span>
+                </div>
+                <div class="overflow-y-auto" style="max-height:400px;">
+                    <p v-if="!activeQ.length" class="py-12 text-center text-slate-400 text-sm">No active patients</p>
+                    <div v-else class="divide-y divide-slate-50">
+                        <div v-for="q in activeQ" :key="q.id" class="px-4 py-2.5 flex items-center gap-3 hover:bg-slate-50/50 transition-colors">
+                            <div class="w-14 text-center flex-shrink-0">
+                                <p class="text-xl font-black font-mono text-slate-800">{{ q.queue_number }}</p>
+                                <p :class="['text-xs font-bold',q.status==='serving'?'text-emerald-600':q.status==='calling'?'text-blue-600 animate-pulse':'text-slate-400']">{{ q.status }}</p>
                             </div>
-
-                            <!-- Patient -->
+                            <div class="w-px h-10 bg-slate-100 flex-shrink-0"/>
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center gap-2">
-                                    <div class="w-2 h-2 rounded-full flex-shrink-0" :class="priorityDot[entry.priority] ?? 'bg-slate-300'" />
-                                    <p class="font-semibold text-[#0F2044]">{{ entry.patient_name }}</p>
+                                    <p class="text-sm font-bold text-slate-800 truncate">{{ q.patient_name }}</p>
+                                    <span v-if="q.priority!=='regular'" class="text-xs font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
+                                        :style="{background:priorityStyle[q.priority]?.bg,color:priorityStyle[q.priority]?.text}">
+                                        {{ q.priority.toUpperCase() }}
+                                    </span>
                                 </div>
-                                <div class="flex items-center gap-2 mt-0.5 ml-4">
-                                    <p class="text-xs text-slate-400 font-mono">{{ entry.patient_code }}</p>
-                                    <span class="text-slate-300">·</span>
-                                    <p class="text-xs text-slate-400">{{ entry.age_sex }}</p>
-                                    <span v-if="entry.employer" class="text-slate-300">·</span>
-                                    <p v-if="entry.employer" class="text-xs text-slate-400 truncate max-w-32">{{ entry.employer }}</p>
+                                <p class="text-xs text-slate-400">{{ q.patient_code }} · {{ q.age_sex }}</p>
+                                <div class="flex flex-wrap gap-1 mt-1">
+                                    <span v-for="s in q.services?.slice(0,5)" :key="s"
+                                        class="text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-semibold">{{ s }}</span>
                                 </div>
                             </div>
+                            <span class="text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0"
+                                :style="{background:labStatusStyle[q.lab_status]?.bg??'#f1f5f9',color:labStatusStyle[q.lab_status]?.text??'#64748b'}">
+                                {{ q.lab_status }}
+                            </span>
+                            <a v-if="q.visit_id" :href="route('laboratory.enter',q.visit_id)"
+                                class="flex-shrink-0 text-xs font-bold px-2.5 py-1.5 rounded-lg text-white flex items-center gap-1" style="background:#3b82f6">
+                                Enter <ChevronRight class="w-3 h-3"/>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                            <!-- Services -->
-                            <div class="flex-shrink-0 flex gap-1 flex-wrap max-w-32">
-                                <span v-for="svc in entry.services?.slice(0, 4)" :key="svc" class="text-xs font-mono bg-[#D6E8F7] text-[#1B4F9B] px-1.5 py-0.5 rounded">{{ svc }}</span>
-                                <span v-if="entry.services?.length > 4" class="text-xs text-slate-400">+{{ entry.services.length - 4 }}</span>
+            <!-- Right -->
+            <div class="space-y-4">
+                <!-- Test volume -->
+                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Test Volume by Category</h3>
+                    <div class="space-y-2.5">
+                        <div v-for="(count,cat) in testVolume" :key="cat">
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="font-semibold capitalize text-slate-600">{{ cat }}</span>
+                                <span class="font-black text-slate-800">{{ count }}</span>
                             </div>
-
-                            <!-- Visit type -->
-                            <div class="flex-shrink-0">
-                                <VisitTypeBadge :type="entry.visit_type" size="xs" />
-                            </div>
-
-                            <!-- Lab status + action -->
-                            <div class="flex-shrink-0 flex items-center gap-2">
-                                <QueueBadge :status="entry.lab_status" size="xs" />
-                                <Link
-                                    v-if="entry.visit_id"
-                                    :href="route('laboratory.enter', entry.visit_id)"
-                                    class="text-xs font-semibold px-3 py-2 rounded-xl transition-colors"
-                                    :class="entry.lab_status === 'released'
-                                        ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                        : 'bg-[#1B4F9B] text-white hover:bg-[#0F2044]'"
-                                >
-                                    {{ entry.lab_status === 'released' ? 'View' : entry.lab_status === 'processing' ? 'Continue' : 'Enter' }}
-                                </Link>
+                            <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                                <div class="h-full rounded-full" :style="{width:(count/totalVol*100)+'%',background:catColor[cat]??'#94a3b8'}"/>
                             </div>
                         </div>
+                        <p v-if="!Object.keys(testVolume??{}).length" class="text-xs text-slate-400 text-center py-2">No results yet</p>
+                    </div>
+                </div>
 
-                        <div v-if="!queue?.length" class="py-16 text-center">
-                            <CheckCircle2 class="w-12 h-12 text-slate-200 mx-auto mb-3" />
-                            <p class="text-slate-400">No patients in lab queue today</p>
+                <!-- Recent Releases -->
+                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div class="px-4 py-3 border-b flex items-center gap-2">
+                        <span class="w-1 h-4 rounded-full inline-block bg-emerald-500"></span>
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Recent Releases</h3>
+                    </div>
+                    <div class="divide-y divide-slate-50">
+                        <p v-if="!recentReleases?.length" class="py-6 text-center text-xs text-slate-400">None today</p>
+                        <div v-for="r in recentReleases" :key="r.request_number" class="px-4 py-2.5">
+                            <div class="flex justify-between items-start">
+                                <p class="text-xs font-bold text-slate-800 truncate max-w-[120px]">{{ r.patient_name }}</p>
+                                <span v-if="r.has_abnormal" class="flex items-center gap-0.5 text-xs text-red-600 font-bold">
+                                    <AlertTriangle class="w-3 h-3"/> Abnormal
+                                </span>
+                            </div>
+                            <p class="text-xs text-slate-400 font-mono">{{ r.request_number }} · {{ r.released_at }}</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Backlog -->
-                <div v-if="backlog?.length" class="bg-amber-50 border border-amber-100 rounded-2xl p-5">
-                    <div class="flex items-center gap-2 mb-4">
-                        <AlertTriangle class="w-4 h-4 text-amber-600" />
-                        <h3 class="font-bold text-amber-800">Pending from Previous Days</h3>
+                <div v-if="backlog?.length" class="bg-white rounded-2xl border border-amber-100 shadow-sm overflow-hidden">
+                    <div class="px-4 py-3 border-b flex items-center gap-2">
+                        <span class="w-1 h-4 rounded-full inline-block bg-amber-400"></span>
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Backlog</h3>
                     </div>
-                    <div class="space-y-2">
-                        <div v-for="r in backlog" :key="r.id" class="bg-white rounded-xl p-3 flex items-center gap-3">
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-semibold text-slate-700 truncate">{{ r.patient_name }}</p>
-                                <p class="text-xs text-slate-400">{{ r.date }} · {{ r.request_number }}</p>
+                    <div class="divide-y divide-slate-50">
+                        <div v-for="b in backlog" :key="b.id" class="px-4 py-2.5 flex items-center justify-between">
+                            <div class="min-w-0">
+                                <p class="text-xs font-semibold text-slate-800 truncate">{{ b.patient_name }}</p>
+                                <p class="text-xs text-amber-500 font-semibold">{{ b.date }}</p>
                             </div>
-                            <VisitTypeBadge :type="r.visit_type" size="xs" />
-                            <Link :href="route('laboratory.enter', r.visit_id)" class="text-[#1B4F9B] hover:text-[#0F2044]">
-                                <ChevronRight class="w-4 h-4" />
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right panel -->
-            <div class="col-span-3 lg:col-span-1 space-y-4">
-                <!-- Test volume -->
-                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="font-bold text-[#0F2044]">Test Volume Today</h3>
-                        <BarChart3 class="w-4 h-4 text-slate-300" />
-                    </div>
-                    <div class="space-y-3">
-                        <div v-for="(count, cat) in testVolume" :key="cat">
-                            <div class="flex items-center justify-between mb-1">
-                                <span class="text-sm text-slate-600">{{ categoryLabels[cat] ?? cat }}</span>
-                                <span class="text-sm font-black text-[#0F2044]">{{ count }}</span>
-                            </div>
-                            <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
-                                <div
-                                    class="h-full rounded-full transition-all duration-500"
-                                    :style="{
-                                        width: `${Math.max(4, (count / maxVolume) * 100)}%`,
-                                        background: categoryColors[cat] ?? '#94A3B8'
-                                    }"
-                                />
-                            </div>
-                        </div>
-                        <div v-if="!Object.keys(testVolume ?? {}).length" class="text-sm text-slate-400 text-center py-4">
-                            No tests entered yet
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Recent releases -->
-                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                    <h3 class="font-bold text-[#0F2044] mb-4">Recently Released</h3>
-                    <div class="space-y-3">
-                        <div v-for="r in recentReleases" :key="r.request_number" class="flex items-start gap-3">
-                            <div class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                                :class="r.has_abnormal ? 'bg-red-50' : 'bg-emerald-50'">
-                                <component :is="r.has_abnormal ? AlertTriangle : CheckCircle2"
-                                    class="w-3.5 h-3.5"
-                                    :class="r.has_abnormal ? 'text-red-500' : 'text-emerald-500'" />
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-semibold text-slate-700 truncate">{{ r.patient_name }}</p>
-                                <p class="text-xs text-slate-400">{{ r.request_number }} · {{ r.released_at }}</p>
-                            </div>
-                            <span v-if="r.has_abnormal" class="text-xs text-red-500 font-bold flex-shrink-0">!</span>
-                        </div>
-                        <div v-if="!recentReleases?.length" class="text-sm text-slate-400 text-center py-4">
-                            No releases today yet
+                            <a :href="route('laboratory.enter',b.visit_id)" class="text-xs text-blue-500 hover:underline flex-shrink-0 ml-2">Enter</a>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </AppLayout>
+    </div>
+</AppLayout>
 </template>

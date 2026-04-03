@@ -361,12 +361,25 @@ class ReceptionController extends Controller
                 return [$visit, $invoice, $ticket];
             });
 
+            $ticket->load(['patient', 'roomAssignments']);
+            $rooms = $ticket->roomAssignments->map(fn($a) => [
+                'room'         => $a->room,
+                'queue_number' => $a->queue_number,
+            ])->values()->toArray();
+
             return redirect()
                 ->route('reception.show', $invoice->id)
-                ->with(
-                    'success',
-                    "Visit registered! Invoice {$invoice->invoice_number} created. Ticket {$ticket->ticket_number} issued."
-                );
+                ->with('success', "Visit registered! Invoice {$invoice->invoice_number} created. Ticket {$ticket->ticket_number} issued.")
+                ->with('newTicket', [
+                    'ticket_number' => $ticket->ticket_number,
+                    'patient_name'  => $ticket->patient->full_name,
+                    'patient_code'  => $ticket->patient->patient_code,
+                    'visit_type'    => $ticket->visit_type,
+                    'priority'      => $ticket->priority,
+                    'services'      => $ticket->services_requested ?? [],
+                    'rooms'         => $rooms,
+                    'issued_at'     => $ticket->issued_at->format('M d, Y h:i A'),
+                ]);
 
         } catch (\Throwable $e) {
             // Temporarily expose full error for debugging
@@ -380,7 +393,7 @@ class ReceptionController extends Controller
 
     public function show(Invoice $invoice)
     {
-        $invoice->load(['patient', 'visit', 'items', 'payments.receivedBy', 'createdBy']);
+        $invoice->load(['patient', 'visit.queueTicket.roomAssignments', 'items', 'payments.receivedBy', 'createdBy']);
 
         return inertia('Reception/Show', [
             'invoice' => [
@@ -427,6 +440,19 @@ class ReceptionController extends Controller
                 'received_by'      => $p->receivedBy?->name,
                 'created_at'       => $p->created_at->format('M d, Y h:i A'),
             ]),
+            'ticket' => $invoice->visit->queueTicket ? [
+                'ticket_number' => $invoice->visit->queueTicket->ticket_number,
+                'patient_name'  => $invoice->patient->full_name,
+                'patient_code'  => $invoice->patient->patient_code,
+                'visit_type'    => $invoice->visit->queueTicket->visit_type,
+                'priority'      => $invoice->visit->queueTicket->priority,
+                'services'      => $invoice->visit->queueTicket->services_requested ?? [],
+                'rooms'         => $invoice->visit->queueTicket->roomAssignments->map(fn($a) => [
+                    'room'         => $a->room,
+                    'queue_number' => $a->queue_number,
+                ])->values()->toArray(),
+                'issued_at'     => $invoice->visit->queueTicket->issued_at?->format('M d, Y h:i A'),
+            ] : null,
         ]);
     }
 

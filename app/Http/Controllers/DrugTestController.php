@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\DrugTestRequest;
 use App\Models\PatientVisit;
 use App\Models\QueueRoomAssignment;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -179,10 +180,12 @@ class DrugTestController extends Controller
                 'specimen_appearance' => $existing->specimen_appearance,
                 'specimen_sampling'   => $existing->specimen_sampling,
                 'specimen_collection' => $existing->specimen_collection,
-                'collector_name'      => $existing->collector_name,
-                'collector_license'   => $existing->collector_license,
-                'head_of_lab_name'    => $existing->head_of_lab_name,
-                'head_of_lab_license' => $existing->head_of_lab_license,
+                'collector_name'       => $existing->collector_name,
+                'collector_license'    => $existing->collector_license,
+                'collector_signature'  => $existing->collector_signature,
+                'head_of_lab_name'     => $existing->head_of_lab_name,
+                'head_of_lab_license'  => $existing->head_of_lab_license,
+                'head_of_lab_signature'=> $existing->head_of_lab_signature,
                 'remarks'             => $existing->remarks,
                 'result'              => $existing->result,
                 'result_remarks'      => $existing->result_remarks,
@@ -192,10 +195,19 @@ class DrugTestController extends Controller
                 'specimen_date'       => $existing->specimen_date?->format('Y-m-d') ?? now()->format('Y-m-d'),
             ] : null,
             'currentUser' => [
+                'id'         => $currentUser->id,
                 'name'       => $currentUser->name,
                 'prc_number' => $currentUser->prc_number ?? '',
+                'esignature' => $currentUser->esignature ? [
+                    'title'          => $currentUser->esignature->title,
+                    'license_number' => $currentUser->esignature->license_number,
+                    'signature_url'  => $currentUser->esignature->signature_url,
+                    'signature_path' => $currentUser->esignature->signature_path,
+                ] : null,
             ],
-            'drugsDefault' => $drugsDefault,
+            'drugsDefault'   => $drugsDefault,
+            'collectorList'  => $this->getStaffList(['drug_test', 'nursing', 'admin']),
+            'headOfLabList'  => $this->getStaffList(['laboratory', 'admin']),
         ]);
     }
 
@@ -212,10 +224,12 @@ class DrugTestController extends Controller
             'specimen_appearance' => ['nullable','string','max:100'],
             'specimen_sampling'   => ['nullable','in:single,split'],
             'specimen_collection' => ['nullable','in:observed,unobserved'],
-            'collector_name'      => ['nullable','string','max:100'],
-            'collector_license'   => ['nullable','string','max:50'],
-            'head_of_lab_name'    => ['nullable','string','max:100'],
-            'head_of_lab_license' => ['nullable','string','max:50'],
+            'collector_name'        => ['nullable','string','max:100'],
+            'collector_license'     => ['nullable','string','max:50'],
+            'collector_signature'   => ['nullable','string'],
+            'head_of_lab_name'      => ['nullable','string','max:100'],
+            'head_of_lab_license'   => ['nullable','string','max:50'],
+            'head_of_lab_signature' => ['nullable','string'],
             'remarks'             => ['nullable','string'],
             'result'              => ['nullable','in:negative,positive,cancelled,refusal,diluted,substituted,adulterated'],
             'result_remarks'      => ['nullable','string'],
@@ -242,10 +256,12 @@ class DrugTestController extends Controller
                 'specimen_appearance' => $validated['specimen_appearance'] ?? null,
                 'specimen_sampling'   => $validated['specimen_sampling'] ?? 'single',
                 'specimen_collection' => $validated['specimen_collection'] ?? 'unobserved',
-                'collector_name'      => $validated['collector_name'] ?? null,
-                'collector_license'   => $validated['collector_license'] ?? null,
-                'head_of_lab_name'    => $validated['head_of_lab_name'] ?? null,
-                'head_of_lab_license' => $validated['head_of_lab_license'] ?? null,
+                'collector_name'        => $validated['collector_name'] ?? null,
+                'collector_license'     => $validated['collector_license'] ?? null,
+                'collector_signature'   => $validated['collector_signature'] ?? null,
+                'head_of_lab_name'      => $validated['head_of_lab_name'] ?? null,
+                'head_of_lab_license'   => $validated['head_of_lab_license'] ?? null,
+                'head_of_lab_signature' => $validated['head_of_lab_signature'] ?? null,
                 'collected_by'        => Auth::id(),
                 'remarks'             => $validated['remarks'] ?? null,
                 'result'              => $validated['result'] ?? null,
@@ -305,10 +321,12 @@ class DrugTestController extends Controller
                 'specimen_appearance' => $test->specimen_appearance,
                 'specimen_sampling'   => $test->specimen_sampling,
                 'specimen_collection' => $test->specimen_collection,
-                'collector_name'      => $test->collector_name,
-                'collector_license'   => $test->collector_license,
-                'head_of_lab_name'    => $test->head_of_lab_name,
-                'head_of_lab_license' => $test->head_of_lab_license,
+                'collector_name'        => $test->collector_name,
+                'collector_license'     => $test->collector_license,
+                'collector_signature'   => $this->sigUrl($test->collector_signature),
+                'head_of_lab_name'      => $test->head_of_lab_name,
+                'head_of_lab_license'   => $test->head_of_lab_license,
+                'head_of_lab_signature' => $this->sigUrl($test->head_of_lab_signature),
                 'remarks'             => $test->remarks,
                 'result'              => $test->result,
                 'result_remarks'      => $test->result_remarks,
@@ -319,5 +337,39 @@ class DrugTestController extends Controller
                 'released_at'         => $test->released_at?->format('M d, Y h:i A'),
             ] : null,
         ]);
+    }
+
+    private function getStaffList(array $departments): array
+    {
+        return User::with('esignature')
+            ->where('is_active', true)
+            ->whereIn('department', $departments)
+            ->orderBy('name')
+            ->get()
+            ->filter(fn($u) => $u->esignature?->is_active ?? true)
+            ->map(fn($u) => [
+                'id'            => $u->id,
+                'name'          => $u->name,
+                'department'    => $u->department,
+                'title'         => $u->esignature?->title ?? null,
+                'license_number'=> $u->esignature?->license_number ?? $u->prc_number ?? '',
+                'ptr_number'    => $u->esignature?->ptr_number ?? $u->ptr_number ?? '',
+                'signature_url'  => $u->esignature?->signature_url ?? null,
+                'signature_path' => $u->esignature?->signature_path ?? null,
+            ])
+            ->values()
+            ->toArray();
+    }
+
+    private function sigUrl(?string $val): ?string
+    {
+        if (!$val) return null;
+        if (str_starts_with($val, 'http')) {
+            if (preg_match('#/storage/(.+)$#', $val, $m)) {
+                return asset('storage/' . $m[1]);
+            }
+            return $val;
+        }
+        return asset('storage/' . $val);
     }
 }

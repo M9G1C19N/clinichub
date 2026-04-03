@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ImagingRequest;
 use App\Models\PatientVisit;
 use App\Models\QueueRoomAssignment;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -195,8 +196,10 @@ class XRayController extends Controller
                 'status'               => $existing->status,
                 'rad_tech_name'        => $existing->rad_tech_name,
                 'rad_tech_license'     => $existing->rad_tech_license,
+                'rad_tech_signature'   => $existing->rad_tech_signature,
                 'radiologist_name'     => $existing->radiologist_name,
                 'radiologist_license'  => $existing->radiologist_license,
+                'radiologist_signature'=> $existing->radiologist_signature,
                 'exam_date' => $existing->exam_date
                 ? (is_string($existing->exam_date)
                     ? $existing->exam_date
@@ -205,9 +208,18 @@ class XRayController extends Controller
                 'exam_time' => $existing->exam_time ?? now()->format('H:i'),
             ] : null,
             'currentUser' => [
+                'id'         => $currentUser->id,
                 'name'       => $currentUser->name,
                 'prc_number' => $currentUser->prc_number ?? '',
+                'esignature' => $currentUser->esignature ? [
+                    'title'          => $currentUser->esignature->title,
+                    'license_number' => $currentUser->esignature->license_number,
+                    'signature_url'  => $currentUser->esignature->signature_url,
+                    'signature_path' => $currentUser->esignature->signature_path,
+                ] : null,
             ],
+            'staffList'   => $this->getStaffList(['xray_utz', 'doctor', 'admin']),
+            'radiologistList' => $this->getStaffList(['doctor', 'admin']),
         ]);
     }
 
@@ -220,10 +232,12 @@ class XRayController extends Controller
             'radiographic_findings' => ['nullable', 'string'],
             'impression'            => ['nullable', 'string'],
             'is_provisional'        => ['boolean'],
-            'rad_tech_name'         => ['nullable', 'string', 'max:100'],
-            'rad_tech_license'      => ['nullable', 'string', 'max:50'],
-            'radiologist_name'      => ['nullable', 'string', 'max:100'],
-            'radiologist_license'   => ['nullable', 'string', 'max:50'],
+            'rad_tech_name'          => ['nullable', 'string', 'max:100'],
+            'rad_tech_license'       => ['nullable', 'string', 'max:50'],
+            'rad_tech_signature'     => ['nullable', 'string'],
+            'radiologist_name'       => ['nullable', 'string', 'max:100'],
+            'radiologist_license'    => ['nullable', 'string', 'max:50'],
+            'radiologist_signature'  => ['nullable', 'string'],
             'release'               => ['boolean'],
             'exam_date'             => ['nullable', 'date'],
             'exam_time'             => ['nullable', 'string', 'max:10'],
@@ -238,10 +252,12 @@ class XRayController extends Controller
                 'radiographic_findings' => $validated['radiographic_findings'] ?? null,
                 'impression'            => $validated['impression'] ?? null,
                 'is_provisional'        => $validated['is_provisional'] ?? false,
-                'rad_tech_name'         => $validated['rad_tech_name'] ?? null,
-                'rad_tech_license'      => $validated['rad_tech_license'] ?? null,
-                'radiologist_name'      => $validated['radiologist_name'] ?? null,
-                'radiologist_license'   => $validated['radiologist_license'] ?? null,
+                'rad_tech_name'          => $validated['rad_tech_name'] ?? null,
+                'rad_tech_license'       => $validated['rad_tech_license'] ?? null,
+                'rad_tech_signature'     => $validated['rad_tech_signature'] ?? null,
+                'radiologist_name'       => $validated['radiologist_name'] ?? null,
+                'radiologist_license'    => $validated['radiologist_license'] ?? null,
+                'radiologist_signature'  => $validated['radiologist_signature'] ?? null,
                 'status'                => $validated['release'] ? 'released' : 'processing',
                 'released_at'           => $validated['release'] ? now() : null,
                 'released_by'           => $validated['release'] ? Auth::id() : null,
@@ -295,8 +311,10 @@ class XRayController extends Controller
                 'is_provisional'       => $imaging->is_provisional,
                 'rad_tech_name'        => $imaging->rad_tech_name,
                 'rad_tech_license'     => $imaging->rad_tech_license,
+                'rad_tech_signature'   => $this->sigUrl($imaging->rad_tech_signature),
                 'radiologist_name'     => $imaging->radiologist_name,
                 'radiologist_license'  => $imaging->radiologist_license,
+                'radiologist_signature'=> $this->sigUrl($imaging->radiologist_signature),
                 'status'               => $imaging->status,
                 'exam_date' => $imaging?->exam_date
                     ? (is_string($imaging->exam_date)
@@ -307,5 +325,39 @@ class XRayController extends Controller
             ] : null,
             'requestingPhysician' => $requestingPhysician,
         ]);
+    }
+
+    private function getStaffList(array $departments): array
+    {
+        return User::with('esignature')
+            ->where('is_active', true)
+            ->whereIn('department', $departments)
+            ->orderBy('name')
+            ->get()
+            ->filter(fn($u) => $u->esignature?->is_active ?? true)
+            ->map(fn($u) => [
+                'id'            => $u->id,
+                'name'          => $u->name,
+                'department'    => $u->department,
+                'title'         => $u->esignature?->title ?? null,
+                'license_number'=> $u->esignature?->license_number ?? $u->prc_number ?? '',
+                'ptr_number'    => $u->esignature?->ptr_number ?? $u->ptr_number ?? '',
+                'signature_url'  => $u->esignature?->signature_url ?? null,
+                'signature_path' => $u->esignature?->signature_path ?? null,
+            ])
+            ->values()
+            ->toArray();
+    }
+
+    private function sigUrl(?string $val): ?string
+    {
+        if (!$val) return null;
+        if (str_starts_with($val, 'http')) {
+            if (preg_match('#/storage/(.+)$#', $val, $m)) {
+                return asset('storage/' . $m[1]);
+            }
+            return $val;
+        }
+        return asset('storage/' . $val);
     }
 }

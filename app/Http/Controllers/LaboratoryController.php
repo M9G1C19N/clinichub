@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Esignature;
 use App\Models\LabTest;
 use App\Models\LaboratoryRequest;
 use App\Models\LaboratoryResult;
 use App\Models\PatientVisit;
 use App\Models\QueueRoomAssignment;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -271,22 +273,33 @@ class LaboratoryController extends Controller
                 'birthdate'    => $patient->birthdate?->format('M d, Y'),
             ],
             'labRequest' => $labRequest ? [
-                'id'                  => $labRequest->id,
-                'request_number'      => $labRequest->request_number,
-                'status'              => $labRequest->status,
-                'examined_by_name'    => $labRequest->examined_by_name,
-                'examined_by_license' => $labRequest->examined_by_license,
-                'noted_by_name'       => $labRequest->noted_by_name,
-                'noted_by_license'    => $labRequest->noted_by_license,
+                'id'                    => $labRequest->id,
+                'request_number'        => $labRequest->request_number,
+                'status'                => $labRequest->status,
+                'examined_by_name'      => $labRequest->examined_by_name,
+                'examined_by_license'   => $labRequest->examined_by_license,
+                'examined_by_signature' => $labRequest->examined_by_signature,
+                'noted_by_name'         => $labRequest->noted_by_name,
+                'noted_by_license'      => $labRequest->noted_by_license,
+                'noted_by_signature'    => $labRequest->noted_by_signature,
                 'result_date' => $labRequest->result_date?->format('Y-m-d') ?? now()->format('Y-m-d'),
                 'result_time' => $labRequest->result_time ?? now()->format('H:i'),
             ] : null,
             'tests'      => $testData,
             'allTests'   => $allTests,
             'currentUser' => [
+                'id'         => $currentUser->id,
                 'name'       => $currentUser->name,
                 'prc_number' => $currentUser->prc_number ?? '',
+                'esignature' => $currentUser->esignature ? [
+                    'title'          => $currentUser->esignature->title,
+                    'license_number' => $currentUser->esignature->license_number,
+                    'ptr_number'     => $currentUser->esignature->ptr_number,
+                    'signature_url'  => $currentUser->esignature->signature_url,
+                    'signature_path' => $currentUser->esignature->signature_path,
+                ] : null,
             ],
+            'staffList' => $this->getStaffList(['laboratory', 'doctor', 'admin', 'nursing']),
         ]);
     }
 
@@ -299,10 +312,12 @@ class LaboratoryController extends Controller
             'results.*.test_id'    => ['required', 'exists:lab_tests,id'],
             'results.*.value'      => ['nullable', 'string', 'max:100'],
             'results.*.remarks'    => ['nullable', 'string'],
-            'examined_by_name'     => ['nullable', 'string', 'max:100'],
-            'examined_by_license'  => ['nullable', 'string', 'max:50'],
-            'noted_by_name'        => ['nullable', 'string', 'max:100'],
-            'noted_by_license'     => ['nullable', 'string', 'max:50'],
+            'examined_by_name'      => ['nullable', 'string', 'max:100'],
+            'examined_by_license'   => ['nullable', 'string', 'max:50'],
+            'examined_by_signature' => ['nullable', 'string'],
+            'noted_by_name'         => ['nullable', 'string', 'max:100'],
+            'noted_by_license'      => ['nullable', 'string', 'max:50'],
+            'noted_by_signature'    => ['nullable', 'string'],
             'general_remarks'       => ['nullable', 'string'],
             'release'              => ['boolean'],
             'result_date' => ['nullable', 'date'],
@@ -318,10 +333,12 @@ class LaboratoryController extends Controller
                     'patient_id'          => $visit->patient_id,
                     'requested_by'        => Auth::id(),
                     'request_date'        => today(),
-                    'examined_by_name'    => $validated['examined_by_name'] ?? null,
-                    'examined_by_license' => $validated['examined_by_license'] ?? null,
-                    'noted_by_name'       => $validated['noted_by_name'] ?? null,
-                    'noted_by_license'    => $validated['noted_by_license'] ?? null,
+                    'examined_by_name'      => $validated['examined_by_name'] ?? null,
+                    'examined_by_license'   => $validated['examined_by_license'] ?? null,
+                    'examined_by_signature' => $validated['examined_by_signature'] ?? null,
+                    'noted_by_name'         => $validated['noted_by_name'] ?? null,
+                    'noted_by_license'      => $validated['noted_by_license'] ?? null,
+                    'noted_by_signature'    => $validated['noted_by_signature'] ?? null,
                     'status'              => $validated['release'] ? 'released' : 'processing',
                     'released_at'         => $validated['release'] ? now() : null,
                     'released_by'         => $validated['release'] ? Auth::id() : null,
@@ -419,18 +436,55 @@ class LaboratoryController extends Controller
                 'address'     => $visit->patient->address,
             ],
             'labRequest' => $labRequest ? [
-                'id'                  => $labRequest->id,
-                'status'              => $labRequest->status,
-                'examined_by_name'    => $labRequest->examined_by_name,
-                'examined_by_license' => $labRequest->examined_by_license,
-                'noted_by_name'       => $labRequest->noted_by_name,
-                'noted_by_license'    => $labRequest->noted_by_license,
-                'remarks'             => $labRequest->remarks,
+                'id'                    => $labRequest->id,
+                'status'                => $labRequest->status,
+                'examined_by_name'      => $labRequest->examined_by_name,
+                'examined_by_license'   => $labRequest->examined_by_license,
+                'examined_by_signature' => $this->sigUrl($labRequest->examined_by_signature),
+                'noted_by_name'         => $labRequest->noted_by_name,
+                'noted_by_license'      => $labRequest->noted_by_license,
+                'noted_by_signature'    => $this->sigUrl($labRequest->noted_by_signature),
+                'remarks'               => $labRequest->remarks,
                 'result_date' => $labRequest->result_date?->format('M d, Y') ?? $visit->visit_date->format('M d, Y'),
                 'result_time' => $labRequest->result_time ?? '',
             ] : null,
             'results'    => $results,
             'categories' => $categories,
         ]);
+    }
+
+    private function getStaffList(array $departments): array
+    {
+        return User::with('esignature')
+            ->where('is_active', true)
+            ->whereIn('department', $departments)
+            ->orderBy('name')
+            ->get()
+            ->filter(fn($u) => $u->esignature?->is_active ?? true)
+            ->map(fn($u) => [
+                'id'            => $u->id,
+                'name'          => $u->name,
+                'department'    => $u->department,
+                'title'         => $u->esignature?->title ?? null,
+                'license_number'=> $u->esignature?->license_number ?? $u->prc_number ?? '',
+                'ptr_number'    => $u->esignature?->ptr_number ?? $u->ptr_number ?? '',
+                'signature_url'  => $u->esignature?->signature_url ?? null,
+                'signature_path' => $u->esignature?->signature_path ?? null,
+            ])
+            ->values()
+            ->toArray();
+    }
+
+    private function sigUrl(?string $val): ?string
+    {
+        if (!$val) return null;
+        if (str_starts_with($val, 'http')) {
+            // Legacy full URL — extract path after /storage/
+            if (preg_match('#/storage/(.+)$#', $val, $m)) {
+                return asset('storage/' . $m[1]);
+            }
+            return $val;
+        }
+        return asset('storage/' . $val);
     }
 }

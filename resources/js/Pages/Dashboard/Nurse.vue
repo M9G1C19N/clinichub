@@ -1,241 +1,150 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { router, Link } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
-import StatCard from '@/Components/Dashboard/StatCard.vue'
-import QueueBadge from '@/Components/Dashboard/QueueBadge.vue'
-import VisitTypeBadge from '@/Components/Dashboard/VisitTypeBadge.vue'
-import {
-    Activity, Heart, ClipboardList, Users, Clock,
-    CheckCircle2, AlertTriangle, RefreshCw, Wifi,
-    ChevronRight, ArrowRight, Star
-} from 'lucide-vue-next'
+import { HeartPulse, AlertCircle, CheckCircle2, ClipboardList, FlaskConical, Pill, ChevronRight, Wifi, Activity } from 'lucide-vue-next'
 
 const props = defineProps({
-    user: Object,
-    role: String,
+    user: Object, role: String,
     stats: Object,
     queue: Array,
     visitTypeCounts: Object,
     backlog: Array,
 })
 
-const visitTypeLabels = {
-    opd: 'OPD', pre_employment: 'Pre-Employment', annual_pe: 'Annual PE',
-    exit_pe: 'Exit PE', follow_up: 'Follow-Up', lab_only: 'Lab Only',
+const priorityStyle = {
+    urgent:  { bg:'#FEF2F2', text:'#DC2626' },
+    pregnant:{ bg:'#FDF2F8', text:'#DB2777' },
+    pwd:     { bg:'#EFF6FF', text:'#1D4ED8' },
+    senior:  { bg:'#FFFBEB', text:'#D97706' },
+    regular: { bg:'#F8FAFC', text:'#475569' },
 }
+const visitLabel = { pre_employment:'Pre-Emp', annual_pe:'Annual PE', exit_pe:'Exit PE', opd:'OPD', follow_up:'Follow-up', lab_only:'Lab Only' }
+const visitColor  = { pre_employment:'#7C3AED', annual_pe:'#16A34A', exit_pe:'#C2410C', opd:'#1D4ED8', follow_up:'#0369A1' }
+const totalVT = computed(() => Math.max(Object.values(props.visitTypeCounts ?? {}).reduce((s,v)=>s+v,0),1))
+const activeQ = computed(() => (props.queue??[]).filter(q=>['waiting','calling','serving'].includes(q.status)))
+const doneQ   = computed(() => (props.queue??[]).filter(q=>q.status==='completed').length)
 
-const priorityConfig = {
-    urgent:   { label: 'Urgent',   bg: 'bg-red-100',   text: 'text-red-700',   dot: 'bg-red-500' },
-    senior:   { label: 'Senior',   bg: 'bg-amber-100', text: 'text-amber-700', dot: 'bg-amber-500' },
-    pwd:      { label: 'PWD',      bg: 'bg-purple-100',text: 'text-purple-700',dot: 'bg-purple-500' },
-    pregnant: { label: 'Pregnant', bg: 'bg-pink-100',  text: 'text-pink-700',  dot: 'bg-pink-500' },
-    regular:  { label: 'Regular',  bg: 'bg-slate-100', text: 'text-slate-600', dot: 'bg-slate-400' },
-}
-
-const formatWait = (mins) => {
-    if (mins < 60) return `${mins}m`
-    return `${Math.floor(mins / 60)}h ${mins % 60}m`
-}
-
-let timer = null
-onMounted(() => {
-    timer = setInterval(() => {
-        router.reload({ only: ['stats', 'queue'] })
-    }, 10000)
-})
-onUnmounted(() => clearInterval(timer))
-
-const refresh = () => router.reload({ only: ['stats', 'queue', 'backlog'] })
+let t = null
+onMounted(() => { t = setInterval(()=>router.reload({only:['stats','queue','visitTypeCounts','backlog']}),20000) })
+onUnmounted(() => clearInterval(t))
 </script>
 
 <template>
-    <AppLayout title="Nurse Dashboard">
-        <!-- Header -->
-        <div class="flex items-center justify-between mb-6">
+<AppLayout title="Nurse Dashboard">
+    <template #header>
+        <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-2xl font-black text-[#0F2044]">Nurse Intake</h1>
-                <p class="text-sm text-slate-400 mt-0.5">Patient vitals and medical history</p>
+                <h1 class="text-xl font-bold text-slate-800">Nurse Station</h1>
+                <p class="text-xs text-slate-400 mt-0.5">{{ new Date().toLocaleDateString('en-PH',{weekday:'long',year:'numeric',month:'long',day:'numeric'}) }}</p>
             </div>
-            <div class="flex items-center gap-3">
-                <div class="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full">
-                    <Wifi class="w-3 h-3" /> <span class="font-semibold">Auto-refresh 10s</span>
-                </div>
-                <button @click="refresh" class="p-2 text-slate-400 hover:text-[#1B4F9B] hover:bg-slate-50 rounded-lg transition-colors">
-                    <RefreshCw class="w-4 h-4" />
-                </button>
+            <div class="flex items-center gap-2">
+                <span class="flex items-center gap-1 text-xs text-emerald-600 font-semibold"><Wifi class="w-3.5 h-3.5"/> Live</span>
+                <a :href="route('nurse.index')" class="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg text-white" style="background:#10B981">
+                    <HeartPulse class="w-3.5 h-3.5"/> Nurse Intake
+                </a>
             </div>
         </div>
+    </template>
 
-        <!-- Stats -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <StatCard label="In Queue" :value="stats.in_queue" :icon="Activity" color="#1B4F9B" sub="Interview room today" />
-            <StatCard label="Vitals Taken" :value="stats.vitals_taken" :icon="Heart" color="#059669" :success="stats.vitals_taken > 0" sub="Completed today" />
-            <StatCard label="Pending Vitals" :value="stats.pending" :icon="ClipboardList" color="#D97706" :warning="stats.pending > 0" sub="Need intake today" />
-            <StatCard label="PE Patients" :value="stats.pe_today" :icon="Star" color="#7C3AED" sub="Pre-employ / Annual / Exit" />
+    <div class="space-y-5">
+        <!-- KPI -->
+        <div class="grid grid-cols-3 lg:grid-cols-6 gap-3">
+            <div v-for="(val,key,i) in { 'In Queue':stats.in_queue, 'Vitals Done':stats.vitals_taken, 'Need Vitals':stats.pending, 'PE Today':stats.pe_today, 'Rx Today':stats.prescriptions_today, 'Lab Pending':stats.lab_pending_today }" :key="key"
+                class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                <p class="text-2xl font-black text-slate-800">{{ val }}</p>
+                <p class="text-xs text-slate-400 mt-0.5">{{ key }}</p>
+            </div>
         </div>
 
         <div class="grid grid-cols-3 gap-5">
-            <!-- Queue (main panel) -->
-            <div class="col-span-3 lg:col-span-2">
-                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm">
-                    <div class="p-5 border-b border-slate-50 flex items-center gap-3">
-                        <h3 class="font-bold text-[#0F2044] flex-1">Today's Interview Room Queue</h3>
-                        <span class="text-xs text-slate-400">{{ queue?.length ?? 0 }} patient(s)</span>
+            <!-- Queue -->
+            <div class="col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div class="px-5 py-3.5 border-b flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-1 h-4 rounded-full inline-block bg-emerald-500"></span>
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Interview Room Queue</h3>
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold">{{ activeQ.length }} active</span>
                     </div>
-
-                    <!-- Queue list -->
-                    <div class="divide-y divide-slate-50">
-                        <div
-                            v-for="entry in queue" :key="entry.id"
-                            class="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors"
-                        >
-                            <!-- Queue number + status -->
-                            <div class="flex-shrink-0 text-center w-16">
-                                <p class="text-lg font-black text-[#0F2044]">{{ entry.queue_number }}</p>
-                                <QueueBadge :status="entry.status" size="xs" />
+                    <span class="text-xs text-slate-400">{{ doneQ }} completed</span>
+                </div>
+                <div class="overflow-y-auto" style="max-height:420px;">
+                    <div v-if="!activeQ.length" class="py-14 text-center text-slate-400 text-sm">No active patients in queue</div>
+                    <div v-else class="divide-y divide-slate-50">
+                        <div v-for="q in activeQ" :key="q.id" class="px-4 py-3 flex items-center gap-3 hover:bg-slate-50/50 transition-colors">
+                            <div class="w-14 text-center flex-shrink-0">
+                                <p class="text-xl font-black font-mono text-slate-800">{{ q.queue_number }}</p>
+                                <p :class="['text-xs font-bold', q.status==='serving'?'text-emerald-600': q.status==='calling'?'text-blue-600 animate-pulse':'text-slate-400']">{{ q.status }}</p>
                             </div>
-
-                            <!-- Priority badge -->
-                            <div class="flex-shrink-0">
-                                <span
-                                    class="text-xs font-semibold px-2 py-1 rounded-full"
-                                    :class="[priorityConfig[entry.priority]?.bg, priorityConfig[entry.priority]?.text]"
-                                >
-                                    {{ priorityConfig[entry.priority]?.label ?? entry.priority }}
+                            <div class="w-px h-10 bg-slate-100 flex-shrink-0"/>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <p class="text-sm font-bold text-slate-800 truncate">{{ q.patient_name }}</p>
+                                    <span v-if="q.priority!=='regular'" class="text-xs font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
+                                        :style="{background:priorityStyle[q.priority]?.bg,color:priorityStyle[q.priority]?.text}">
+                                        {{ q.priority.toUpperCase() }}
+                                    </span>
+                                </div>
+                                <p class="text-xs text-slate-400">{{ q.patient_code }} · {{ q.age_sex }}</p>
+                                <p v-if="q.employer" class="text-xs text-violet-500 font-semibold truncate">{{ q.employer }}</p>
+                            </div>
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 flex-shrink-0">{{ visitLabel[q.visit_type]??q.visit_type }}</span>
+                            <div class="flex-shrink-0 w-16 text-center">
+                                <span v-if="q.has_vitals" class="flex items-center gap-1 text-xs text-emerald-600 font-bold justify-center">
+                                    <CheckCircle2 class="w-3.5 h-3.5"/> Done
+                                </span>
+                                <span v-else class="flex items-center gap-1 text-xs text-amber-600 font-bold justify-center">
+                                    <AlertCircle class="w-3.5 h-3.5"/> Needed
                                 </span>
                             </div>
-
-                            <!-- Patient info -->
-                            <div class="flex-1 min-w-0">
-                                <p class="font-semibold text-[#0F2044]">{{ entry.patient_name }}</p>
-                                <div class="flex items-center gap-2 mt-0.5">
-                                    <p class="text-xs text-slate-400 font-mono">{{ entry.patient_code }}</p>
-                                    <span class="text-slate-300">·</span>
-                                    <p class="text-xs text-slate-400">{{ entry.age_sex }}</p>
-                                    <span v-if="entry.employer" class="text-slate-300">·</span>
-                                    <p v-if="entry.employer" class="text-xs text-slate-400 truncate">{{ entry.employer }}</p>
-                                </div>
-                            </div>
-
-                            <!-- Visit type -->
-                            <div class="flex-shrink-0">
-                                <VisitTypeBadge :type="entry.visit_type" size="xs" />
-                            </div>
-
-                            <!-- Vitals status -->
-                            <div class="flex-shrink-0 text-center w-20">
-                                <div v-if="entry.has_vitals" class="flex items-center gap-1 text-emerald-600">
-                                    <CheckCircle2 class="w-4 h-4" />
-                                    <span class="text-xs font-semibold">Done</span>
-                                </div>
-                                <div v-else class="flex items-center gap-1 text-amber-500">
-                                    <AlertTriangle class="w-4 h-4" />
-                                    <span class="text-xs font-semibold">Needed</span>
-                                </div>
-                            </div>
-
-                            <!-- Wait time -->
-                            <div class="flex-shrink-0 text-right w-12">
-                                <p class="text-xs font-semibold text-slate-500">{{ formatWait(entry.wait_mins) }}</p>
-                                <p class="text-xs text-slate-300">wait</p>
-                            </div>
-
-                            <!-- Action -->
-                            <div class="flex-shrink-0">
-                                <Link
-                                    v-if="entry.visit_id"
-                                    :href="route('nurse.vitals', entry.visit_id)"
-                                    class="text-xs font-semibold px-3 py-2 rounded-xl transition-colors"
-                                    :class="entry.has_vitals
-                                        ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                        : 'bg-[#1B4F9B] text-white hover:bg-[#0F2044]'"
-                                >
-                                    {{ entry.has_vitals ? 'Update' : 'Record' }}
-                                </Link>
-                            </div>
-                        </div>
-
-                        <div v-if="!queue?.length" class="py-16 text-center">
-                            <CheckCircle2 class="w-12 h-12 text-slate-200 mx-auto mb-3" />
-                            <p class="text-slate-400 font-medium">No patients in queue right now</p>
-                            <p class="text-sm text-slate-300 mt-1">New patients will appear here when assigned</p>
+                            <a v-if="q.visit_id" :href="route('nurse.enter',q.visit_id)"
+                                class="flex-shrink-0 text-xs font-bold px-2.5 py-1.5 rounded-lg text-white flex items-center gap-1" style="background:#0F2044">
+                                Enter <ChevronRight class="w-3 h-3"/>
+                            </a>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Right panel -->
-            <div class="col-span-3 lg:col-span-1 space-y-4">
-                <!-- Visit type breakdown -->
-                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                    <h3 class="font-bold text-[#0F2044] mb-4">Today's Visit Breakdown</h3>
-                    <div class="space-y-3">
-                        <div v-for="(count, type) in visitTypeCounts" :key="type" class="flex items-center gap-3">
-                            <div class="flex-1">
-                                <div class="flex items-center justify-between mb-1">
-                                    <span class="text-sm text-slate-600">{{ visitTypeLabels[type] ?? type }}</span>
-                                    <span class="text-sm font-black text-[#0F2044]">{{ count }}</span>
-                                </div>
-                                <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
-                                    <div
-                                        class="h-full bg-[#1B4F9B] rounded-full transition-all duration-500"
-                                        :style="{ width: `${(count / (stats.in_queue || 1)) * 100}%` }"
-                                    />
-                                </div>
+            <!-- Right -->
+            <div class="space-y-4">
+                <!-- Visit type bars -->
+                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Today's Visit Types</h3>
+                    <div class="space-y-2.5">
+                        <div v-for="(count,type) in visitTypeCounts" :key="type">
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-slate-600 font-semibold">{{ visitLabel[type]??type }}</span>
+                                <span class="font-black text-slate-800">{{ count }}</span>
+                            </div>
+                            <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                                <div class="h-full rounded-full" :style="{width:(count/totalVT*100)+'%',background:visitColor[type]??'#94a3b8'}"/>
                             </div>
                         </div>
-                        <div v-if="!Object.keys(visitTypeCounts ?? {}).length" class="text-sm text-slate-400 text-center py-4">
-                            No data yet
-                        </div>
+                        <p v-if="!Object.keys(visitTypeCounts??{}).length" class="text-xs text-slate-400 text-center py-2">No data yet</p>
                     </div>
                 </div>
 
-                <!-- Backlog from previous days -->
-                <div v-if="backlog?.length" class="bg-amber-50 border border-amber-100 rounded-2xl p-5">
-                    <div class="flex items-center gap-2 mb-4">
-                        <AlertTriangle class="w-4 h-4 text-amber-600" />
-                        <h3 class="font-bold text-amber-800">Pending from Previous Days</h3>
+                <!-- Backlog -->
+                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div class="px-4 py-3 border-b flex items-center gap-2">
+                        <span class="w-1 h-4 rounded-full inline-block bg-amber-400"></span>
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Backlog</h3>
+                        <span class="text-xs text-slate-400">(no vitals)</span>
                     </div>
-                    <div class="space-y-3">
-                        <div v-for="v in backlog" :key="v.id" class="bg-white rounded-xl p-3 flex items-center gap-3">
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-semibold text-slate-700 truncate">{{ v.patient_name }}</p>
-                                <p class="text-xs text-slate-400">{{ v.visit_date }} · {{ visitTypeLabels[v.visit_type] }}</p>
+                    <div class="divide-y divide-slate-50">
+                        <p v-if="!backlog?.length" class="py-6 text-center text-xs text-slate-400">No backlog</p>
+                        <div v-for="b in backlog" :key="b.id" class="px-4 py-2.5 flex items-center justify-between">
+                            <div class="min-w-0">
+                                <p class="text-xs font-semibold text-slate-800 truncate">{{ b.patient_name }}</p>
+                                <p class="text-xs text-amber-500 font-semibold">{{ b.visit_date }} · {{ b.days_ago }}d ago</p>
                             </div>
-                            <span class="text-xs text-amber-600 font-semibold bg-amber-50 px-2 py-0.5 rounded-full">
-                                {{ v.days_ago }}d ago
-                            </span>
-                            <Link :href="route('nurse.vitals', v.id)" class="text-[#1B4F9B] hover:text-[#0F2044] flex-shrink-0">
-                                <ArrowRight class="w-4 h-4" />
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tips -->
-                <div class="bg-[#0F2044] rounded-2xl p-5 text-white">
-                    <h4 class="font-bold text-sm mb-3">Priority Guide</h4>
-                    <div class="space-y-2 text-xs">
-                        <div class="flex items-center gap-2">
-                            <span class="px-2 py-0.5 rounded-full bg-red-500 text-white font-bold">Urgent</span>
-                            <span class="text-white/70">Serve immediately</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="px-2 py-0.5 rounded-full bg-pink-500 text-white font-bold">Pregnant</span>
-                            <span class="text-white/70">Priority seating</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="px-2 py-0.5 rounded-full bg-purple-500 text-white font-bold">PWD</span>
-                            <span class="text-white/70">Assisted service</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="px-2 py-0.5 rounded-full bg-amber-500 text-white font-bold">Senior</span>
-                            <span class="text-white/70">Before regular</span>
+                            <a :href="route('nurse.enter',b.id)" class="text-xs text-blue-500 hover:underline ml-2 flex-shrink-0">Enter</a>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </AppLayout>
+    </div>
+</AppLayout>
 </template>

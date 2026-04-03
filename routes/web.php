@@ -109,6 +109,12 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/audit', fn() => inertia('Admin/Audit'))->name('audit');
 
+        // Staff E-Signatures
+        Route::get('/esignatures',                           [\App\Http\Controllers\Admin\EsignatureController::class, 'index'])->name('esignatures.index');
+        Route::post('/esignatures',                          [\App\Http\Controllers\Admin\EsignatureController::class, 'store'])->name('esignatures.store');
+        Route::delete('/esignatures/{esignature}',           [\App\Http\Controllers\Admin\EsignatureController::class, 'destroy'])->name('esignatures.destroy');
+        Route::patch('/esignatures/{esignature}/toggle',     [\App\Http\Controllers\Admin\EsignatureController::class, 'toggleActive'])->name('esignatures.toggle');
+
         // Booking page photo management
         Route::get('/booking-photos',                      [\App\Http\Controllers\Admin\BookingPhotoController::class, 'index'])->name('booking-photos.index');
         Route::post('/booking-photos',                     [\App\Http\Controllers\Admin\BookingPhotoController::class, 'store'])->name('booking-photos.store');

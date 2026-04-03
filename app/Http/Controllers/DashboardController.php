@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Appointment;
 use App\Models\Consultation;
 use App\Models\DrugTestRequest;
 use App\Models\ImagingRequest;
@@ -12,9 +13,11 @@ use App\Models\Patient;
 use App\Models\PatientVisit;
 use App\Models\PatientVital;
 use App\Models\Payment;
+use App\Models\Prescription;
 use App\Models\QueueRoomAssignment;
 use App\Models\QueueTicket;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -157,24 +160,48 @@ class DashboardController extends Controller
             ];
         }
 
+        // Appointments
+        $apptPending   = Appointment::where('status', 'pending')->count();
+        $apptToday     = Appointment::whereDate('preferred_date', today())->whereIn('status', ['confirmed', 'pending'])->count();
+        $apptThisWeek  = Appointment::whereBetween('preferred_date', [now()->startOfWeek(), now()->endOfWeek()])->count();
+        $recentAppointments = Appointment::where('status', 'pending')
+            ->orderByDesc('created_at')->limit(5)->get()
+            ->map(fn($a) => [
+                'id'             => $a->id,
+                'appointment_number' => $a->appointment_number,
+                'patient_name'   => $a->patient_name,
+                'service_label'  => $a->service_label,
+                'preferred_date' => $a->preferred_date->format('M d, Y'),
+                'preferred_time' => $a->preferred_time_label,
+                'created_at'     => $a->created_at->diffForHumans(),
+            ]);
+
+        // Prescriptions
+        $prescriptionsToday = Prescription::whereDate('rx_date', today())->count();
+
         return [
             'stats' => [
-                'today_visits'    => $todayVisits,
-                'today_revenue'   => (float) $todayRevenue,
-                'pending_payment' => $pendingPay,
-                'active_queue'    => $activeQueue,
-                'visits_trend'    => $yesterdayVisits > 0 ? round((($todayVisits - $yesterdayVisits) / $yesterdayVisits) * 100) : 0,
-                'revenue_trend'   => $yesterdayRevenue > 0 ? round((($todayRevenue - $yesterdayRevenue) / $yesterdayRevenue) * 100) : 0,
+                'today_visits'         => $todayVisits,
+                'today_revenue'        => (float) $todayRevenue,
+                'pending_payment'      => $pendingPay,
+                'active_queue'         => $activeQueue,
+                'visits_trend'         => $yesterdayVisits > 0 ? round((($todayVisits - $yesterdayVisits) / $yesterdayVisits) * 100) : 0,
+                'revenue_trend'        => $yesterdayRevenue > 0 ? round((($todayRevenue - $yesterdayRevenue) / $yesterdayRevenue) * 100) : 0,
+                'appointments_pending' => $apptPending,
+                'appointments_today'   => $apptToday,
+                'appointments_week'    => $apptThisWeek,
+                'prescriptions_today'  => $prescriptionsToday,
             ],
-            'visitTrend'         => $visitTrend,
-            'revenueTrend'       => $revenueTrend,
-            'visitTypeBreakdown' => $visitTypeBreakdown,
-            'pendingInvoices'    => $pendingInvoices,
-            'topServices'        => $topServices,
-            'recentActivity'     => $recentActivity,
-            'roomActivity'       => $roomActivity,
-            'totalPatients'      => Patient::count(),
-            'newPatientsToday'   => Patient::whereDate('created_at', today())->count(),
+            'visitTrend'           => $visitTrend,
+            'revenueTrend'         => $revenueTrend,
+            'visitTypeBreakdown'   => $visitTypeBreakdown,
+            'pendingInvoices'      => $pendingInvoices,
+            'topServices'          => $topServices,
+            'recentActivity'       => $recentActivity,
+            'roomActivity'         => $roomActivity,
+            'recentAppointments'   => $recentAppointments,
+            'totalPatients'        => Patient::count(),
+            'newPatientsToday'     => Patient::whereDate('created_at', today())->count(),
         ];
     }
 
@@ -226,23 +253,37 @@ class DashboardController extends Controller
                 ->count();
         }
 
+        $pendingAppointments = Appointment::where('status', 'pending')
+            ->orderByDesc('created_at')->limit(8)->get()
+            ->map(fn($a) => [
+                'id'             => $a->id,
+                'appointment_number' => $a->appointment_number,
+                'patient_name'   => $a->patient_name,
+                'patient_phone'  => $a->patient_phone,
+                'service_label'  => $a->service_label,
+                'preferred_date' => $a->preferred_date->format('M d, Y'),
+                'preferred_time' => $a->preferred_time_label,
+                'created_at'     => $a->created_at->diffForHumans(),
+            ]);
+
         return [
             'stats' => [
-                'today_visits'    => $todayVisits->count(),
-                'pending_payment' => $unpaidCount + $partialCount,
-                'pending_balance' => $totalBalance,
-                'completed'       => $todayVisits->where('invoice_status', 'paid')->count(),
-                'active_queue'    => array_sum($queueStats),
+                'today_visits'         => $todayVisits->count(),
+                'pending_payment'      => $unpaidCount + $partialCount,
+                'pending_balance'      => $totalBalance,
+                'completed'            => $todayVisits->where('invoice_status', 'paid')->count(),
+                'active_queue'         => array_sum($queueStats),
+                'appointments_pending' => Appointment::where('status', 'pending')->count(),
+                'appointments_today'   => Appointment::whereDate('preferred_date', today())->whereIn('status', ['confirmed','pending'])->count(),
             ],
             'todayVisits'         => $todayVisits,
             'queueStats'          => $queueStats,
             'fieldVisitsPending'  => PatientVisit::where('is_field_visit', true)
                 ->whereNull('case_number')->count(),
+            'pendingAppointments' => $pendingAppointments,
             'recentPayments'      => Payment::with('invoice.visit.patient')
                 ->whereDate('created_at', today())
-                ->latest()
-                ->limit(5)
-                ->get()
+                ->latest()->limit(5)->get()
                 ->map(fn ($p) => [
                     'amount'       => (float) $p->amount,
                     'method'       => $p->method,
@@ -308,14 +349,20 @@ class DashboardController extends Controller
                 'days_ago'     => $v->visit_date->diffInDays(today()),
             ]);
 
+        $prescriptionsToday = Prescription::whereDate('rx_date', today())->count();
+        $labPendingToday    = LaboratoryRequest::whereIn('status', ['pending', 'processing'])
+            ->whereHas('visit', fn($q) => $q->whereDate('visit_date', today()))->count();
+
         return [
             'stats' => [
-                'in_queue'       => $queue->count(),
-                'vitals_taken'   => $vitalsTaken,
-                'pending'        => $queue->where('has_vitals', false)->count(),
-                'pe_today'       => ($visitTypeCounts['pre_employment'] ?? 0) +
-                                    ($visitTypeCounts['annual_pe'] ?? 0) +
-                                    ($visitTypeCounts['exit_pe'] ?? 0),
+                'in_queue'            => $queue->count(),
+                'vitals_taken'        => $vitalsTaken,
+                'pending'             => $queue->where('has_vitals', false)->count(),
+                'pe_today'            => ($visitTypeCounts['pre_employment'] ?? 0) +
+                                         ($visitTypeCounts['annual_pe'] ?? 0) +
+                                         ($visitTypeCounts['exit_pe'] ?? 0),
+                'prescriptions_today' => $prescriptionsToday,
+                'lab_pending_today'   => $labPendingToday,
             ],
             'queue'           => $queue,
             'visitTypeCounts' => $visitTypeCounts,
@@ -394,16 +441,22 @@ class DashboardController extends Controller
             ->whereHas('request.visit', fn ($q) => $q->whereDate('visit_date', today()))
             ->count();
 
+        $myPrescriptionsToday = Prescription::where('doctor_id', Auth::id())
+            ->whereDate('rx_date', today())->count();
+        $totalPrescriptionsToday = Prescription::whereDate('rx_date', today())->count();
+
         return [
             'stats' => [
-                'ready_for_review'  => $pending->where('all_results_in', true)->count(),
-                'pending_total'     => $pending->count(),
-                'completed_today'   => Consultation::where('is_finalized', true)
+                'ready_for_review'       => $pending->where('all_results_in', true)->count(),
+                'pending_total'          => $pending->count(),
+                'completed_today'        => Consultation::where('is_finalized', true)
                     ->whereDate('finalized_at', today())->count(),
-                'abnormal_today'    => $abnormalToday,
-                'pe_done_today'     => Consultation::where('is_finalized', true)
+                'abnormal_today'         => $abnormalToday,
+                'pe_done_today'          => Consultation::where('is_finalized', true)
                     ->whereNotNull('pe_classification')
                     ->whereDate('finalized_at', today())->count(),
+                'my_prescriptions_today' => $myPrescriptionsToday,
+                'all_prescriptions_today'=> $totalPrescriptionsToday,
             ],
             'pending'               => $pending,
             'completedToday'        => $completedToday,
@@ -711,20 +764,34 @@ class DashboardController extends Controller
                 'created_at'     => $p->created_at->format('h:i A'),
             ]);
 
+        $apptPending     = Appointment::where('status', 'pending')->count();
+        $apptConfToday   = Appointment::whereDate('preferred_date', today())->where('status', 'confirmed')->count();
+        $visitTypeRevenue = Invoice::join('patient_visits', 'invoices.patient_visit_id', '=', 'patient_visits.id')
+            ->whereDate('invoices.created_at', $today)
+            ->where('invoices.status', '!=', 'cancelled')
+            ->selectRaw('patient_visits.visit_type, SUM(invoices.total_amount) as total')
+            ->groupBy('patient_visits.visit_type')
+            ->orderByDesc('total')
+            ->pluck('total', 'visit_type')
+            ->toArray();
+
         return [
             'stats' => [
-                'collected_today'  => (float) $totalToday,
-                'billed_today'     => (float) $billedToday,
-                'paid_today'       => $paidToday,
-                'unpaid_count'     => $unpaidCount,
-                'unpaid_balance'   => (float) $unpaidBalance,
-                'partial_count'    => $partialCount,
-                'partial_balance'  => (float) $partialBalance,
+                'collected_today'      => (float) $totalToday,
+                'billed_today'         => (float) $billedToday,
+                'paid_today'           => $paidToday,
+                'unpaid_count'         => $unpaidCount,
+                'unpaid_balance'       => (float) $unpaidBalance,
+                'partial_count'        => $partialCount,
+                'partial_balance'      => (float) $partialBalance,
+                'appointments_pending' => $apptPending,
+                'appointments_today'   => $apptConfToday,
             ],
-            'revenueTrend'    => $revenueTrend,
-            'byMethod'        => $byMethod,
-            'pendingInvoices' => $pendingInvoices,
-            'recentPayments'  => $recentPayments,
+            'revenueTrend'     => $revenueTrend,
+            'byMethod'         => $byMethod,
+            'pendingInvoices'  => $pendingInvoices,
+            'recentPayments'   => $recentPayments,
+            'visitTypeRevenue' => $visitTypeRevenue,
         ];
     }
 }

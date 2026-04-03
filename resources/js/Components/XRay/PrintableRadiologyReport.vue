@@ -137,7 +137,13 @@ defineProps({
 
             <!-- Rad Tech -->
             <div style="text-align:center;">
-                <div style="border-top:1px solid #333; padding-top:6px; margin-top:40px;">
+                <div style="min-height:50px; display:flex; align-items:flex-end; justify-content:center; margin-bottom:4px;">
+                    <img v-if="imagingRequest?.rad_tech_signature"
+                        :src="imagingRequest.rad_tech_signature"
+                        style="max-height:48px; max-width:160px; object-fit:contain;"
+                        alt="Signature"/>
+                </div>
+                <div style="border-top:1px solid #333; padding-top:6px;">
                     <div style="font-weight:900; font-size:11px; text-transform:uppercase; letter-spacing:0.3px;">
                         {{ imagingRequest?.rad_tech_name ?? '' }}
                     </div>
@@ -152,7 +158,13 @@ defineProps({
 
             <!-- Radiologist -->
             <div style="text-align:center;">
-                <div style="border-top:1px solid #333; padding-top:6px; margin-top:40px;">
+                <div style="min-height:50px; display:flex; align-items:flex-end; justify-content:center; margin-bottom:4px;">
+                    <img v-if="imagingRequest?.radiologist_signature"
+                        :src="imagingRequest.radiologist_signature"
+                        style="max-height:48px; max-width:160px; object-fit:contain;"
+                        alt="Signature"/>
+                </div>
+                <div style="border-top:1px solid #333; padding-top:6px;">
                     <div style="font-weight:900; font-size:11px; text-transform:uppercase; letter-spacing:0.3px; text-decoration:underline;">
                         {{ imagingRequest?.radiologist_name ?? '' }}
                     </div>

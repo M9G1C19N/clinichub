@@ -14,8 +14,9 @@ class DrugTestRequest extends Model
         'company','test_purpose','drugs_to_test','specimen_type',
         'specimen_time','temp_in_range','specimen_volume',
         'specimen_appearance','specimen_sampling','specimen_collection',
-        'collector_name','collector_license','head_of_lab_name',
-        'head_of_lab_license','collected_by','remarks',
+        'collector_name','collector_license','collector_signature',
+        'head_of_lab_name','head_of_lab_license','head_of_lab_signature',
+        'collected_by','remarks',
         'result','result_remarks','certification_signed',
         'certification_date','status','released_at','released_by','specimen_date',
     ];

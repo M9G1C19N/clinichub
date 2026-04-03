@@ -189,6 +189,10 @@ class PrescriptionController extends Controller
     // ── PRINT ─────────────────────────────────────────────
     public function print(Prescription $prescription)
     {
+        $prescription->load(['doctor.esignature']);
+        $rawSig    = $prescription->doctor?->esignature?->signature_path;
+        $doctorSig = $this->sigUrl($rawSig);
+
         return inertia('Prescriptions/Print', [
             'prescription' => [
                 'id'             => $prescription->id,
@@ -211,6 +215,7 @@ class PrescriptionController extends Controller
                 'ptr_number'     => $prescription->doctor_ptr,
                 's2_number'      => $prescription->doctor_s2,
                 'specialization' => $prescription->doctor_specialization,
+                'signature_url'  => $doctorSig,
             ],
         ]);
     }
@@ -220,5 +225,17 @@ class PrescriptionController extends Controller
     {
         $prescription->delete();
         return back()->with('success', 'Prescription removed.');
+    }
+
+    private function sigUrl(?string $val): ?string
+    {
+        if (!$val) return null;
+        if (str_starts_with($val, 'http')) {
+            if (preg_match('#/storage/(.+)$#', $val, $m)) {
+                return asset('storage/' . $m[1]);
+            }
+            return $val;
+        }
+        return asset('storage/' . $val);
     }
 }

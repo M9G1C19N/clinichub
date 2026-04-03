@@ -643,7 +643,12 @@ const classRec = {
 
     <!-- DOCTOR SIGNATURE -->
     <div style="text-align:right;padding-right:16px;margin-top:5px;">
-        <div style="min-height:16px;"></div>
+        <div style="min-height:40px;display:flex;align-items:flex-end;justify-content:flex-end;margin-bottom:2px;padding-right:0;">
+            <img v-if="consultation?.doctor_signature"
+                :src="consultation.doctor_signature"
+                style="max-height:38px;max-width:150px;object-fit:contain;"
+                alt="Signature"/>
+        </div>
         <div style="border-top:1px solid #333;display:inline-block;min-width:190px;text-align:center;padding-top:2px;">
             <div style="font-size:9px;">
                 Examining Physician: <strong style="font-size:11px;">&nbsp;{{ (consultation?.doctor_name||'ROLAND E. MIRA')?.toUpperCase() }}, MD</strong>
