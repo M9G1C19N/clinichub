@@ -70,13 +70,20 @@ const isPurpose = (p) => props.drugTest?.test_purpose === p
         <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px 12px; margin-bottom:12px; font-size:10.5px;">
             <div style="grid-column:1/-1; border-bottom:1px solid #ccc; padding-bottom:4px; margin-bottom:4px;">
                 <span style="color:#555; font-size:9.5px;">Name:</span>
-                <span style="margin-left:8px;"></span>
-                <strong style="font-size:13px; letter-spacing:0.5px;">{{ patient.last_name?.toUpperCase() }}</strong>
-                <span style="margin:0 12px; color:#999; font-size:9px;">Surname</span>
-                <strong style="font-size:13px;">{{ patient.first_name?.toUpperCase() }}</strong>
-                <span style="margin:0 12px; color:#999; font-size:9px;">First Name</span>
-                <strong style="font-size:13px;">{{ patient.middle_name?.charAt(0)?.toUpperCase() }}</strong>
-                <span style="margin-left:4px; color:#999; font-size:9px;">M.I.</span>
+                <div style="display:flex; gap:0; margin-top:2px;">
+                    <div style="flex:3; text-align:center; padding:0 8px 2px 0; border-bottom:1px solid #333;">
+                        <strong style="font-size:13px; letter-spacing:0.5px;">{{ patient.last_name?.toUpperCase() }}</strong>
+                        <div style="font-size:8.5px; color:#777; margin-top:1px;">Surname</div>
+                    </div>
+                    <div style="flex:3; text-align:center; padding:0 8px 2px; border-bottom:1px solid #333;">
+                        <strong style="font-size:13px;">{{ patient.first_name?.toUpperCase() }}</strong>
+                        <div style="font-size:8.5px; color:#777; margin-top:1px;">First Name</div>
+                    </div>
+                    <div style="flex:1; text-align:center; padding:0 0 2px 8px; border-bottom:1px solid #333;">
+                        <strong style="font-size:13px;">{{ patient.middle_name?.charAt(0)?.toUpperCase() }}</strong>
+                        <div style="font-size:8.5px; color:#777; margin-top:1px;">M.I.</div>
+                    </div>
+                </div>
             </div>
 
             <div>

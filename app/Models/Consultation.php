@@ -4,10 +4,26 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class Consultation extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly([
+                'chief_complaint', 'soap_subjective', 'soap_objective', 'soap_assessment', 'soap_plan',
+                'icd10_code', 'icd10_description', 'diagnosis_type',
+                'pe_classification', 'pe_findings', 'pe_recommendation',
+                'doctor_notes', 'is_finalized', 'status', 'follow_up_date',
+            ])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn(string $event) => "Consultation #{$this->id} {$event}");
+    }
 
     protected $fillable = [
         'patient_id', 'patient_visit_id', 'visit_type',

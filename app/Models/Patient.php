@@ -5,11 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 use Carbon\Carbon;
 
 class Patient extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, LogsActivity;
 
     protected $fillable = [
         'patient_code',
@@ -38,11 +40,23 @@ class Patient extends Model
         'is_active'     => 'boolean',
     ];
 
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly([
+                'first_name', 'last_name', 'middle_name', 'date_of_birth',
+                'sex', 'civil_status', 'contact_number', 'email', 'address',
+                'philhealth_number', 'blood_type', 'occupation',
+                'emergency_contact_name', 'emergency_contact_number',
+                'visit_type_default', 'is_active',
+            ])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn(string $event) => "Patient {$this->patient_code} {$event}");
+    }
+
     // ── Accessors ──────────────────────────────────────────
 
-    /**
-     * Full name: Last, First Middle
-     */
     public function getFullNameAttribute(): string
     {
         $middle = $this->middle_name
@@ -52,17 +66,11 @@ class Patient extends Model
         return "{$this->last_name}, {$this->first_name}{$middle}";
     }
 
-    /**
-     * Age computed from date_of_birth
-     */
     public function getAgeAttribute(): int
     {
         return Carbon::parse($this->date_of_birth)->age;
     }
 
-    /**
-     * Age/Sex short string e.g. "34/M"
-     */
     public function getAgeSexAttribute(): string
     {
         return $this->age . '/' . strtoupper(substr($this->sex, 0, 1));

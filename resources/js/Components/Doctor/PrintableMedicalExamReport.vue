@@ -501,7 +501,7 @@ const classRec = {
                     </tr>
                 </table>
 
-                <div style="font-weight:900;font-size:10px;text-align:center;margin-bottom:2px;">SEROLOGY</div>
+                <div style="font-weight:900;font-size:10px;text-align:center;margin-bottom:2px;">OTHERS</div>
                 <table style="width:100%;border-collapse:collapse;font-size:8.5px;border:1px solid #333;">
                     <tr style="border-bottom:1px solid #333;background:#f5f5f5;">
                         <th style="text-align:left;padding:1px 2px;border-right:1px solid #333;">EXAMINATION</th>
@@ -747,7 +747,7 @@ const classRec = {
             <div v-if="consultation?.soap_assessment && !consultation?.essentially_normal" style="font-size:9px;white-space:pre-line;margin-top:2px;">{{ consultation.soap_assessment }}</div>
             <!-- Examining Physician signature — right side, below Remarks -->
             <div style="margin-top:8px;text-align:center;">
-                <div style="min-height:38px;display:flex;align-items:flex-end;justify-content:start;margin-bottom:2px;">
+                <div style="min-height:38px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:2px;">
                     <img v-if="consultation?.doctor_signature"
                         :src="consultation.doctor_signature"
                         style="max-height:36px;max-width:150px;object-fit:contain;"

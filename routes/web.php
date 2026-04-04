@@ -107,7 +107,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('services', \App\Http\Controllers\Admin\ServiceCatalogController::class)->names('services');
         Route::patch('/services/{service}/toggle-active', [\App\Http\Controllers\Admin\ServiceCatalogController::class, 'toggleActive'])->name('services.toggle-active');
 
-        Route::get('/audit', fn() => inertia('Admin/Audit'))->name('audit');
+        Route::get('/audit', [\App\Http\Controllers\AuditController::class, 'index'])->name('audit');
 
         // Staff E-Signatures
         Route::get('/esignatures',                           [\App\Http\Controllers\Admin\EsignatureController::class, 'index'])->name('esignatures.index');

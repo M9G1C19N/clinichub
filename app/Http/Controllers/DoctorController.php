@@ -734,25 +734,32 @@ public function destroyPrescription(Prescription $prescription)
 
 public function printPrescription(Prescription $prescription)
 {
-    return inertia('Doctor/PrintPrescription', [
+    $prescription->load('doctor.esignature');
+
+    return inertia('Prescriptions/Print', [
         'prescription' => [
-            'id'             => $prescription->id,
-            'rx_number'      => $prescription->rx_number,
-            'rx_date'        => $prescription->rx_date->format('M d, Y'),
-            'items'          => $prescription->items,
-            'notes'          => $prescription->notes,
-            'is_controlled'  => $prescription->is_controlled,
-            'doctor_name'    => $prescription->doctor_name,
-            'doctor_prc'     => $prescription->doctor_prc,
-            'doctor_ptr'     => $prescription->doctor_ptr,
-            'doctor_s2'      => $prescription->doctor_s2,
-            'doctor_specialization' => $prescription->doctor_specialization,
+            'id'            => $prescription->id,
+            'rx_number'     => $prescription->rx_number,
+            'rx_date'       => $prescription->rx_date->format('M d, Y'),
+            'items'         => $prescription->items,
+            'notes'         => $prescription->notes,
+            'is_controlled' => $prescription->is_controlled,
         ],
         'patient' => [
             'full_name'    => $prescription->patient_name,
             'age_sex'      => $prescription->patient_age_sex,
             'address'      => $prescription->patient_address,
             'patient_code' => $prescription->patient->patient_code,
+        ],
+        'doctor' => [
+            'name'           => $prescription->doctor_name,
+            'specialization' => $prescription->doctor_specialization,
+            'prc_number'     => $prescription->doctor_prc,
+            'ptr_number'     => $prescription->doctor_ptr,
+            's2_number'      => $prescription->doctor_s2,
+            'signature_url'  => $prescription->doctor?->esignature?->signature_path
+                ? $this->sigUrl($prescription->doctor->esignature->signature_path)
+                : null,
         ],
     ]);
 }
