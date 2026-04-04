@@ -50,7 +50,7 @@ const categoryLabel = {
     chemistry:  'Blood Chemistry',
     urinalysis: 'Urinalysis',
     stool:      'Stool Exam',
-    serology:   'Others (Serology)',
+    serology:   'Serology',
     thyroid:    'Thyroid Panel',
     other:      'Other Tests',
 }

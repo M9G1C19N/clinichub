@@ -106,73 +106,104 @@ const peClassColor = {
             </div>
         </template>
 
-        <!-- ── Summary Cards ─────────────────────────── -->
-        <div class="grid grid-cols-4 gap-4 mb-5">
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-5 gap-3 mb-4">
 
-            <div @click="activeTab = 'today'"
-                :class="['bg-card rounded-xl border shadow-sm p-4 flex items-center gap-3 cursor-pointer transition-all',
-                    activeTab === 'today' ? 'ring-2 ring-blue-400' : 'hover:shadow-md']">
-                <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+            <div @click="activeTab = 'today'" class="rounded-xl border shadow-sm p-4 flex items-center gap-3 cursor-pointer transition-all hover:shadow-md"
+                :style="activeTab === 'today'
+                    ? 'background:linear-gradient(135deg,#EFF6FF,#DBEAFE);border-color:#93C5FD;'
+                    : 'background:white;'">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                    :style="activeTab === 'today' ? 'background:#DBEAFE;' : 'background:#EFF6FF;'">
                     <Users class="w-5 h-5 text-blue-600"/>
                 </div>
                 <div>
-                    <p class="text-xs text-muted-foreground">Today's Queue</p>
-                    <p class="text-2xl font-black text-slate-800">{{ summary.today_queue }}</p>
+                    <p class="text-xs text-slate-500 font-medium">Today's Queue</p>
+                    <p class="text-2xl font-black text-slate-800 leading-none mt-0.5">{{ summary.today_queue }}</p>
                 </div>
             </div>
 
-            <div @click="activeTab = 'pending'"
-                :class="['bg-card rounded-xl border shadow-sm p-4 flex items-center gap-3 cursor-pointer transition-all',
-                    activeTab === 'pending' ? 'ring-2 ring-amber-400' : 'hover:shadow-md']">
-                <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
-                    <ClipboardList class="w-5 h-5 text-amber-600"/>
+            <div @click="activeTab = 'pending'" class="rounded-xl border shadow-sm p-4 flex items-center gap-3 cursor-pointer transition-all hover:shadow-md"
+                :style="activeTab === 'pending'
+                    ? 'background:linear-gradient(135deg,#FFFBEB,#FEF3C7);border-color:#FCD34D;'
+                    : 'background:white;'">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                    :style="activeTab === 'pending' ? 'background:#FEF3C7;' : 'background:#FFFBEB;'">
+                    <ClipboardList class="w-5 h-5 text-amber-500"/>
                 </div>
                 <div>
-                    <p class="text-xs text-muted-foreground">Pending Diagnosis</p>
-                    <div class="flex items-center gap-2">
-                        <p class="text-2xl font-black text-slate-800">{{ summary.pending_total }}</p>
+                    <p class="text-xs text-slate-500 font-medium">Pending</p>
+                    <div class="flex items-baseline gap-1.5 mt-0.5">
+                        <p class="text-2xl font-black text-slate-800 leading-none">{{ summary.pending_total }}</p>
                         <span v-if="summary.pending_pe > 0"
-                            class="text-xs font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">
+                            class="text-xs font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700">
                             {{ summary.pending_pe }} PE
                         </span>
                     </div>
                 </div>
             </div>
 
-            <div @click="activeTab = 'completed'"
-                :class="['bg-card rounded-xl border shadow-sm p-4 flex items-center gap-3 cursor-pointer transition-all',
-                    activeTab === 'completed' ? 'ring-2 ring-emerald-400' : 'hover:shadow-md']">
-                <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+            <div @click="activeTab = 'completed'" class="rounded-xl border shadow-sm p-4 flex items-center gap-3 cursor-pointer transition-all hover:shadow-md"
+                :style="activeTab === 'completed'
+                    ? 'background:linear-gradient(135deg,#ECFDF5,#D1FAE5);border-color:#6EE7B7;'
+                    : 'background:white;'">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                    :style="activeTab === 'completed' ? 'background:#D1FAE5;' : 'background:#ECFDF5;'">
                     <CheckCircle2 class="w-5 h-5 text-emerald-600"/>
                 </div>
                 <div>
-                    <p class="text-xs text-muted-foreground">Completed Today</p>
-                    <p class="text-2xl font-black text-slate-800">{{ summary.completed_today }}</p>
+                    <p class="text-xs text-slate-500 font-medium">Completed Today</p>
+                    <p class="text-2xl font-black text-slate-800 leading-none mt-0.5">{{ summary.completed_today }}</p>
                 </div>
             </div>
 
-            <div class="bg-card rounded-xl border shadow-sm p-4 flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
-                    <Stethoscope class="w-5 h-5 text-purple-600"/>
+            <div class="rounded-xl border shadow-sm p-4 flex items-center gap-3 bg-white">
+                <div class="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center flex-shrink-0">
+                    <Stethoscope class="w-5 h-5 text-violet-600"/>
                 </div>
                 <div>
-                    <p class="text-xs text-muted-foreground">Pre-Employment Pending</p>
-                    <p class="text-2xl font-black text-slate-800">{{ summary.pending_pe }}</p>
+                    <p class="text-xs text-slate-500 font-medium">PE Pending</p>
+                    <p class="text-2xl font-black text-slate-800 leading-none mt-0.5">{{ summary.pending_pe }}</p>
                 </div>
             </div>
 
-            <div @click="activeTab = 'history'"
-                :class="['bg-card rounded-xl border shadow-sm p-4 flex items-center gap-3 cursor-pointer transition-all',
-                    activeTab === 'history' ? 'ring-2 ring-slate-400' : 'hover:shadow-md']">
-                <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
-                    <FileText class="w-5 h-5 text-slate-600"/>
+            <div @click="activeTab = 'history'" class="rounded-xl border shadow-sm p-4 flex items-center gap-3 cursor-pointer transition-all hover:shadow-md"
+                :style="activeTab === 'history'
+                    ? 'background:linear-gradient(135deg,#F8FAFC,#F1F5F9);border-color:#94A3B8;'
+                    : 'background:white;'">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                    :style="activeTab === 'history' ? 'background:#E2E8F0;' : 'background:#F8FAFC;'">
+                    <FileText class="w-5 h-5 text-slate-500"/>
                 </div>
                 <div>
-                    <p class="text-xs text-muted-foreground">History</p>
-                    <p class="text-2xl font-black text-slate-800">{{ summary.history_total ?? 0 }}</p>
+                    <p class="text-xs text-slate-500 font-medium">History</p>
+                    <p class="text-2xl font-black text-slate-800 leading-none mt-0.5">{{ summary.history_total ?? 0 }}</p>
                 </div>
             </div>
 
+        </div>
+
+        <!-- Tab Navigation Bar -->
+        <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl mb-5">
+            <button v-for="tab in [
+                { key: 'today',     label: 'Today\'s Queue',    count: summary.today_queue,    color: '#1B4F9B' },
+                { key: 'pending',   label: 'Pending Diagnosis', count: summary.pending_total,  color: '#D97706' },
+                { key: 'completed', label: 'Completed Today',   count: summary.completed_today, color: '#059669' },
+                { key: 'history',   label: 'History',           count: summary.history_total ?? 0, color: '#64748B' },
+            ]" :key="tab.key"
+                @click="activeTab = tab.key"
+                class="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+                :style="activeTab === tab.key
+                    ? 'background:white;color:' + tab.color + ';box-shadow:0 1px 3px rgba(0,0,0,0.1);'
+                    : 'color:#64748B;'">
+                {{ tab.label }}
+                <span class="text-xs font-bold px-1.5 py-0.5 rounded-full"
+                    :style="activeTab === tab.key
+                        ? 'background:' + tab.color + ';color:white;'
+                        : 'background:#E2E8F0;color:#64748B;'">
+                    {{ tab.count }}
+                </span>
+            </button>
         </div>
 
 
@@ -180,12 +211,6 @@ const peClassColor = {
         <!-- TAB 1: TODAY'S QUEUE                           -->
         <!-- ══════════════════════════════════════════════ -->
         <div v-if="activeTab === 'today'" class="space-y-3">
-            <div class="flex items-center gap-2 px-1 mb-3">
-                <span class="w-1 h-4 rounded-full inline-block bg-blue-500"></span>
-                <h3 class="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                    Today's Interview Room Queue
-                </h3>
-            </div>
 
             <!-- Empty -->
             <div v-if="todayQueue.length === 0"
@@ -292,10 +317,6 @@ const peClassColor = {
 
             <!-- Filter bar -->
             <div class="flex items-center gap-2 mb-4">
-                <span class="w-1 h-4 rounded-full inline-block bg-amber-400"></span>
-                <h3 class="text-xs font-bold text-muted-foreground uppercase tracking-widest mr-2">
-                    Pending Diagnosis
-                </h3>
                 <div class="flex items-center gap-1.5">
                     <button v-for="f in [
                         { value: 'all',            label: 'All' },
@@ -420,9 +441,9 @@ const peClassColor = {
                             <!-- Action -->
                             <td class="px-4 py-4">
                                 <Link :href="route('doctor.consult', visit.id)">
-                                    <Button size="sm" class="gap-2 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                    <Button size="sm" class="gap-2 text-white"
                                         :style="{ backgroundColor:
-                                            visit.visit_type === 'pre_employment' ? '#8B5CF6' : '#1B4F9B' }">
+                                            ['pre_employment','annual_pe','exit_pe'].includes(visit.visit_type) ? '#8B5CF6' : '#1B4F9B' }">
                                         <Stethoscope class="w-3.5 h-3.5"/>
                                         {{ visit.has_draft ? 'Continue' : 'Diagnose' }}
                                     </Button>
@@ -456,12 +477,6 @@ const peClassColor = {
         <!-- TAB 3: COMPLETED TODAY                         -->
         <!-- ══════════════════════════════════════════════ -->
         <div v-if="activeTab === 'completed'">
-            <div class="flex items-center gap-2 px-1 mb-3">
-                <span class="w-1 h-4 rounded-full inline-block bg-emerald-500"></span>
-                <h3 class="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                    Completed Today ({{ completed.length }})
-                </h3>
-            </div>
 
             <div v-if="completed.length === 0"
                 class="bg-card rounded-xl border shadow-sm py-16 text-center">
@@ -513,16 +528,15 @@ const peClassColor = {
                                 </div>
                             </td>
                             <td class="px-4 py-3.5">
-                                <div class="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div class="flex items-center gap-1.5">
                                     <Link :href="route('doctor.consult', c.visit_id)">
                                         <Button variant="outline" size="sm" class="text-xs gap-1.5">
                                             <Stethoscope class="w-3.5 h-3.5"/>
                                             View
                                         </Button>
                                     </Link>
-                                    <!-- Print button — visible to all authorized roles -->
                                     <a :href="route('doctor.print', c.visit_id)" target="_blank">
-                                        <Button variant="outline" size="sm" class="text-xs gap-1.5">
+                                        <Button size="sm" class="text-xs gap-1.5 text-white" style="background:#1B4F9B;">
                                             <Printer class="w-3.5 h-3.5"/>
                                             Print
                                         </Button>
@@ -595,12 +609,8 @@ const peClassColor = {
                                 </p>
                             </td>
                             <td class="px-4 py-3.5">
-                                <span class="text-xs font-semibold px-2 py-0.5 rounded"
-                                    :style="{
-                                        background: visitTypeBadge[c.visit_type]?.bg,
-                                        color: visitTypeBadge[c.visit_type]?.color
-                                    }">
-                                    {{ visitTypeBadge[c.visit_type]?.label }}
+                                <span :class="['text-xs font-semibold px-2 py-0.5 rounded-full', visitTypeBadge[c.visit_type]]">
+                                    {{ visitTypeLabel[c.visit_type] }}
                                 </span>
                             </td>
                             <td class="px-4 py-3.5">
@@ -624,14 +634,14 @@ const peClassColor = {
                                 {{ c.finalized_at }}
                             </td>
                             <td class="px-4 py-3.5">
-                                <div class="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div class="flex items-center gap-1.5">
                                     <Link :href="route('doctor.consult', c.visit_id)">
                                         <Button variant="outline" size="sm" class="text-xs h-7 gap-1">
                                             <Stethoscope class="w-3 h-3"/> View
                                         </Button>
                                     </Link>
                                     <a :href="route('doctor.print', c.visit_id)" target="_blank">
-                                        <Button variant="outline" size="sm" class="text-xs h-7 gap-1">
+                                        <Button size="sm" class="text-xs h-7 gap-1 text-white" style="background:#1B4F9B;">
                                             <Printer class="w-3 h-3"/> Print
                                         </Button>
                                     </a>

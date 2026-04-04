@@ -501,7 +501,7 @@ const classRec = {
                     </tr>
                 </table>
 
-                <div style="font-weight:900;font-size:10px;text-align:center;margin-bottom:2px;">OTHERS</div>
+                <div style="font-weight:900;font-size:10px;text-align:center;margin-bottom:2px;">SEROLOGY</div>
                 <table style="width:100%;border-collapse:collapse;font-size:8.5px;border:1px solid #333;">
                     <tr style="border-bottom:1px solid #333;background:#f5f5f5;">
                         <th style="text-align:left;padding:1px 2px;border-right:1px solid #333;">EXAMINATION</th>
@@ -524,7 +524,12 @@ const classRec = {
         <!-- Lab sigs PE -->
         <div style="display:flex;justify-content:space-between;font-size:9px;border-top:1px solid #aaa;padding-top:4px;margin-bottom:10px;">
             <div style="text-align:center;">
-                <div style="color:#555;margin-bottom:16px;">Examined By:</div>
+                <div style="color:#555;margin-bottom:4px;">Examined By:</div>
+                <img v-if="labRequest?.examined_by_signature"
+                    :src="labRequest.examined_by_signature"
+                    style="max-height:32px;max-width:120px;object-fit:contain;display:block;margin:0 auto 2px;"
+                    crossorigin="anonymous"/>
+                <div v-else style="min-height:32px;"></div>
                 <div style="border-top:1px solid #333;padding-top:2px;">
                     <div style="font-weight:700;">{{ labRequest?.examined_by_name||'VAN VINCE G. DIVES, RMT' }}</div>
                     <div>License no. {{ labRequest?.examined_by_license||'0128116' }}</div>
@@ -532,8 +537,12 @@ const classRec = {
                 </div>
             </div>
             <div style="text-align:center;">
-                <div style="margin-bottom:2px;">Noted By:</div>
-                <div style="min-height:16px;"></div>
+                <div style="color:#555;margin-bottom:4px;">Noted By:</div>
+                <img v-if="labRequest?.noted_by_signature"
+                    :src="labRequest.noted_by_signature"
+                    style="max-height:32px;max-width:120px;object-fit:contain;display:block;margin:0 auto 2px;"
+                    crossorigin="anonymous"/>
+                <div v-else style="min-height:32px;"></div>
                 <div style="border-top:1px solid #333;padding-top:2px;">
                     <div style="font-weight:700;">{{ labRequest?.noted_by_name||'PONCIANO S. LIMCANGCO, MD, FPSP' }}</div>
                     <div>License No.: {{ labRequest?.noted_by_license||'0058646' }}</div>

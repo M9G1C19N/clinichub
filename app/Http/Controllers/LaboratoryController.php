@@ -62,7 +62,7 @@ class LaboratoryController extends Controller
                         'CBC','UA','FECALYSIS','BLOODTYPING','FBS','RBS','BUN',
                         'CREATININE','URICACID','CHOLESTEROL','TRIGLYCERIDES',
                         'HDLLDL','SGOT','SGPT','HBSAG','VDRL','PREGNANCY','DENGUE',
-                        'THYROID','PSA'
+                        'THYROID','PSA','BLOOD_CHEMISTRY'
                     ]))
                     ->map(fn($i) => ['code' => $i->service_code, 'name' => $i->service_name])
                     ->values()->toArray(),
@@ -157,26 +157,27 @@ class LaboratoryController extends Controller
         // Determine which lab tests are needed
         // Map service codes to lab test categories
         $serviceToCategories = [
-            'CBC'          => ['hematology'],
-            'UA'           => ['urinalysis'],
-            'FECALYSIS'    => ['stool'],
-            'BLOODTYPING'  => ['hematology'],  // ← keep only ONE entry
-            'FBS'          => ['chemistry'],
-            'RBS'          => ['chemistry'],
-            'BUN'          => ['chemistry'],
-            'CREATININE'   => ['chemistry'],
-            'URICACID'     => ['chemistry'],
-            'CHOLESTEROL'  => ['chemistry'],
-            'TRIGLYCERIDES'=> ['chemistry'],
-            'HDLLDL'       => ['chemistry'],
-            'SGOT'         => ['chemistry'],
-            'SGPT'         => ['chemistry'],
-            'HBSAG'        => ['serology'],
-            'VDRL'         => ['serology'],
-            'PREGNANCY'    => ['serology'],
-            'DENGUE'       => ['serology'],
-            'THYROID'      => ['thyroid'],
-            'PSA'          => ['serology'],
+            'CBC'             => ['hematology'],
+            'UA'              => ['urinalysis'],
+            'FECALYSIS'       => ['stool'],
+            'BLOODTYPING'     => ['hematology'],  // ← keep only ONE entry
+            'BLOOD_CHEMISTRY' => ['chemistry'],
+            'FBS'             => ['chemistry'],
+            'RBS'             => ['chemistry'],
+            'BUN'             => ['chemistry'],
+            'CREATININE'      => ['chemistry'],
+            'URICACID'        => ['chemistry'],
+            'CHOLESTEROL'     => ['chemistry'],
+            'TRIGLYCERIDES'   => ['chemistry'],
+            'HDLLDL'          => ['chemistry'],
+            'SGOT'            => ['chemistry'],
+            'SGPT'            => ['chemistry'],
+            'HBSAG'           => ['serology'],
+            'VDRL'            => ['serology'],
+            'PREGNANCY'       => ['serology'],
+            'DENGUE'          => ['serology'],
+            'THYROID'         => ['thyroid'],
+            'PSA'             => ['serology'],
         ];
 
         // Get ordered lab services from invoice
@@ -354,16 +355,29 @@ class LaboratoryController extends Controller
 
                 $test = LabTest::find($row['test_id']);
 
-                // Auto-determine abnormal flag
-                $isAbnormal  = false;
+                // Auto-determine abnormal flag from normal_range text
+                $isAbnormal   = false;
                 $abnormalFlag = null;
 
                 if (!$test->is_text_result && is_numeric($row['value'])) {
-                    $val = floatval($row['value']);
-                    if ($test->normal_min && $val < $test->normal_min) {
-                        $isAbnormal = true; $abnormalFlag = 'L';
-                    } elseif ($test->normal_max && $val > $test->normal_max) {
-                        $isAbnormal = true; $abnormalFlag = 'H';
+                    $val   = floatval($row['value']);
+                    $range = $test->getNormalRangeForPatient($visit->patient->sex ?? 'general');
+                    if ($range && $range !== '—') {
+                        if (str_starts_with($range, '<')) {
+                            $max = floatval(ltrim($range, '<'));
+                            if ($val >= $max) { $isAbnormal = true; $abnormalFlag = 'H'; }
+                        } elseif (str_starts_with($range, '>')) {
+                            $min = floatval(ltrim($range, '>'));
+                            if ($val <= $min) { $isAbnormal = true; $abnormalFlag = 'L'; }
+                        } else {
+                            $parts = explode('-', $range);
+                            if (count($parts) === 2 && is_numeric($parts[0]) && is_numeric($parts[1])) {
+                                $min = floatval($parts[0]);
+                                $max = floatval($parts[1]);
+                                if ($val < $min) { $isAbnormal = true; $abnormalFlag = 'L'; }
+                                elseif ($val > $max) { $isAbnormal = true; $abnormalFlag = 'H'; }
+                            }
+                        }
                     }
                 }
 

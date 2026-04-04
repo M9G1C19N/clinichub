@@ -37,20 +37,32 @@ class LaboratoryResult extends Model
         static::saving(function (LaboratoryResult $result) {
             $test = $result->labTest;
             if (!$test || $test->is_text_result) return;
-
-            $val = floatval($result->result_value);
             if ($result->result_value === null || $result->result_value === '') return;
+            if (!is_numeric($result->result_value)) return;
 
-            if ($test->normal_min && $test->normal_max) {
-                if ($val < $test->normal_min) {
-                    $result->is_abnormal   = true;
-                    $result->abnormal_flag = 'L';
-                } elseif ($val > $test->normal_max) {
-                    $result->is_abnormal   = true;
-                    $result->abnormal_flag = 'H';
-                } else {
-                    $result->is_abnormal   = false;
-                    $result->abnormal_flag = null;
+            $val   = floatval($result->result_value);
+            $range = $test->normal_range_general
+                ?? $test->normal_range_male
+                ?? $test->normal_range_female;
+
+            if (!$range || $range === '—') return;
+
+            if (str_starts_with($range, '<')) {
+                $max = floatval(ltrim($range, '<'));
+                $result->is_abnormal   = $val >= $max;
+                $result->abnormal_flag = $val >= $max ? 'H' : null;
+            } elseif (str_starts_with($range, '>')) {
+                $min = floatval(ltrim($range, '>'));
+                $result->is_abnormal   = $val <= $min;
+                $result->abnormal_flag = $val <= $min ? 'L' : null;
+            } else {
+                $parts = explode('-', $range);
+                if (count($parts) === 2 && is_numeric($parts[0]) && is_numeric($parts[1])) {
+                    $min = floatval($parts[0]);
+                    $max = floatval($parts[1]);
+                    if ($val < $min)      { $result->is_abnormal = true;  $result->abnormal_flag = 'L'; }
+                    elseif ($val > $max)  { $result->is_abnormal = true;  $result->abnormal_flag = 'H'; }
+                    else                  { $result->is_abnormal = false; $result->abnormal_flag = null; }
                 }
             }
         });

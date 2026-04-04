@@ -30,6 +30,7 @@ class ServiceCatalogSeeder extends Seeder
             ['code' => 'HDLLDL',        'name' => 'HDL / LDL Cholesterol',      'category' => 'laboratory', 'room' => 'laboratory',     'price' => 350.00,  'turnaround' => 4],
             ['code' => 'SGOT',          'name' => 'SGOT (AST)',                 'category' => 'laboratory', 'room' => 'laboratory',     'price' => 300.00,  'turnaround' => 4],
             ['code' => 'SGPT',          'name' => 'SGPT (ALT)',                 'category' => 'laboratory', 'room' => 'laboratory',     'price' => 300.00,  'turnaround' => 4],
+            ['code' => 'BLOOD_CHEMISTRY','name' => 'Blood Chemistry Panel',       'category' => 'laboratory', 'room' => 'laboratory',     'price' => 800.00,  'turnaround' => 4, 'fasting' => true],
             ['code' => 'HBSAG',         'name' => 'Hepatitis B Surface Antigen','category' => 'laboratory', 'room' => 'laboratory',     'price' => 400.00,  'turnaround' => 4],
             ['code' => 'VDRL',          'name' => 'VDRL (Syphilis Test)',       'category' => 'laboratory', 'room' => 'laboratory',     'price' => 300.00,  'turnaround' => 4],
             ['code' => 'PREGNANCY',     'name' => 'Pregnancy Test',             'category' => 'laboratory', 'room' => 'laboratory',     'price' => 200.00,  'turnaround' => 1],

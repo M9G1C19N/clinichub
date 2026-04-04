@@ -252,29 +252,82 @@ class DoctorController extends Controller
 
         // ── Imaging / XRay Results ───────────────────
         $imaging = $visit->imagingRequest;
-        $imagingResult = $imaging ? [
-            'request_number'        => $imaging->request_number,
-            'imaging_type'          => $imaging->imaging_type,
-            'imaging_type_label'    => $imaging->imaging_type_label,
-            'radiographic_findings' => $imaging->radiographic_findings,
-            'impression'            => $imaging->impression,
-            'is_provisional'        => $imaging->is_provisional,
-            'status'                => $imaging->status,
-            'is_released'           => $imaging->status === 'released',
-            'rad_tech_name'         => $imaging->rad_tech_name,
-            'radiologist_name'      => $imaging->radiologist_name,
-        ] : null;
+        $imagingServiceCodes = ['CXRPA','UTZ','UTZ_ABDOMEN','UTZ_KUB','UTZ_PELVIS','ECG','XRAY'];
+        $hasImagingService   = $visit->invoice?->items
+            ->whereIn('service_code', $imagingServiceCodes)->isNotEmpty() ?? false;
+
+        $imagingResult = null;
+        if ($imaging) {
+            $imagingResult = [
+                'request_number'        => $imaging->request_number,
+                'imaging_type'          => $imaging->imaging_type,
+                'imaging_type_label'    => $imaging->imaging_type_label,
+                'radiographic_findings' => $imaging->radiographic_findings,
+                'impression'            => $imaging->impression,
+                'is_provisional'        => $imaging->is_provisional,
+                'status'                => $imaging->status,
+                'is_released'           => $imaging->status === 'released',
+                'rad_tech_name'         => $imaging->rad_tech_name,
+                'radiologist_name'      => $imaging->radiologist_name,
+                'exam_date'             => $imaging->exam_date?->format('M d, Y'),
+                'exam_time'             => $imaging->exam_time,
+            ];
+        } elseif ($hasImagingService) {
+            // Service ordered but tech hasn't entered results yet
+            $orderedCodes = $visit->invoice->items
+                ->whereIn('service_code', $imagingServiceCodes)
+                ->pluck('service_name')->join(', ');
+            $imagingResult = [
+                'request_number'        => null,
+                'imaging_type'          => null,
+                'imaging_type_label'    => $orderedCodes ?: 'Imaging / X-Ray',
+                'radiographic_findings' => null,
+                'impression'            => null,
+                'is_provisional'        => false,
+                'status'                => 'pending',
+                'is_released'           => false,
+                'rad_tech_name'         => null,
+                'radiologist_name'      => null,
+                'exam_date'             => null,
+                'exam_time'             => null,
+            ];
+        }
 
         // ── Drug Test Result ─────────────────────────
         $drugTest = $visit->drugTestRequest;
-        $drugTestResult = $drugTest ? [
-            'code_number'  => $drugTest->code_number,
-            'result'       => $drugTest->result,
-            'drugs_label'  => $drugTest->drugs_label,
-            'status'       => $drugTest->status,
-            'is_released'  => $drugTest->status === 'released',
-            'purpose'      => $drugTest->test_purpose_label,
-        ] : null;
+        $hasDrugTestService = $visit->invoice?->items
+            ->whereIn('service_code', ['DRUGTEST','DRUGTEST5','DRUG_TEST','DRUG_TEST_BASIC'])->isNotEmpty() ?? false;
+
+        $drugTestResult = null;
+        if ($drugTest) {
+            $drugTestResult = [
+                'code_number'    => $drugTest->code_number,
+                'result'         => $drugTest->result,
+                'result_remarks' => $drugTest->result_remarks,
+                'drugs_label'    => $drugTest->drugs_label,
+                'specimen_type'  => $drugTest->specimen_type,
+                'collector_name' => $drugTest->collector_name,
+                'status'         => $drugTest->status,
+                'is_released'    => $drugTest->status === 'released',
+                'purpose'        => $drugTest->test_purpose_label,
+                'specimen_date'  => $drugTest->specimen_date?->format('M d, Y'),
+                'remarks'        => $drugTest->remarks,
+            ];
+        } elseif ($hasDrugTestService) {
+            $drugTestResult = [
+                'code_number'    => null,
+                'result'         => null,
+                'result_remarks' => null,
+                'drugs_label'    => null,
+                'specimen_type'  => null,
+                'collector_name' => null,
+                'status'         => 'pending',
+                'is_released'    => false,
+                'purpose'        => null,
+                'specimen_date'  => null,
+                'remarks'        => null,
+            ];
+        }
 
         return inertia('Doctor/Consult', [
             'visit' => [

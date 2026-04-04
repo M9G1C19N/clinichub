@@ -31,8 +31,11 @@ const servicePackages = computed(() => {
         follow_up:      'OPD',
     }[vt] ?? null
 
-    // Base 5 services — same for all PE types
-    const base5 = ['CBC', 'CXRPA', 'FECALYSIS', 'UA']
+    // Base services — PE types include Blood Chemistry, OPD does not
+    const isPE = ['pre_employment','annual_pe','exit_pe'].includes(vt)
+    const base5 = isPE
+        ? ['CBC', 'BLOOD_CHEMISTRY', 'CXRPA', 'FECALYSIS', 'UA']
+        : ['CBC', 'CXRPA', 'FECALYSIS', 'UA']
     if (consultCode) base5.push(consultCode)
 
     const labelMap = {
@@ -48,8 +51,10 @@ const servicePackages = computed(() => {
     return [{
         key:   'basic',
         label: labelMap[vt],
-        color: ['pre_employment','annual_pe','exit_pe'].includes(vt) ? '#8B5CF6' : '#1B4F9B',
-        desc:  'CBC · Chest X-Ray · Stool Exam · Urinalysis · Consultation',
+        color: isPE ? '#8B5CF6' : '#1B4F9B',
+        desc:  isPE
+            ? 'CBC · Blood Chemistry · Chest X-Ray · Stool Exam · Urinalysis · Consultation'
+            : 'CBC · Chest X-Ray · Stool Exam · Urinalysis · Consultation',
         codes: base5,
     }]
 })
