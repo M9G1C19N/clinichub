@@ -17,9 +17,9 @@ import {
 } from '@/components/ui/select'
 
 import {
-    FlaskConical, ScanLine, TestTube, Stethoscope,
+    FlaskConical, ScanLine, TestTube, Stethoscope, HeartPulse,
     Monitor, Tv2, Bell, ChevronRight,
-    AlertTriangle, Users, Activity, Printer,
+    AlertTriangle, Users, Activity, Printer, Lock,
 } from 'lucide-vue-next'
 import { printQueueSlip } from '@/utils/printQueueSlip.js'
 
@@ -210,25 +210,23 @@ const priorityBadge = {
     regular:  'bg-slate-100 text-slate-500',
 }
 
-const roomColor = {
-    laboratory:     'border-l-blue-500',
-    xray_utz:       'border-l-purple-500',
-    drug_test:      'border-l-rose-500',
-    interview_room: 'border-l-emerald-500',
+const roomMeta = {
+    laboratory:     { color: '#3B82F6', bg: '#EFF6FF', icon: FlaskConical,  label: 'Lab' },
+    xray_utz:       { color: '#8B5CF6', bg: '#F5F3FF', icon: ScanLine,      label: 'X-Ray/UTZ' },
+    drug_test:      { color: '#F43F5E', bg: '#FFF1F2', icon: TestTube,      label: 'Drug Test' },
+    nurse_station:  { color: '#10B981', bg: '#F0FDF4', icon: HeartPulse,    label: 'Nurse' },
+    interview_room: { color: '#0EA5E9', bg: '#F0F9FF', icon: Stethoscope,   label: 'Doctor', gated: true },
 }
 
+// legacy alias used in ticket rows
 const roomIcon = {
     laboratory:     FlaskConical,
     xray_utz:       ScanLine,
     drug_test:      TestTube,
+    nurse_station:  HeartPulse,
     interview_room: Stethoscope,
 }
-const roomIconMap = {
-    laboratory:     FlaskConical,
-    xray_utz:       ScanLine,
-    drug_test:      TestTube,
-    interview_room: Stethoscope,
-}
+const roomIconMap = roomIcon
 </script>
 
 <template>
@@ -269,80 +267,88 @@ const roomIconMap = {
         </div>
 
         <!-- ── Room Status Cards ──────────────────────── -->
-        <div class="grid grid-cols-4 gap-4 mb-5">
-        <div v-for="(stat, room) in roomStats" :key="room"
-            class="bg-card rounded-xl border shadow-sm overflow-hidden flex flex-col">
+        <!-- Flow legend -->
+        <div class="flex items-center gap-2 mb-3 text-xs text-slate-400">
+            <span class="font-semibold text-slate-500">Queue Flow:</span>
+            <span class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-600 font-semibold">
+                <TestTube class="w-3 h-3"/> Drug Test
+            </span>
+            <span class="text-slate-300 font-bold">→</span>
+            <span class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-500 font-semibold">
+                <FlaskConical class="w-3 h-3"/> Lab
+                <span class="text-slate-300">·</span>
+                <ScanLine class="w-3 h-3"/> X-Ray
+                <span class="text-slate-300">·</span>
+                <HeartPulse class="w-3 h-3"/> Nurse
+                <span class="ml-1 text-slate-400 font-normal italic">(parallel)</span>
+            </span>
+            <span class="text-slate-300 font-bold">→</span>
+            <span class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-sky-50 border border-sky-200 text-sky-600 font-semibold">
+                <Lock class="w-3 h-3"/> Doctor
+                <span class="ml-0.5 font-normal italic text-sky-400">(unlocks after all parallel done)</span>
+            </span>
+        </div>
 
-            <!-- Room header with color accent -->
-            <div class="px-4 py-3 flex items-center gap-3 border-b"
-                :style="{
-                    borderLeft: `4px solid ${
-                        room === 'laboratory'     ? '#3B82F6' :
-                        room === 'xray_utz'       ? '#8B5CF6' :
-                        room === 'drug_test'      ? '#F43F5E' : '#10B981'
-                    }`
-                }">
-                <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                    :style="{
-                        background: room === 'laboratory'     ? '#EFF6FF' :
-                                    room === 'xray_utz'       ? '#F5F3FF' :
-                                    room === 'drug_test'      ? '#FFF1F2' : '#F0FDF4'
-                    }">
-                    <component :is="roomIconMap[room]"
-                        class="w-4 h-4"
-                        :style="{
-                            color: room === 'laboratory'     ? '#3B82F6' :
-                                room === 'xray_utz'       ? '#8B5CF6' :
-                                room === 'drug_test'      ? '#F43F5E' : '#10B981'
-                        }"
-                    />
-                </div>
-                <p class="text-xs font-bold text-slate-700 flex-1 truncate">{{ stat.label }}</p>
-            </div>
+        <div class="grid grid-cols-5 gap-3 mb-5">
+            <div v-for="(stat, room) in roomStats" :key="room"
+                class="bg-card rounded-xl border shadow-sm overflow-hidden flex flex-col"
+                :class="roomMeta[room]?.gated ? 'ring-1 ring-sky-200' : ''">
 
-            <!-- Stats grid -->
-            <div class="p-4 grid grid-cols-2 gap-2 flex-1">
-                <div class="text-center p-2 rounded-lg bg-amber-50">
-                    <p class="text-xl font-bold text-amber-600">{{ stat.waiting }}</p>
-                    <p class="text-xs text-amber-600/70 font-medium">Waiting</p>
+                <!-- Room header -->
+                <div class="px-3 py-2.5 flex items-center gap-2 border-b"
+                    :style="{ borderLeft: `4px solid ${roomMeta[room]?.color ?? '#94A3B8'}` }">
+                    <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                        :style="{ background: roomMeta[room]?.bg ?? '#F8FAFC' }">
+                        <component :is="roomMeta[room]?.icon"
+                            class="w-3.5 h-3.5"
+                            :style="{ color: roomMeta[room]?.color ?? '#94A3B8' }" />
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-bold text-slate-700 truncate">{{ stat.label }}</p>
+                        <span v-if="roomMeta[room]?.gated"
+                            class="inline-flex items-center gap-0.5 text-[10px] text-sky-500 font-semibold">
+                            <Lock class="w-2.5 h-2.5"/> Gated
+                        </span>
+                        <span v-else class="text-[10px] text-slate-400">Parallel</span>
+                    </div>
                 </div>
-                <div class="text-center p-2 rounded-lg bg-emerald-50">
-                    <p class="text-xl font-bold text-emerald-600">{{ stat.serving }}</p>
-                    <p class="text-xs text-emerald-600/70 font-medium">Serving</p>
-                </div>
-                <div class="text-center p-2 rounded-lg bg-slate-50">
-                    <p class="text-xl font-bold text-slate-600">{{ stat.completed }}</p>
-                    <p class="text-xs text-slate-500 font-medium">Done</p>
-                </div>
-                <div class="text-center p-2 rounded-lg bg-red-50">
-                    <p class="text-xl font-bold text-red-400">{{ stat.no_show }}</p>
-                    <p class="text-xs text-red-400/70 font-medium">No Show</p>
-                </div>
-            </div>
 
-            <!-- Action buttons -->
-            <div class="px-4 pb-4 space-y-2">
-                <!-- Room Screen button — prominent -->
-                <a :href="route('queue.room', room)" target="_blank"
-                    class="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold text-white transition-all hover:opacity-90"
-                    :style="{
-                        background: room === 'laboratory'     ? '#3B82F6' :
-                                    room === 'xray_utz'       ? '#8B5CF6' :
-                                    room === 'drug_test'      ? '#F43F5E' : '#10B981'
-                    }">
-                    <Monitor class="w-3.5 h-3.5" />
-                    Open Room Screen
-                </a>
+                <!-- Stats grid -->
+                <div class="p-3 grid grid-cols-2 gap-1.5 flex-1">
+                    <div class="text-center p-1.5 rounded-lg bg-amber-50">
+                        <p class="text-lg font-bold text-amber-600">{{ stat.waiting }}</p>
+                        <p class="text-[10px] text-amber-600/70 font-medium">Waiting</p>
+                    </div>
+                    <div class="text-center p-1.5 rounded-lg bg-emerald-50">
+                        <p class="text-lg font-bold text-emerald-600">{{ stat.serving }}</p>
+                        <p class="text-[10px] text-emerald-600/70 font-medium">Serving</p>
+                    </div>
+                    <div class="text-center p-1.5 rounded-lg bg-slate-50">
+                        <p class="text-lg font-bold text-slate-600">{{ stat.completed }}</p>
+                        <p class="text-[10px] text-slate-500 font-medium">Done</p>
+                    </div>
+                    <div class="text-center p-1.5 rounded-lg bg-red-50">
+                        <p class="text-lg font-bold text-red-400">{{ stat.no_show }}</p>
+                        <p class="text-[10px] text-red-400/70 font-medium">No Show</p>
+                    </div>
+                </div>
 
-                <!-- Call Next button -->
-                <Button variant="outline" size="sm" class="w-full text-xs gap-2"
-                    @click="callNext(room)">
-                    <Bell class="w-3.5 h-3.5" />
-                    Call Next
-                </Button>
+                <!-- Action buttons -->
+                <div class="px-3 pb-3 space-y-1.5">
+                    <a :href="route('queue.room', room)" target="_blank"
+                        class="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold text-white transition-all hover:opacity-90"
+                        :style="{ background: roomMeta[room]?.color ?? '#1B4F9B' }">
+                        <Monitor class="w-3 h-3" />
+                        Room Screen
+                    </a>
+                    <Button variant="outline" size="sm" class="w-full text-xs gap-1.5 h-7"
+                        @click="callNext(room)">
+                        <Bell class="w-3 h-3" />
+                        Call Next
+                    </Button>
+                </div>
             </div>
         </div>
-    </div>
 
         <!-- ── Today's Ticket List ────────────────────── -->
         <div class="bg-card rounded-xl border shadow-sm overflow-hidden">
@@ -400,21 +406,36 @@ const roomIconMap = {
                         </span>
                     </div>
 
-                    <!-- Room routing sequence -->
-                    <div class="flex items-center gap-1.5 flex-shrink-0">
+                    <!-- Room routing — parallel mode display -->
+                    <div class="flex items-center gap-1 flex-shrink-0 flex-wrap max-w-xs">
                         <template v-for="(room, i) in ticket.rooms" :key="room.room">
+                            <!-- Separator: → before gated rooms, · between parallel rooms -->
+                            <span v-if="i > 0" class="text-slate-300 text-xs font-bold">
+                                {{ room.is_gated ? '→' : '·' }}
+                            </span>
                             <div :class="[
-                                'flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold border',
-                                room.status === 'completed' ? 'bg-emerald-50 border-emerald-200 text-emerald-700 line-through opacity-60' :
-                                room.status === 'serving'   ? 'bg-amber-50 border-amber-300 text-amber-700' :
+                                'flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs font-semibold border transition-all',
+                                room.status === 'completed' ? 'bg-emerald-50 border-emerald-200 text-emerald-600 line-through opacity-50' :
+                                room.status === 'serving'   ? 'bg-amber-50 border-amber-300 text-amber-700 ring-1 ring-amber-300' :
                                 room.status === 'calling'   ? 'bg-blue-50 border-blue-300 text-blue-700 animate-pulse' :
+                                room.status === 'locked'    ? 'bg-slate-100 border-slate-200 text-slate-300 opacity-50' :
+                                room.status === 'no_show'   ? 'bg-red-50 border-red-200 text-red-400 line-through opacity-50' :
+                                room.status === 'skipped'   ? 'bg-orange-50 border-orange-200 text-orange-400 line-through opacity-50' :
                                 'bg-slate-50 border-slate-200 text-slate-500'
-                            ]">
-                                <component :is="roomIcon[room.room]" class="w-3 h-3" />
+                            ]"
+                            :title="`${roomMeta[room.room]?.label ?? room.room} · ${room.status}`">
+                                <component :is="roomIcon[room.room]" class="w-3 h-3 flex-shrink-0" />
                                 <span>{{ room.queue_number }}</span>
+                                <Lock v-if="room.status === 'locked'" class="w-2.5 h-2.5 ml-0.5 text-slate-400" />
                             </div>
-                            <span v-if="i < ticket.rooms.length - 1" class="text-slate-300 text-xs">→</span>
                         </template>
+
+                        <!-- Pending count badge when doctor room is still locked -->
+                        <span v-if="ticket.interview_locked && ticket.parallel_pending > 0"
+                            class="text-[10px] text-sky-500 bg-sky-50 border border-sky-200 px-1.5 py-0.5 rounded font-semibold ml-0.5"
+                            :title="`${ticket.parallel_pending} parallel room(s) still in progress`">
+                            {{ ticket.parallel_pending }} left
+                        </span>
                     </div>
 
                     <!-- Status -->
@@ -708,12 +729,25 @@ const roomIconMap = {
                                     {{ svc }}
                                 </span>
                             </div>
-                            <div v-if="slipTicket.rooms?.length" class="flex items-center justify-center gap-2 pt-1 flex-wrap">
-                                <template v-for="(r, i) in slipTicket.rooms" :key="r.room">
-                                    <span v-if="i > 0" class="text-slate-300 text-xs">→</span>
-                                    <div class="text-center">
-                                        <div class="text-xs text-slate-500">{{ r.room.replace('_',' ') }}</div>
-                                        <div class="text-sm font-black text-slate-700 font-mono">{{ r.queue_number }}</div>
+                            <div v-if="slipTicket.rooms?.length" class="pt-2 w-full">
+                                <!-- Parallel rooms group (non-gated) -->
+                                <div class="flex items-center justify-center gap-2 flex-wrap">
+                                    <template v-for="(r, i) in slipTicket.rooms.filter(r => !r.is_gated)" :key="r.room">
+                                        <span v-if="i > 0" class="text-slate-300 text-xs font-bold">·</span>
+                                        <div class="text-center">
+                                            <div class="text-xs text-slate-400 uppercase">{{ r.room_label }}</div>
+                                            <div class="text-base font-black text-slate-800 font-mono">{{ r.queue_number }}</div>
+                                        </div>
+                                    </template>
+                                </div>
+                                <!-- Gated rooms (interview room — nurse + doctor) -->
+                                <template v-for="r in slipTicket.rooms.filter(r => r.is_gated)" :key="r.room">
+                                    <div class="flex items-center gap-1 justify-center mt-1 text-slate-400">
+                                        <span class="text-xs font-bold">↓ after lab/xray</span>
+                                    </div>
+                                    <div class="text-center mt-0.5">
+                                        <div class="text-xs text-slate-400 uppercase">{{ r.room_label }} (Nurse → Doctor)</div>
+                                        <div class="text-base font-black text-slate-800 font-mono">{{ r.queue_number }}</div>
                                     </div>
                                 </template>
                             </div>

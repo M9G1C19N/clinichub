@@ -81,7 +81,7 @@ const priorityConfig = {
                         </span>
                         Live · 10s
                     </div>
-                    <a :href="route('queue.room', 'interview_room')" target="_blank">
+                    <a :href="route('queue.room', 'nurse_station')" target="_blank">
                         <Button variant="outline" size="sm" class="gap-1.5 text-xs h-7">
                             <Activity class="w-3.5 h-3.5"/>
                             Room Screen

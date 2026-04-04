@@ -10,7 +10,8 @@ class QueueRoomAssignment extends Model
         'laboratory'     => 'Laboratory',
         'xray_utz'       => 'X-Ray & Ultrasound',
         'drug_test'      => 'Drug Test',
-        'interview_room' => 'Interview Room',
+        'nurse_station'  => 'Nurse Station',
+        'interview_room' => 'Interview Room (Doctor)',
     ];
 
     protected $fillable = [
@@ -93,14 +94,20 @@ class QueueRoomAssignment extends Model
             'laboratory'     => 'L',
             'xray_utz'       => 'X',
             'drug_test'      => 'D',
+            'nurse_station'  => 'N',
             'interview_room' => 'I',
             default          => 'Q',
         };
 
-        $count = static::whereDate('created_at', today())
-                       ->where('room', $room)
-                       ->count() + 1;
+        // Fix H — use SELECT FOR UPDATE inside the caller's transaction to prevent
+        // concurrent inserts from reading the same count and generating duplicate numbers.
+        $result = \Illuminate\Support\Facades\DB::selectOne(
+            "SELECT COUNT(*) as cnt FROM queue_room_assignments
+             WHERE DATE(created_at) = CURDATE() AND room = ? FOR UPDATE",
+            [$room]
+        );
 
+        $count = ($result->cnt ?? 0) + 1;
         return $prefix . str_pad($count, 3, '0', STR_PAD_LEFT);
     }
 }

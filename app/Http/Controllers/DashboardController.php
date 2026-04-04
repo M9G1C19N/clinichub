@@ -445,6 +445,13 @@ class DashboardController extends Controller
             ->whereDate('rx_date', today())->count();
         $totalPrescriptionsToday = Prescription::whereDate('rx_date', today())->count();
 
+        // Nurse station queue stats for doctor's awareness
+        $nurseWaiting   = QueueRoomAssignment::today()->forRoom('nurse_station')->where('status', 'waiting')->count();
+        $nurseServing   = QueueRoomAssignment::today()->forRoom('nurse_station')->where('status', 'serving')->count();
+        $nurseDone      = QueueRoomAssignment::today()->forRoom('nurse_station')->where('status', 'completed')->count();
+        $interviewWaiting = QueueRoomAssignment::today()->forRoom('interview_room')->where('status', 'waiting')->count();
+        $interviewServing = QueueRoomAssignment::today()->forRoom('interview_room')->where('status', 'serving')->count();
+
         return [
             'stats' => [
                 'ready_for_review'       => $pending->where('all_results_in', true)->count(),
@@ -457,6 +464,13 @@ class DashboardController extends Controller
                     ->whereDate('finalized_at', today())->count(),
                 'my_prescriptions_today' => $myPrescriptionsToday,
                 'all_prescriptions_today'=> $totalPrescriptionsToday,
+                // Nurse station live counts
+                'nurse_waiting'          => $nurseWaiting,
+                'nurse_serving'          => $nurseServing,
+                'nurse_done'             => $nurseDone,
+                // Interview room live counts
+                'interview_waiting'      => $interviewWaiting,
+                'interview_serving'      => $interviewServing,
             ],
             'pending'               => $pending,
             'completedToday'        => $completedToday,

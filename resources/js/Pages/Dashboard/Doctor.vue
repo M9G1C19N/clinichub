@@ -6,6 +6,7 @@ import {
     Stethoscope, AlertTriangle, CheckCircle2,
     ChevronRight, Wifi, Clock, AlertCircle,
     RefreshCw, Users, Pill, Activity, TrendingUp,
+    HeartPulse, Monitor, Lock,
 } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -74,8 +75,21 @@ async function refresh() {
             <button @click="refresh" class="p-2 text-slate-400 hover:text-violet-600 hover:bg-slate-50 rounded-lg transition-colors">
                 <RefreshCw class="w-4 h-4" :class="refreshing && 'animate-spin'"/>
             </button>
+            <!-- Nurse Intake shortcut -->
+            <a :href="route('nurse.index')" class="flex items-center gap-2 text-sm font-semibold border border-emerald-500 text-emerald-600 px-3 py-2 rounded-xl hover:bg-emerald-500 hover:text-white transition-colors">
+                <HeartPulse class="w-4 h-4"/> Nurse Intake
+            </a>
+            <!-- Room screen shortcuts -->
+            <a :href="route('queue.room', 'nurse_station')" target="_blank"
+                class="flex items-center gap-1.5 text-xs font-semibold border border-emerald-200 text-emerald-600 bg-emerald-50 px-2.5 py-2 rounded-xl hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-colors">
+                <Monitor class="w-3.5 h-3.5"/> Nurse
+            </a>
+            <a :href="route('queue.room', 'interview_room')" target="_blank"
+                class="flex items-center gap-1.5 text-xs font-semibold border border-sky-200 text-sky-600 bg-sky-50 px-2.5 py-2 rounded-xl hover:bg-sky-500 hover:text-white hover:border-sky-500 transition-colors">
+                <Monitor class="w-3.5 h-3.5"/> Interview
+            </a>
             <a :href="route('doctor.index')" class="flex items-center gap-2 text-sm font-semibold border border-violet-600 text-violet-600 px-3 py-2 rounded-xl hover:bg-violet-600 hover:text-white transition-colors">
-                <Stethoscope class="w-4 h-4"/> Open Consultations
+                <Stethoscope class="w-4 h-4"/> Consultations
             </a>
         </div>
     </div>
@@ -140,6 +154,79 @@ async function refresh() {
         </div>
     </div>
 
+    <!-- Live Queue Status — Nurse Station + Interview Room -->
+    <div class="grid grid-cols-2 gap-4">
+
+        <!-- Nurse Station card -->
+        <div class="rounded-2xl border border-emerald-100 shadow-sm overflow-hidden">
+            <div class="flex items-center gap-3 px-5 py-3 border-b border-emerald-100" style="background:#F0FDF4">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-emerald-100">
+                    <HeartPulse class="w-4 h-4 text-emerald-600"/>
+                </div>
+                <div class="flex-1">
+                    <p class="text-sm font-bold text-emerald-800">Nurse Station</p>
+                    <p class="text-xs text-emerald-500">Parallel — intake running</p>
+                </div>
+                <a :href="route('nurse.index')"
+                    class="text-xs font-semibold text-emerald-600 border border-emerald-300 bg-white px-2.5 py-1 rounded-lg hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-colors">
+                    Intake
+                </a>
+                <a :href="route('queue.room', 'nurse_station')" target="_blank"
+                    class="text-xs font-semibold text-emerald-600 border border-emerald-300 bg-white px-2.5 py-1 rounded-lg hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-colors flex items-center gap-1">
+                    <Monitor class="w-3 h-3"/> Screen
+                </a>
+            </div>
+            <div class="grid grid-cols-3 divide-x divide-slate-100">
+                <div class="p-4 text-center">
+                    <p class="text-2xl font-black text-amber-500">{{ stats.nurse_waiting ?? 0 }}</p>
+                    <p class="text-xs text-slate-400 font-medium mt-0.5">Waiting</p>
+                </div>
+                <div class="p-4 text-center">
+                    <p class="text-2xl font-black text-emerald-500">{{ stats.nurse_serving ?? 0 }}</p>
+                    <p class="text-xs text-slate-400 font-medium mt-0.5">Serving</p>
+                </div>
+                <div class="p-4 text-center">
+                    <p class="text-2xl font-black text-slate-400">{{ stats.nurse_done ?? 0 }}</p>
+                    <p class="text-xs text-slate-400 font-medium mt-0.5">Done</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Interview Room card -->
+        <div class="rounded-2xl border border-sky-100 shadow-sm overflow-hidden">
+            <div class="flex items-center gap-3 px-5 py-3 border-b border-sky-100" style="background:#F0F9FF">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-sky-100">
+                    <Stethoscope class="w-4 h-4 text-sky-600"/>
+                </div>
+                <div class="flex-1">
+                    <p class="text-sm font-bold text-sky-800">Interview Room</p>
+                    <p class="text-xs text-sky-400 flex items-center gap-1">
+                        <Lock class="w-3 h-3"/> Gated — unlocks after nurse + diagnostics
+                    </p>
+                </div>
+                <a :href="route('queue.room', 'interview_room')" target="_blank"
+                    class="text-xs font-semibold text-sky-600 border border-sky-300 bg-white px-2.5 py-1 rounded-lg hover:bg-sky-600 hover:text-white hover:border-sky-600 transition-colors flex items-center gap-1">
+                    <Monitor class="w-3 h-3"/> Screen
+                </a>
+            </div>
+            <div class="grid grid-cols-3 divide-x divide-slate-100">
+                <div class="p-4 text-center">
+                    <p class="text-2xl font-black text-amber-500">{{ stats.interview_waiting ?? 0 }}</p>
+                    <p class="text-xs text-slate-400 font-medium mt-0.5">Waiting</p>
+                </div>
+                <div class="p-4 text-center">
+                    <p class="text-2xl font-black text-sky-500">{{ stats.interview_serving ?? 0 }}</p>
+                    <p class="text-xs text-slate-400 font-medium mt-0.5">Serving</p>
+                </div>
+                <div class="p-4 text-center">
+                    <p class="text-2xl font-black text-violet-500">{{ stats.ready_for_review ?? 0 }}</p>
+                    <p class="text-xs text-slate-400 font-medium mt-0.5">Ready</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
     <!-- Review Progress Bar -->
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
         <div class="flex items-center justify-between mb-2">
@@ -201,7 +288,7 @@ async function refresh() {
                         <!-- Wait time -->
                         <span class="text-xs text-slate-400 flex-shrink-0">{{ p.wait_mins }}m</span>
                         <!-- Action -->
-                        <a :href="route('doctor.enter', p.id)"
+                        <a :href="route('doctor.consult', p.id)"
                             class="flex-shrink-0 text-xs font-bold px-3 py-1.5 rounded-xl text-white flex items-center gap-1 hover:opacity-90 transition-opacity"
                             style="background:#7C3AED">
                             Consult <ChevronRight class="w-3 h-3"/>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\PatientVital;
 use App\Models\PatientVisit;
 use App\Models\QueueRoomAssignment;
+use App\Services\RoomRoutingEngine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -22,7 +23,7 @@ class NurseController extends Controller
             'ticket.visit.vitals',
         ])
         ->today()
-        ->forRoom('interview_room')
+        ->forRoom('nurse_station')
         ->whereNotIn('status', ['no_show', 'skipped', 'cancelled'])
         ->orderByRaw("FIELD(status, 'serving', 'calling', 'waiting', 'completed')")
         ->orderBy('routing_sequence')
@@ -245,6 +246,16 @@ class NurseController extends Controller
                 'recorded_by' => Auth::id(),
             ]
         );
+
+        // Auto-complete the nurse_station queue assignment → triggers interview room unlock
+        $nurseAssignment = QueueRoomAssignment::where('patient_visit_id', $visit->id)
+            ->where('room', 'nurse_station')
+            ->whereIn('status', ['waiting', 'calling', 'serving'])
+            ->first();
+
+        if ($nurseAssignment) {
+            app(RoomRoutingEngine::class)->completeRoom($nurseAssignment);
+        }
 
         return redirect()
             ->route('nurse.index')

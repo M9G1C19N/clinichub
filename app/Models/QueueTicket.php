@@ -79,17 +79,19 @@ class QueueTicket extends Model
         });
     }
 
-   protected static function generateTicketNumber(int $counterId): string
+    protected static function generateTicketNumber(int $counterId): string
     {
         $counter = \App\Models\QueueCounter::find($counterId);
         $prefix  = $counter?->counter_code ?? 'A';
 
+        // Fix H — FOR UPDATE lock prevents two concurrent creates from getting the same number.
+        // This must run inside a transaction (issueTicket wraps everything in DB::transaction).
         $result = \Illuminate\Support\Facades\DB::selectOne(
             "SELECT COALESCE(
                 MAX(CAST(SUBSTRING_INDEX(ticket_number, '-', -1) AS UNSIGNED)),
             0) as max_num
             FROM queue_tickets
-            WHERE ticket_number LIKE ?",
+            WHERE ticket_number LIKE ? FOR UPDATE",
             [$prefix . '-%']
         );
 

@@ -5,7 +5,7 @@ import AppLayout from '@/Layouts/AppLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import {
-    FlaskConical, ScanLine, TestTube, Stethoscope,
+    FlaskConical, ScanLine, TestTube, Stethoscope, HeartPulse,
     Bell, CheckCircle, XCircle, SkipForward,
     RotateCcw, UserCheck, Clock,
     AlertTriangle, Users, Activity,
@@ -35,6 +35,7 @@ const roomIconMap = {
     laboratory:     FlaskConical,
     xray_utz:       ScanLine,
     drug_test:      TestTube,
+    nurse_station:  HeartPulse,
     interview_room: Stethoscope,
 }
 
@@ -42,7 +43,8 @@ const roomColorMap = {
     laboratory:     '#3B82F6',
     xray_utz:       '#8B5CF6',
     drug_test:      '#F43F5E',
-    interview_room: '#10B981',
+    nurse_station:  '#10B981',
+    interview_room: '#0EA5E9',
 }
 
 // ← This was missing — the fix
@@ -164,6 +166,15 @@ function callNext() {
 
                     <!-- Patient Info -->
                     <div class="flex-1 min-w-0 px-5">
+                        <!-- Cross-room warning banner -->
+                        <div v-if="assignment.serving_in"
+                            class="flex items-center gap-2 mb-2 px-2.5 py-1.5 rounded-lg border text-xs font-semibold"
+                            style="background:#FEF3C7;border-color:#FCD34D;color:#92400E;">
+                            <AlertTriangle class="w-3.5 h-3.5 flex-shrink-0 text-amber-500"/>
+                            Patient is currently being served at
+                            <strong>{{ assignment.serving_in }}</strong> — do not call yet
+                        </div>
+
                         <div class="flex items-center gap-2 mb-1.5">
                             <p class="text-base font-bold text-slate-800 truncate">
                                 {{ assignment.patient_name }}
@@ -210,10 +221,11 @@ function callNext() {
                         <!-- WAITING -->
                         <template v-if="assignment.status === 'waiting'">
                             <Button size="sm" class="gap-2 text-xs w-full"
-                                :style="{ backgroundColor: currentColor }"
+                                :style="{ backgroundColor: assignment.serving_in ? '#94A3B8' : currentColor }"
+                                :disabled="!!assignment.serving_in"
                                 @click="callNext">
                                 <Bell class="w-3.5 h-3.5" />
-                                Call
+                                {{ assignment.serving_in ? 'In Another Room' : 'Call' }}
                             </Button>
                             <Button size="sm" variant="outline" class="gap-2 text-xs w-full"
                                 @click="skip(assignment.id)">
@@ -225,10 +237,11 @@ function callNext() {
                         <!-- CALLING -->
                         <template v-else-if="assignment.status === 'calling'">
                             <Button size="sm"
-                                class="gap-2 text-xs w-full bg-emerald-500 hover:bg-emerald-600 text-white"
+                                :class="['gap-2 text-xs w-full text-white', assignment.serving_in ? 'bg-slate-400' : 'bg-emerald-500 hover:bg-emerald-600']"
+                                :disabled="!!assignment.serving_in"
                                 @click="markServing(assignment.id)">
                                 <UserCheck class="w-3.5 h-3.5" />
-                                Patient In
+                                {{ assignment.serving_in ? 'In Another Room' : 'Patient In' }}
                             </Button>
                             <Button size="sm" variant="outline" class="gap-2 text-xs w-full"
                                 @click="recall(assignment.id)">

@@ -56,19 +56,21 @@ const navMap = {
         { label: 'Patients',       href: '/patients',               icon: Users },
         { label: 'Nurse Intake',   href: '/nurse',                  icon: HeartPulse },
         { divider: true },
-        { label: 'Interview Room', href: '/queue/room/interview_room', icon: Monitor, badge: 'Room Screen' },
+        { label: 'Nurse Station',  href: '/queue/room/nurse_station', icon: Monitor, badge: 'Room Screen' },
     ],
 
 
     doctor: [
         { label: 'Dashboard',      href: '/dashboard',        icon: LayoutDashboard },
         { label: 'Patients',       href: '/patients',         icon: Users },
+        { label: 'Nurse Intake',   href: '/nurse',            icon: HeartPulse },
         { label: 'Consultations',  href: '/doctor',           icon: Stethoscope },
-        { label: 'Queue',          href: '/queue',            icon: HeartPulse },
+        { label: 'Queue',          href: '/queue',            icon: Activity },
         { label: 'Appointments',   href: '/appointments',     icon: Calendar },
         { label: 'Prescriptions',  href: '/prescriptions',    icon: Pill },
         { label: 'Lab Results',    href: '/laboratory',       icon: FlaskConical },
         { divider: true },
+        { label: 'Nurse Station',  href: '/queue/room/nurse_station',  icon: Monitor, badge: 'Room Screen' },
         { label: 'Interview Room', href: '/queue/room/interview_room', icon: Monitor, badge: 'Room Screen' },
     ],
 
@@ -115,6 +117,7 @@ const navItems = computed(() => {
     if (role.value === 'nurse' && hasPermission('doctor_features')) {
         return [
             ...navMap.nurse,
+            { label: 'Interview Room', href: '/queue/room/interview_room', icon: Monitor, badge: 'Room Screen' },
             { divider: true },
             { label: 'Consultations',  href: '/doctor',       icon: Stethoscope },
             { label: 'Prescriptions',  href: '/prescriptions', icon: Pill },

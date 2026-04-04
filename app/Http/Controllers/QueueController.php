@@ -51,15 +51,26 @@ class QueueController extends Controller
             'status'         => $t->status,
             'issued_at'      => $t->issued_at->format('h:i A'),
             'services'       => $t->services_requested ?? [],
-            'rooms'          => $t->roomAssignments->map(fn($r) => [
+            'rooms'              => $t->roomAssignments->map(fn($r) => [
                 'room'         => $r->room,
                 'room_label'   => $r->room_label,
                 'queue_number' => $r->queue_number,
                 'sequence'     => $r->routing_sequence,
                 'status'       => $r->status,
+                'is_gated'     => in_array($r->room, RoomRoutingEngine::GATED_ROOMS),
             ]),
-            'current_room'   => $t->roomAssignments
-                ->whereIn('status', ['waiting','calling','serving'])
+            // For parallel mode: how many parallel rooms are still pending
+            'parallel_pending'   => $t->roomAssignments
+                ->whereNotIn('room', RoomRoutingEngine::GATED_ROOMS)
+                ->whereNotIn('status', ['completed', 'no_show', 'skipped'])
+                ->count(),
+            // Is the interview room currently locked waiting for parallel rooms?
+            'interview_locked'   => $t->roomAssignments
+                ->where('room', 'interview_room')
+                ->where('status', 'locked')
+                ->isNotEmpty(),
+            'current_room'       => $t->roomAssignments
+                ->whereIn('status', ['calling','serving'])
                 ->sortBy('routing_sequence')
                 ->first()?->room_label ?? '—',
         ]);
@@ -101,44 +112,62 @@ class QueueController extends Controller
             'chief_complaint'    => ['nullable', 'string'],
         ]);
 
-        // Step 1 — Create patient visit
-        $visit = PatientVisit::create([
-            'patient_id'        => $validated['patient_id'],
-            'visit_type'        => $validated['visit_type'],
-            'employer_company'  => $validated['employer_company'] ?? null,
-            'services_selected' => $validated['services_requested'],
-            'visit_date'        => now(),
-            'status'            => 'pending',
-            'chief_complaint'   => $validated['chief_complaint'] ?? null,
-            'created_by'        => Auth::id(),
-        ]);
+        // Fix F — Prevent duplicate active tickets for the same patient today
+        $existingTicket = QueueTicket::today()
+            ->where('patient_id', $validated['patient_id'])
+            ->whereIn('status', ['waiting', 'in_progress'])
+            ->first();
 
-        // Step 2 — Issue queue ticket
-        $ticket = QueueTicket::create([
-            'patient_id'         => $validated['patient_id'],
-            'patient_visit_id'   => $visit->id,
-            'queue_counter_id'   => $validated['queue_counter_id'],
-            'visit_type'         => $validated['visit_type'],
-            'priority'           => $validated['priority'],
-            'services_requested' => $validated['services_requested'],
-            'issued_by'          => Auth::id(),
-            'issued_at'          => now(),
-        ]);
+        if ($existingTicket) {
+            return back()->withErrors([
+                'patient_id' => "This patient already has an active ticket today ({$existingTicket->ticket_number}). Cancel it first before issuing a new one.",
+            ]);
+        }
 
-        // Step 3 — Route to rooms via engine
-        $this->engine->route($ticket);
+        // Fix A — Wrap everything in a transaction; rollback if routing fails
+        [$ticket, $roomCount, $rooms] = DB::transaction(function () use ($validated) {
 
-        // Step 4 — Get routing summary
-        $ticket->refresh();
-        $ticket->load('roomAssignments');
-        $routing = $this->engine->getRoutingSummary($ticket);
-        $roomCount = count($routing);
+            // Step 1 — Create patient visit
+            $visit = PatientVisit::create([
+                'patient_id'        => $validated['patient_id'],
+                'visit_type'        => $validated['visit_type'],
+                'employer_company'  => $validated['employer_company'] ?? null,
+                'services_selected' => $validated['services_requested'],
+                'visit_date'        => now(),
+                'status'            => 'pending',
+                'chief_complaint'   => $validated['chief_complaint'] ?? null,
+                'created_by'        => Auth::id(),
+            ]);
+
+            // Step 2 — Issue queue ticket
+            $ticket = QueueTicket::create([
+                'patient_id'         => $validated['patient_id'],
+                'patient_visit_id'   => $visit->id,
+                'queue_counter_id'   => $validated['queue_counter_id'],
+                'visit_type'         => $validated['visit_type'],
+                'priority'           => $validated['priority'],
+                'services_requested' => $validated['services_requested'],
+                'issued_by'          => Auth::id(),
+                'issued_at'          => now(),
+            ]);
+
+            // Step 3 — Route to rooms via engine (inside transaction — rollback if fails)
+            $this->engine->route($ticket);
+
+            // Step 4 — Get routing summary
+            $ticket->refresh();
+            $ticket->load('roomAssignments');
+            $routing   = $this->engine->getRoutingSummary($ticket);
+            $roomCount = count($routing);
+            $rooms     = $ticket->roomAssignments->map(fn($a) => [
+                'room'         => $a->room,
+                'queue_number' => $a->queue_number,
+            ])->values()->toArray();
+
+            return [$ticket, $roomCount, $rooms];
+        });
 
         $patient = $ticket->patient;
-        $rooms   = $ticket->roomAssignments->map(fn($a) => [
-            'room'         => $a->room,
-            'queue_number' => $a->queue_number,
-        ])->values()->toArray();
 
         return back()
             ->with('success', "Ticket {$ticket->ticket_number} issued! Routed to {$roomCount} room(s).")
@@ -158,7 +187,7 @@ class QueueController extends Controller
 
     public function roomScreen(string $room)
     {
-        $validRooms = ['laboratory', 'xray_utz', 'drug_test', 'interview_room'];
+        $validRooms = ['laboratory', 'xray_utz', 'drug_test', 'nurse_station', 'interview_room'];
 
         if (!in_array($room, $validRooms)) {
             abort(404, 'Invalid room.');
@@ -166,7 +195,7 @@ class QueueController extends Controller
 
         $queue = QueueRoomAssignment::with([
             'ticket.patient',
-            'ticket' => fn($q) => $q->with('patient'),
+            'ticket.roomAssignments',
         ])
         ->today()
         ->forRoom($room)
@@ -187,6 +216,12 @@ class QueueController extends Controller
             'sequence'       => $a->routing_sequence,
             'services'       => $a->ticket->services_requested ?? [],
             'issued_at'      => $a->ticket->issued_at->format('h:i A'),
+            // Cross-room awareness: show which other room is currently serving this patient
+            'serving_in'     => $a->ticket->roomAssignments
+                ->where('status', 'serving')
+                ->where('id', '!=', $a->id)
+                ->map(fn($r) => QueueRoomAssignment::ROOM_LABELS[$r->room] ?? $r->room)
+                ->first(),
         ]);
 
         $roomLabel = QueueRoomAssignment::ROOM_LABELS[$room];
@@ -198,7 +233,7 @@ class QueueController extends Controller
 
     public function display()
     {
-        $rooms = ['laboratory', 'xray_utz', 'drug_test', 'interview_room'];
+        $rooms = ['laboratory', 'xray_utz', 'drug_test', 'nurse_station', 'interview_room'];
         $board = [];
 
         foreach ($rooms as $room) {
@@ -246,7 +281,7 @@ class QueueController extends Controller
     public function callNext(Request $request)
     {
         $request->validate([
-            'room' => ['required', 'in:laboratory,xray_utz,drug_test,interview_room'],
+            'room' => ['required', 'in:laboratory,xray_utz,drug_test,nurse_station,interview_room'],
         ]);
 
         $next = QueueRoomAssignment::with('ticket.patient')
@@ -261,10 +296,24 @@ class QueueController extends Controller
             return back()->with('error', 'No patients waiting in this room.');
         }
 
+        // Cross-room check — warn if this patient is currently being served elsewhere
+        $servingElsewhere = QueueRoomAssignment::where('queue_ticket_id', $next->queue_ticket_id)
+            ->where('id', '!=', $next->id)
+            ->where('status', 'serving')
+            ->first();
+
+        if ($servingElsewhere) {
+            $otherRoom = QueueRoomAssignment::ROOM_LABELS[$servingElsewhere->room] ?? $servingElsewhere->room;
+            return back()->with('error',
+                "Cannot call {$next->queue_number} — patient is currently being served at {$otherRoom}. Wait for them to be released."
+            );
+        }
+
+        // Fix E — atomic increment to prevent race condition on concurrent calls
         $next->update([
             'status'     => 'calling',
             'called_at'  => now(),
-            'call_count' => $next->call_count + 1,
+            'call_count' => DB::raw('call_count + 1'),
         ]);
 
         return back()->with('success',
@@ -276,6 +325,19 @@ class QueueController extends Controller
 
     public function markServing(QueueRoomAssignment $assignment)
     {
+        // Cross-room check — block if patient is already being served in another room
+        $servingElsewhere = QueueRoomAssignment::where('queue_ticket_id', $assignment->queue_ticket_id)
+            ->where('id', '!=', $assignment->id)
+            ->where('status', 'serving')
+            ->first();
+
+        if ($servingElsewhere) {
+            $otherRoom = QueueRoomAssignment::ROOM_LABELS[$servingElsewhere->room] ?? $servingElsewhere->room;
+            return back()->with('error',
+                "Cannot mark serving — patient is currently being served at {$otherRoom}."
+            );
+        }
+
         $assignment->update([
             'status'   => 'serving',
             'served_at'=> now(),
@@ -302,29 +364,53 @@ class QueueController extends Controller
 
     public function markNoShow(QueueRoomAssignment $assignment)
     {
-        $assignment->update(['status' => 'no_show']);
+        $ticket = $assignment->ticket;
 
-        // Check if all rooms done/no_show
-        $ticket     = $assignment->ticket;
-        $allDone    = $ticket->roomAssignments()
-            ->whereNotIn('status', ['completed', 'no_show', 'skipped'])
-            ->doesntExist();
+        DB::transaction(function () use ($assignment, $ticket) {
+            // Mark this room as no-show
+            $assignment->update(['status' => 'no_show']);
 
-        if ($allDone) {
+            // Fix D — also mark all remaining waiting/calling rooms as no_show
+            // so the ticket doesn't stay stuck in in_progress forever
+            $ticket->roomAssignments()
+                ->whereIn('status', ['waiting', 'calling'])
+                ->update(['status' => 'no_show']);
+
+            // Ticket is now fully closed
             $ticket->update([
                 'status'       => 'no_show',
                 'completed_at' => now(),
             ]);
-        }
+        });
 
-        return back()->with('success', "Marked as no-show.");
+        return back()->with('success', "Marked as no-show. Remaining rooms cleared.");
     }
 
     // ── SKIP ──────────────────────────────────────────
 
     public function skip(QueueRoomAssignment $assignment)
     {
-        $assignment->update(['status' => 'skipped']);
+        $ticket = $assignment->ticket;
+
+        DB::transaction(function () use ($assignment, $ticket) {
+            $assignment->update(['status' => 'skipped']);
+
+            // Skipping a parallel room may unlock the interview room gate
+            $this->engine->checkAndUnlockGatedRooms($ticket);
+
+            // If every room is now done, close the ticket
+            $allDone = $ticket->roomAssignments()
+                ->whereNotIn('status', ['completed', 'no_show', 'skipped'])
+                ->doesntExist();
+
+            if ($allDone) {
+                $ticket->update([
+                    'status'       => 'completed',
+                    'completed_at' => now(),
+                ]);
+            }
+        });
+
         return back()->with('success', "Patient skipped.");
     }
 
@@ -332,11 +418,21 @@ class QueueController extends Controller
 
     public function recall(QueueRoomAssignment $assignment)
     {
+        // Fix G — do not allow recalling a patient already being served
+        if ($assignment->status === 'serving') {
+            return back()->with('error',
+                "Cannot re-call {$assignment->queue_number} — patient is already being served."
+            );
+        }
+
+        // Fix E — atomic increment
         $assignment->update([
             'status'     => 'calling',
             'called_at'  => now(),
-            'call_count' => $assignment->call_count + 1,
+            'call_count' => DB::raw('call_count + 1'),
         ]);
+
+        $assignment->refresh();
 
         return back()->with('success',
             "Re-calling {$assignment->queue_number} (Call #{$assignment->call_count})"
@@ -352,8 +448,9 @@ class QueueController extends Controller
             'completed_at' => now(),
         ]);
 
+        // Fix C — include 'serving' so in-progress rooms are also cleared on cancel
         $ticket->roomAssignments()
-            ->whereIn('status', ['waiting', 'calling', 'directing'])
+            ->whereIn('status', ['waiting', 'calling', 'serving', 'directing'])
             ->update(['status' => 'skipped']);
 
         return back()->with('success', "Ticket {$ticket->ticket_number} cancelled.");
