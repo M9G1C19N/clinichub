@@ -15,8 +15,13 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 });
 
-// TV Display Board — public kiosk, no auth needed
+// TV Display Board — public, no auth needed
 Route::get('/queue-display', [QueueController::class, 'display'])->name('queue.display');
+
+// Kiosk — public self-service terminal, no auth needed
+Route::get('/queue/kiosk',          [QueueController::class, 'kiosk'])->name('queue.kiosk');
+Route::post('/queue/kiosk-checkin', [QueueController::class, 'kioskCheckIn'])->name('queue.kiosk-checkin');
+Route::get('/queue/search-patient-kiosk', [QueueController::class, 'searchPatient'])->name('queue.search-patient-kiosk');
 
 // Online Appointment Booking — public, no auth needed
 Route::get('/book-appointment',  [AppointmentController::class, 'bookingForm'])->name('appointments.book');
@@ -50,6 +55,11 @@ Route::middleware('auth')->group(function () {
         Route::patch('/assignments/{assignment}/recall',    [QueueController::class, 'recall'])->name('recall');
         Route::get('/room/{room}',                          [QueueController::class, 'roomScreen'])->name('room');
         Route::get('/search-patient',                       [QueueController::class, 'searchPatient'])->name('search-patient');
+        Route::patch('/kiosk-checkins/{checkin}/cancel',    [QueueController::class, 'cancelKioskCheckIn'])->name('kiosk-checkin.cancel');
+        // Counter management (admin only)
+        Route::post('/counters',                            [QueueController::class, 'storeCounter'])->name('counters.store');
+        Route::patch('/counters/{counter}/toggle',          [QueueController::class, 'toggleCounter'])->name('counters.toggle');
+        Route::delete('/counters/{counter}',                [QueueController::class, 'destroyCounter'])->name('counters.destroy');
     });
 
     // ── Reception & Billing ───────────────────────────
@@ -108,6 +118,24 @@ Route::middleware('auth')->group(function () {
         Route::patch('/services/{service}/toggle-active', [\App\Http\Controllers\Admin\ServiceCatalogController::class, 'toggleActive'])->name('services.toggle-active');
 
         Route::get('/audit', [\App\Http\Controllers\AuditController::class, 'index'])->name('audit');
+
+        // Database Backup & Recovery
+        Route::prefix('backup')->name('backup.')->group(function () {
+            Route::get('/',                         [\App\Http\Controllers\Admin\BackupController::class, 'index'])->name('index');
+            Route::post('/',                        [\App\Http\Controllers\Admin\BackupController::class, 'create'])->name('create');
+            Route::get('/{filename}/download',      [\App\Http\Controllers\Admin\BackupController::class, 'download'])->name('download');
+            Route::post('/{filename}/restore',      [\App\Http\Controllers\Admin\BackupController::class, 'restore'])->name('restore');
+            Route::delete('/{filename}',            [\App\Http\Controllers\Admin\BackupController::class, 'destroy'])->name('destroy');
+        });
+
+        // Field Visit Sync
+        Route::prefix('field-sync')->name('field-sync.')->group(function () {
+            Route::get('/',                         [\App\Http\Controllers\Admin\FieldSyncController::class, 'index'])->name('index');
+            Route::get('/export',                   [\App\Http\Controllers\Admin\FieldSyncController::class, 'export'])->name('export');
+            Route::post('/preview',                 [\App\Http\Controllers\Admin\FieldSyncController::class, 'preview'])->name('preview');
+            Route::post('/import',                  [\App\Http\Controllers\Admin\FieldSyncController::class, 'import'])->name('import');
+            Route::post('/cancel-preview',          [\App\Http\Controllers\Admin\FieldSyncController::class, 'cancelPreview'])->name('cancel-preview');
+        });
 
         // Staff E-Signatures
         Route::get('/esignatures',                           [\App\Http\Controllers\Admin\EsignatureController::class, 'index'])->name('esignatures.index');

@@ -7,6 +7,7 @@ import {
     Settings, BarChart3, ShieldCheck, UserCog, Pill,
     ChevronLeft, ChevronRight, LogOut, Activity, Monitor,
     Microscope, ScanLine, Syringe, HeartPulse, PenLine,
+    DatabaseBackup, RefreshCw, MonitorPlay,
 } from 'lucide-vue-next'
 import { CLINIC_LOGO, CLINIC_INFO } from '@/config/clinic.js'
 
@@ -27,6 +28,7 @@ const navMap = {
         { label: 'Patients',       href: '/patients',         icon: Users },
         { label: 'Reception',      href: '/reception',        icon: ClipboardList },
         { label: 'Queue',          href: '/queue',            icon: HeartPulse },
+        { label: 'Kiosk',         href: '/queue/kiosk',      icon: MonitorPlay },
         { label: 'Laboratory',     href: '/laboratory',       icon: FlaskConical },
         { label: 'X-Ray & UTZ',    href: '/xray',             icon: ScanLine },
         { label: 'Drug Test',      href: '/drug-test',        icon: TestTube },
@@ -40,6 +42,9 @@ const navMap = {
         { label: 'E-Signatures',   href: '/admin/esignatures',    icon: PenLine },
         { label: 'Booking Photos', href: '/admin/booking-photos', icon: Monitor },
         { label: 'Audit Logs',     href: '/admin/audit',          icon: ShieldCheck },
+        { divider: true },
+        { label: 'Field Sync',     href: '/admin/field-sync',     icon: RefreshCw },
+        { label: 'DB Backup',      href: '/admin/backup',         icon: DatabaseBackup },
     ],
 
     receptionist: [
@@ -47,6 +52,7 @@ const navMap = {
         { label: 'Patients',       href: '/patients',         icon: Users },
         { label: 'Reception',      href: '/reception',        icon: ClipboardList },
         { label: 'Queue',          href: '/queue',            icon: HeartPulse },
+        { label: 'Kiosk',         href: '/queue/kiosk',      icon: MonitorPlay },
         { label: 'Appointments',   href: '/appointments',     icon: Calendar },
         { label: 'Billing',        href: '/billing',          icon: Receipt },
     ],
@@ -285,5 +291,24 @@ const roleLabel = {
 .fade-slide-leave-to {
     opacity: 0;
     transform: translateX(-6px);
+}
+
+/* ── Custom scrollbar for the nav ── */
+nav {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.15) transparent;
+}
+nav::-webkit-scrollbar {
+    width: 4px;
+}
+nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+nav::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 99px;
+}
+nav::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.30);
 }
 </style>

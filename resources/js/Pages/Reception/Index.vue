@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted, onUnmounted, computed } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { Button } from '@/components/ui/button'
@@ -12,16 +12,17 @@ import {
     Plus, Search, Receipt, Users, TrendingUp,
     Clock, CheckCircle2, AlertCircle, Calendar,
     FlaskConical, ScanLine, TestTube, Stethoscope,
-    AlertTriangle, ChevronRight, FileText,
+    AlertTriangle, ChevronRight, FileText, Monitor, X,
 } from 'lucide-vue-next'
 import { VISIT_TYPE_BADGE as visitTypeBadge } from '@/config/visitTypes.js'
 
 const props = defineProps({
-    today:   Object,
-    history: Object,
-    unpaid:  Object,
-    filters: Object,
-    summary: Object,
+    today:         Object,
+    history:       Object,
+    unpaid:        Object,
+    kioskCheckins: { type: Array, default: () => [] },
+    filters:       Object,
+    summary:       Object,
 })
 
 const activeTab = ref(props.filters?.tab ?? 'today')
@@ -102,6 +103,43 @@ function currentData() {
     if (activeTab.value === 'history') return props.history
     return props.today
 }
+
+// ── Auto-refresh for kiosk arrivals ──────────────────────
+const REFRESH_INTERVAL  = 20_000  // 20 seconds
+const lastRefreshedAt   = ref(Date.now())
+const now               = ref(Date.now())
+const isRefreshing      = ref(false)
+let   refreshTimer      = null
+let   clockTicker       = null
+
+function refreshKioskArrivals() {
+    if (isRefreshing.value) return
+    isRefreshing.value = true
+    router.reload({
+        only: ['kioskCheckins', 'summary'],
+        onFinish: () => {
+            isRefreshing.value  = false
+            lastRefreshedAt.value = Date.now()
+        },
+    })
+}
+
+const lastRefreshedLabel = computed(() => {
+    const s = Math.floor((now.value - lastRefreshedAt.value) / 1000)
+    if (s < 10)  return 'just now'
+    if (s < 60)  return `${s}s ago`
+    return `${Math.floor(s / 60)}m ago`
+})
+
+onMounted(() => {
+    refreshTimer = setInterval(refreshKioskArrivals, REFRESH_INTERVAL)
+    clockTicker  = setInterval(() => { now.value = Date.now() }, 5_000)
+})
+
+onUnmounted(() => {
+    clearInterval(refreshTimer)
+    clearInterval(clockTicker)
+})
 </script>
 
 <template>
@@ -166,6 +204,103 @@ function currentData() {
                 <div>
                     <p class="text-xs text-muted-foreground">Completed Today</p>
                     <p class="text-2xl font-black text-slate-800">{{ summary.completed }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kiosk Check-ins Panel — always visible so the live indicator shows -->
+        <div class="border rounded-xl p-4 mb-4 transition-colors"
+             :class="kioskCheckins.length > 0 ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'">
+            <div class="flex items-center gap-2 mb-3">
+                <Monitor class="w-4 h-4" :class="kioskCheckins.length > 0 ? 'text-amber-600' : 'text-slate-400'"/>
+                <h3 class="text-sm font-bold" :class="kioskCheckins.length > 0 ? 'text-amber-800' : 'text-slate-500'">
+                    Kiosk Arrivals
+                </h3>
+                <span class="text-xs font-black px-2 py-0.5 rounded-full"
+                      :class="kioskCheckins.length > 0 ? 'bg-amber-500 text-white' : 'bg-slate-200 text-slate-500'">
+                    {{ kioskCheckins.length }}
+                </span>
+
+                <!-- Live indicator -->
+                <div class="flex items-center gap-1.5 ml-auto">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+                              :class="isRefreshing ? 'bg-blue-400' : 'bg-green-400'"/>
+                        <span class="relative inline-flex rounded-full h-2 w-2"
+                              :class="isRefreshing ? 'bg-blue-500' : 'bg-green-500'"/>
+                    </span>
+                    <span class="text-xs text-slate-400">
+                        {{ isRefreshing ? 'Refreshing…' : `Updated ${lastRefreshedLabel}` }}
+                    </span>
+                    <button @click="refreshKioskArrivals"
+                            class="text-xs text-slate-400 hover:text-blue-600 underline ml-1 transition-colors">
+                        Refresh
+                    </button>
+                </div>
+            </div>
+
+            <!-- Empty state -->
+            <p v-if="kioskCheckins.length === 0" class="text-xs text-slate-400 text-center py-2">
+                No kiosk arrivals yet. Refreshes automatically every 20 seconds.
+            </p>
+            <div class="flex flex-col gap-2">
+                <div v-for="checkin in kioskCheckins" :key="checkin.id"
+                     class="bg-white border border-amber-200 rounded-lg px-4 py-3 flex items-center gap-4">
+                    <!-- Time -->
+                    <div class="text-center min-w-[48px]">
+                        <Clock class="w-3.5 h-3.5 text-amber-500 mx-auto mb-0.5"/>
+                        <p class="text-xs font-bold text-amber-700">{{ checkin.checked_in_at }}</p>
+                    </div>
+
+                    <!-- Patient info -->
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-bold text-slate-800 truncate">{{ checkin.patient_name }}</p>
+                        <p class="text-xs text-slate-400 font-mono">{{ checkin.patient_code }}</p>
+                    </div>
+
+                    <!-- Visit type + priority -->
+                    <div class="flex items-center gap-1.5 flex-shrink-0">
+                        <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-medium">
+                            {{ checkin.visit_type.replace(/_/g,' ').toUpperCase() }}
+                        </span>
+                        <span class="text-xs px-2 py-0.5 rounded font-bold"
+                            :class="{
+                                'bg-red-100 text-red-700':    checkin.priority === 'urgent',
+                                'bg-pink-100 text-pink-700':  checkin.priority === 'pregnant',
+                                'bg-blue-100 text-blue-700':  checkin.priority === 'pwd',
+                                'bg-amber-100 text-amber-700':checkin.priority === 'senior',
+                                'bg-slate-100 text-slate-600':checkin.priority === 'regular',
+                            }">
+                            {{ checkin.priority.toUpperCase() }}
+                        </span>
+                    </div>
+
+                    <!-- Services -->
+                    <div class="flex flex-wrap gap-1 max-w-[220px] flex-shrink-0">
+                        <span v-for="svc in checkin.services.slice(0,4)" :key="svc"
+                              class="text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded font-medium">
+                            {{ svc }}
+                        </span>
+                        <span v-if="checkin.services.length > 4"
+                              class="text-xs text-slate-400">
+                            +{{ checkin.services.length - 4 }} more
+                        </span>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <Link :href="route('reception.create', { patient_id: checkin.patient_id, checkin_id: checkin.id })">
+                            <Button size="sm" style="background-color:#1B4F9B" class="text-white gap-1.5 text-xs">
+                                <Plus class="w-3.5 h-3.5"/>
+                                Process Visit
+                            </Button>
+                        </Link>
+                        <button @click="router.patch(route('queue.kiosk-checkin.cancel', checkin.id))"
+                                class="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                title="Dismiss">
+                            <X class="w-4 h-4"/>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

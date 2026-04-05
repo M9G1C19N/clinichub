@@ -14,7 +14,7 @@ import {
 import {
     Search, FlaskConical, ScanLine, TestTube,
     Stethoscope, Tag, ChevronRight, Receipt,
-    User, CheckCircle2, AlertTriangle,
+    User, CheckCircle2, AlertTriangle, Monitor,
 } from 'lucide-vue-next'
 
 
@@ -76,20 +76,22 @@ const props = defineProps({
     patient:  Object,
     services: Array,
     counters: Array,
+    checkin:  { type: Object, default: null },
 })
 
 const form = useForm({
     patient_id:         props.patient?.id ?? null,
-    visit_type: 'opd',
-    employer_company:   '',
-    chief_complaint:    '',
+    visit_type:         props.checkin?.visit_type ?? 'opd',
+    employer_company:   props.checkin?.employer_company ?? '',
+    chief_complaint:    props.checkin?.chief_complaint ?? '',
     referral_validated: false,
-    services:           [],
-    priority:           'regular',
-    queue_counter_id: props.counters[0]?.id ? String(props.counters[0].id) : null,
+    services:           props.checkin?.services ?? [],
+    priority:           props.checkin?.priority ?? 'regular',
+    queue_counter_id:   props.counters[0]?.id ? String(props.counters[0].id) : null,
     discount_amount:    0,
     notes:              '',
-    is_field_visit: false,
+    is_field_visit:     false,
+    checkin_id:         props.checkin?.id ?? null,
 })
 
 // Patient search
@@ -188,6 +190,16 @@ function submit() {
                 </div>
             </div>
         </template>
+
+        <!-- Kiosk check-in banner -->
+        <div v-if="checkin"
+             class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 flex items-center gap-3">
+            <Monitor class="w-4 h-4 text-amber-600 flex-shrink-0"/>
+            <p class="text-sm text-amber-800">
+                <strong>Kiosk Check-in</strong> — Services and details have been pre-filled from the patient's self-registration.
+                Review and confirm before issuing the visit and invoice.
+            </p>
+        </div>
 
         <form @submit.prevent="submit">
             <div class="flex gap-5 items-start">

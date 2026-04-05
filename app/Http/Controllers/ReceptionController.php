@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
+use App\Models\KioskCheckIn;
 use App\Models\Patient;
 use App\Models\PatientVisit;
 use App\Models\Payment;
@@ -102,10 +103,30 @@ class ReceptionController extends Controller
         $unpaid = $unpaidQuery->getCollection()->map(fn($v) => $this->transformVisit($v));
         $unpaidQuery->setCollection($unpaid);
 
+        // Pending kiosk check-ins (patients who self-registered at kiosk today)
+        $kioskCheckins = KioskCheckIn::with('patient')
+            ->pending()
+            ->whereDate('created_at', today())
+            ->orderBy('created_at')
+            ->get()
+            ->map(fn($c) => [
+                'id'               => $c->id,
+                'patient_id'       => $c->patient_id,
+                'patient_name'     => $c->patient->full_name,
+                'patient_code'     => $c->patient->patient_code,
+                'visit_type'       => $c->visit_type,
+                'priority'         => $c->priority,
+                'services'         => $c->services_requested,
+                'employer_company' => $c->employer_company,
+                'chief_complaint'  => $c->chief_complaint,
+                'checked_in_at'    => $c->created_at->format('h:i A'),
+            ]);
+
         return inertia('Reception/Index', [
-            'today'   => $todayQuery,
-            'history' => $historyQuery,
-            'unpaid'  => $unpaidQuery,
+            'today'         => $todayQuery,
+            'history'       => $historyQuery,
+            'unpaid'        => $unpaidQuery,
+            'kioskCheckins' => $kioskCheckins,
             'filters' => [
                 'search' => $search,
                 'status' => $statusFilter,
@@ -120,6 +141,7 @@ class ReceptionController extends Controller
                 'unpaid_count'  => \App\Models\Invoice::whereIn('status', ['unpaid','partial'])->count(),
                 'completed'     => PatientVisit::whereDate('visit_date', today())
                                     ->where('status', 'completed')->count(),
+                'kiosk_pending' => KioskCheckIn::pending()->whereDate('created_at', today())->count(),
             ],
         ]);
     }
@@ -230,6 +252,34 @@ class ReceptionController extends Controller
             }
         }
 
+        // Pre-fill from kiosk check-in if provided
+        $checkin = null;
+        if ($request->filled('checkin_id')) {
+            $kioskCheckin = KioskCheckIn::with('patient')->find($request->checkin_id);
+            if ($kioskCheckin && $kioskCheckin->status === 'pending') {
+                $checkin = [
+                    'id'               => $kioskCheckin->id,
+                    'visit_type'       => $kioskCheckin->visit_type,
+                    'priority'         => $kioskCheckin->priority,
+                    'services'         => $kioskCheckin->services_requested,
+                    'employer_company' => $kioskCheckin->employer_company,
+                    'chief_complaint'  => $kioskCheckin->chief_complaint,
+                ];
+                // Ensure patient is pre-filled from the checkin
+                if (!$patient) {
+                    $p = $kioskCheckin->patient;
+                    $patient = [
+                        'id'           => $p->id,
+                        'full_name'    => $p->full_name,
+                        'patient_code' => $p->patient_code,
+                        'age_sex'      => $p->age_sex,
+                        'visit_type'   => $p->visit_type_default,
+                        'philhealth'   => $p->philhealth_number,
+                    ];
+                }
+            }
+        }
+
         // Load services grouped by category
         $services = ServiceCatalog::active()
             ->orderBy('category')
@@ -257,6 +307,7 @@ class ReceptionController extends Controller
             'patient'  => $patient,
             'services' => $services,
             'counters' => $counters,
+            'checkin'  => $checkin,
         ]);
     }
 
@@ -265,9 +316,9 @@ class ReceptionController extends Controller
     public function store(Request $request)
     {
         $request->merge([
-        'queue_counter_id' => (int) $request->queue_counter_id,
-        'discount_amount'  => (float) ($request->discount_amount ?? 0),
-    ]);
+            'queue_counter_id' => (int) $request->queue_counter_id,
+            'discount_amount'  => (float) ($request->discount_amount ?? 0),
+        ]);
         $validated = $request->validate([
             'patient_id'         => ['required', 'exists:patients,id'],
             'visit_type'         => ['required', 'in:opd,pre_employment,annual_pe,exit_pe,follow_up,lab_only'],
@@ -280,7 +331,7 @@ class ReceptionController extends Controller
             'queue_counter_id'   => ['required', 'exists:queue_counters,id'],
             'discount_amount'    => ['nullable', 'numeric', 'min:0'],
             'notes'              => ['nullable', 'string'],
-            'is_field_visit' => ['boolean'],
+            'checkin_id'         => ['nullable', 'exists:kiosk_checkins,id'],
         ]);
 
         try {
@@ -366,6 +417,13 @@ class ReceptionController extends Controller
                 'room'         => $a->room,
                 'queue_number' => $a->queue_number,
             ])->values()->toArray();
+
+            // Mark kiosk check-in as processed if this visit originated from one
+            if (!empty($validated['checkin_id'])) {
+                KioskCheckIn::where('id', $validated['checkin_id'])
+                    ->where('status', 'pending')
+                    ->update(['status' => 'processed', 'processed_at' => now()]);
+            }
 
             return redirect()
                 ->route('reception.show', $invoice->id)

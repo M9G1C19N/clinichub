@@ -20,6 +20,7 @@ import {
     FlaskConical, ScanLine, TestTube, Stethoscope, HeartPulse,
     Monitor, Tv2, Bell, ChevronRight,
     AlertTriangle, Users, Activity, Printer, Lock,
+    Plus, Trash2, ToggleLeft, ToggleRight,
 } from 'lucide-vue-next'
 import { printQueueSlip } from '@/utils/printQueueSlip.js'
 
@@ -227,6 +228,28 @@ const roomIcon = {
     interview_room: Stethoscope,
 }
 const roomIconMap = roomIcon
+
+// ── Counter management ─────────────────────────────────
+const showCounterModal = ref(false)
+const counterForm = ref({ counter_name: '', counter_code: '' })
+const role = computed(() => page.props.auth?.user?.role)
+
+function submitCounter() {
+    router.post(route('queue.counters.store'), counterForm.value, {
+        onSuccess: () => {
+            showCounterModal.value = false
+            counterForm.value = { counter_name: '', counter_code: '' }
+        },
+        preserveScroll: true,
+    })
+}
+function toggleCounter(id) {
+    router.patch(route('queue.counters.toggle', id), {}, { preserveScroll: true })
+}
+function deleteCounter(id, name) {
+    if (!confirm(`Delete counter "${name}"?`)) return
+    router.delete(route('queue.counters.destroy', id), { preserveScroll: true })
+}
 </script>
 
 <template>
@@ -265,6 +288,72 @@ const roomIconMap = roomIcon
                 </p>
             </div>
         </div>
+
+        <!-- ── Counters ──────────────────────────────── -->
+        <div class="mb-5 bg-white border rounded-xl shadow-sm p-4">
+            <div class="flex items-center justify-between mb-3">
+                <div>
+                    <p class="text-sm font-bold text-slate-700">Queue Counters</p>
+                    <p class="text-xs text-slate-400">Reception desks the kiosk and staff can issue tickets from</p>
+                </div>
+                <Button v-if="role === 'admin'" size="sm" variant="outline" class="gap-1.5" @click="showCounterModal = true">
+                    <Plus class="w-4 h-4" /> Add Counter
+                </Button>
+            </div>
+
+            <!-- No counters warning -->
+            <div v-if="!counters.length"
+                 class="flex items-center gap-2 text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm">
+                <AlertTriangle class="w-4 h-4 flex-shrink-0" />
+                No counters exist. Add at least one counter so the kiosk can issue tickets.
+            </div>
+
+            <!-- Counter list -->
+            <div v-else class="flex flex-wrap gap-2">
+                <div v-for="c in counters" :key="c.id"
+                     class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium"
+                     :class="c.is_active ? 'bg-green-50 border-green-200 text-green-800' : 'bg-slate-50 border-slate-200 text-slate-400'">
+                    <span class="font-mono text-xs font-bold">{{ c.counter_code }}</span>
+                    <span>{{ c.counter_name }}</span>
+                    <template v-if="role === 'admin'">
+                        <button @click="toggleCounter(c.id)" class="ml-1 hover:opacity-70 transition-opacity" :title="c.is_active ? 'Deactivate' : 'Activate'">
+                            <ToggleRight v-if="c.is_active" class="w-4 h-4 text-green-600" />
+                            <ToggleLeft  v-else              class="w-4 h-4 text-slate-400" />
+                        </button>
+                        <button @click="deleteCounter(c.id, c.counter_name)" class="hover:text-red-500 transition-colors" title="Delete">
+                            <Trash2 class="w-3.5 h-3.5" />
+                        </button>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Counter Modal -->
+        <Dialog :open="showCounterModal" @update:open="showCounterModal = $event">
+            <DialogContent class="max-w-sm">
+                <DialogHeader>
+                    <DialogTitle>Add Queue Counter</DialogTitle>
+                    <DialogDescription>A counter is a reception desk or window (e.g. Counter 1, Window A).</DialogDescription>
+                </DialogHeader>
+                <div class="space-y-4 pt-2">
+                    <div>
+                        <Label>Counter Name</Label>
+                        <Input v-model="counterForm.counter_name" placeholder="e.g. Counter 1" class="mt-1" />
+                    </div>
+                    <div>
+                        <Label>Counter Code <span class="text-xs text-slate-400">(short, unique)</span></Label>
+                        <Input v-model="counterForm.counter_code" placeholder="e.g. CTR1" maxlength="10" class="mt-1" />
+                    </div>
+                    <div class="flex gap-2 pt-2">
+                        <Button variant="outline" class="flex-1" @click="showCounterModal = false">Cancel</Button>
+                        <Button class="flex-1" style="background:#1B4F9B" @click="submitCounter"
+                                :disabled="!counterForm.counter_name || !counterForm.counter_code">
+                            Add Counter
+                        </Button>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
 
         <!-- ── Room Status Cards ──────────────────────── -->
         <!-- Flow legend -->

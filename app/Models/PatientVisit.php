@@ -34,6 +34,11 @@ class PatientVisit extends Model
         'created_by',
         'case_number',
         'is_field_visit',
+        'synced_from_field',
+        'synced_at',
+        'field_device_id',
+        'field_temp_id',
+        'field_sync_log_id',
     ];
 
     protected $casts = [
@@ -41,7 +46,9 @@ class PatientVisit extends Model
         'referral_validated' => 'boolean',
         'visit_date'         => 'datetime',
         'result_claim_date'  => 'date',
-        'is_field_visit' => 'boolean',
+        'is_field_visit'     => 'boolean',
+        'synced_from_field'  => 'boolean',
+        'synced_at'          => 'datetime',
     ];
 
     protected static function booted(): void

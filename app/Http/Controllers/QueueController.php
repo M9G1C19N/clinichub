@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\KioskCheckIn;
 use App\Models\Patient;
 use App\Models\PatientVisit;
 use App\Models\QueueCounter;
@@ -87,11 +88,12 @@ class QueueController extends Controller
             'no_show'     => QueueTicket::today()->where('status', 'no_show')->count(),
         ];
 
-        // Active counters
-        $counters = QueueCounter::active()->get()->map(fn($c) => [
+        // All counters (so admins can see and manage inactive ones too)
+        $counters = QueueCounter::orderBy('id')->get()->map(fn($c) => [
             'id'           => $c->id,
             'counter_name' => $c->counter_name,
             'counter_code' => $c->counter_code,
+            'is_active'    => $c->is_active,
         ]);
 
         return inertia('Queue/Index', compact(
@@ -104,13 +106,24 @@ class QueueController extends Controller
     {
         $validated = $request->validate([
             'patient_id'         => ['required', 'exists:patients,id'],
-            'visit_type' => ['required', 'in:opd,pre_employment,annual_pe,exit_pe,follow_up,lab_only'],
+            'visit_type'         => ['required', 'in:opd,pre_employment,annual_pe,exit_pe,follow_up,lab_only'],
             'priority'           => ['required', 'in:regular,senior,pwd,pregnant,urgent'],
-            'queue_counter_id'   => ['required', 'exists:queue_counters,id'],
+            'queue_counter_id'   => ['nullable', 'exists:queue_counters,id'],
             'services_requested' => ['required', 'array', 'min:1'],
             'employer_company'   => ['nullable', 'string', 'max:150'],
             'chief_complaint'    => ['nullable', 'string'],
         ]);
+
+        // Auto-assign first active counter when kiosk doesn't supply one
+        if (empty($validated['queue_counter_id'])) {
+            $counter = QueueCounter::active()->first();
+            if (!$counter) {
+                return back()->withErrors([
+                    'queue_counter_id' => 'No active counter is open right now. Please ask a staff member for assistance.',
+                ]);
+            }
+            $validated['queue_counter_id'] = $counter->id;
+        }
 
         // Fix F — Prevent duplicate active tickets for the same patient today
         $existingTicket = QueueTicket::today()
@@ -454,6 +467,108 @@ class QueueController extends Controller
             ->update(['status' => 'skipped']);
 
         return back()->with('success', "Ticket {$ticket->ticket_number} cancelled.");
+    }
+
+    // ── COUNTER MANAGEMENT ────────────────────────────
+
+    public function storeCounter(Request $request)
+    {
+        $request->validate([
+            'counter_name' => ['required', 'string', 'max:50'],
+            'counter_code' => ['required', 'string', 'max:10', 'unique:queue_counters,counter_code'],
+        ]);
+
+        QueueCounter::create([
+            'counter_name' => $request->counter_name,
+            'counter_code' => strtoupper($request->counter_code),
+            'is_active'    => true,
+        ]);
+
+        return back()->with('success', "Counter \"{$request->counter_name}\" created.");
+    }
+
+    public function toggleCounter(QueueCounter $counter)
+    {
+        $counter->update(['is_active' => !$counter->is_active]);
+        $state = $counter->is_active ? 'activated' : 'deactivated';
+        return back()->with('success', "Counter \"{$counter->counter_name}\" {$state}.");
+    }
+
+    public function destroyCounter(QueueCounter $counter)
+    {
+        $counter->delete();
+        return back()->with('success', "Counter \"{$counter->counter_name}\" deleted.");
+    }
+
+    // ── KIOSK ─────────────────────────────────────────
+
+    public function kiosk()
+    {
+        // Pass active services grouped by category so the kiosk always reflects
+        // the live service catalog — no hardcoded list on the frontend.
+        $services = \App\Models\ServiceCatalog::active()
+            ->orderBy('category')
+            ->orderBy('service_name')
+            ->get()
+            ->groupBy('category')
+            ->map(fn($items, $category) => [
+                'category' => $category,
+                'room'     => $items->first()->room,
+                'services' => $items->map(fn($s) => [
+                    'code'  => $s->service_code,
+                    'label' => $s->service_name,
+                ])->values(),
+            ])
+            ->values();
+
+        return inertia('Queue/Kiosk', compact('services'));
+    }
+
+    // ── KIOSK CHECK-IN (pre-registration only — no ticket issued) ──
+
+    public function kioskCheckIn(Request $request)
+    {
+        $validated = $request->validate([
+            'patient_id'         => ['required', 'exists:patients,id'],
+            'visit_type'         => ['required', 'in:opd,pre_employment,annual_pe,exit_pe,follow_up,lab_only'],
+            'priority'           => ['required', 'in:regular,senior,pwd,pregnant,urgent'],
+            'services_requested' => ['required', 'array', 'min:1'],
+            'employer_company'   => ['nullable', 'string', 'max:150'],
+            'chief_complaint'    => ['nullable', 'string'],
+        ]);
+
+        // Prevent duplicate pending check-ins for the same patient today
+        $existing = KioskCheckIn::where('patient_id', $validated['patient_id'])
+            ->where('status', 'pending')
+            ->whereDate('created_at', today())
+            ->first();
+
+        if ($existing) {
+            return back()->withErrors([
+                'patient_id' => 'You already have a pending check-in today. Please proceed to the Reception Counter.',
+            ]);
+        }
+
+        $checkin = KioskCheckIn::create($validated);
+        $patient = Patient::find($validated['patient_id']);
+
+        return back()->with('kioskSuccess', [
+            'checkin_id'    => $checkin->id,
+            'patient_name'  => $patient->full_name,
+            'patient_code'  => $patient->patient_code,
+            'visit_type'    => $validated['visit_type'],
+            'priority'      => $validated['priority'],
+            'services'      => $validated['services_requested'],
+            'checked_in_at' => $checkin->created_at->format('M d, Y h:i A'),
+        ]);
+    }
+
+    // ── CANCEL KIOSK CHECK-IN (reception can dismiss) ──
+
+    public function cancelKioskCheckIn(KioskCheckIn $checkin)
+    {
+        $checkin->update(['status' => 'cancelled']);
+        return back()->with('success', 'Kiosk check-in cancelled.');
     }
 
     // ── SEARCH PATIENT FOR TICKET FORM ────────────────
