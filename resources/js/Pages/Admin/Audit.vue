@@ -183,49 +183,61 @@ const statCards = computed(() => [
                     </Button>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
                     <!-- Search -->
                     <div class="relative lg:col-span-2">
-                        <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <Input v-model="form.search" @input="applyFilters"
-                            placeholder="Search description or user..."
-                            class="pl-9" />
+                        <label class="text-xs text-slate-500 mb-1 block">Search</label>
+                        <div class="relative">
+                            <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            <Input v-model="form.search" @input="applyFilters"
+                                placeholder="Search description or user..."
+                                class="pl-9" />
+                        </div>
                     </div>
 
                     <!-- Event -->
-                    <Select v-model="form.event" @update:modelValue="applyFilters">
-                        <SelectTrigger>
-                            <SelectValue placeholder="All Events" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Events</SelectItem>
-                            <SelectItem value="created">Created</SelectItem>
-                            <SelectItem value="updated">Updated</SelectItem>
-                            <SelectItem value="deleted">Deleted</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <div>
+                        <label class="text-xs text-slate-500 mb-1 block">Event</label>
+                        <Select v-model="form.event" @update:modelValue="applyFilters">
+                            <SelectTrigger class="w-full">
+                                <SelectValue placeholder="All Events" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Events</SelectItem>
+                                <SelectItem value="created">Created</SelectItem>
+                                <SelectItem value="updated">Updated</SelectItem>
+                                <SelectItem value="deleted">Deleted</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
 
                     <!-- Module -->
-                    <Select v-model="form.subject_type" @update:modelValue="applyFilters">
-                        <SelectTrigger>
-                            <SelectValue placeholder="All Modules" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Modules</SelectItem>
-                            <SelectItem v-for="t in subjectTypes" :key="t" :value="t">{{ t }}</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <div>
+                        <label class="text-xs text-slate-500 mb-1 block">Module</label>
+                        <Select v-model="form.subject_type" @update:modelValue="applyFilters">
+                            <SelectTrigger class="w-full">
+                                <SelectValue placeholder="All Modules" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Modules</SelectItem>
+                                <SelectItem v-for="t in subjectTypes" :key="t" :value="t">{{ t }}</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
 
                     <!-- User -->
-                    <Select v-model="form.user_id" @update:modelValue="applyFilters">
-                        <SelectTrigger>
-                            <SelectValue placeholder="All Users" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Users</SelectItem>
-                            <SelectItem v-for="u in users" :key="u.id" :value="String(u.id)">{{ u.name }}</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <div>
+                        <label class="text-xs text-slate-500 mb-1 block">User</label>
+                        <Select v-model="form.user_id" @update:modelValue="applyFilters">
+                            <SelectTrigger class="w-full">
+                                <SelectValue placeholder="All Users" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Users</SelectItem>
+                                <SelectItem v-for="u in users" :key="u.id" :value="String(u.id)">{{ u.name }}</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
 
                     <!-- Date From -->
                     <div>
