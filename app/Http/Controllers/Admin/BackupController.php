@@ -16,14 +16,46 @@ class BackupController extends Controller
         return storage_path('app/backups');
     }
 
+    private function isWindows(): bool
+    {
+        return PHP_OS_FAMILY === 'Windows';
+    }
+
+    private function findBinary(string $name): string
+    {
+        // Linux/XAMPP
+        if (!$this->isWindows()) {
+            $xamppPath = "/opt/lampp/bin/{$name}";
+            return file_exists($xamppPath) ? $xamppPath : $name;
+        }
+
+        // Windows: search common Laragon MySQL paths
+        $laragonBase = 'C:\\laragon\\bin\\mysql';
+        if (is_dir($laragonBase)) {
+            $dirs = glob($laragonBase . '\\mysql-*', GLOB_ONLYDIR)
+                 ?: glob($laragonBase . '\\*', GLOB_ONLYDIR);
+            if ($dirs) {
+                // Use the latest version folder
+                rsort($dirs);
+                $bin = $dirs[0] . "\\bin\\{$name}.exe";
+                if (file_exists($bin)) {
+                    return $bin;
+                }
+            }
+        }
+
+        // Fallback: rely on system PATH (must be added manually by user)
+        return $name;
+    }
+
     private function mysqldump(): string
     {
-        return file_exists('/opt/lampp/bin/mysqldump') ? '/opt/lampp/bin/mysqldump' : 'mysqldump';
+        return $this->findBinary('mysqldump');
     }
 
     private function mysql(): string
     {
-        return file_exists('/opt/lampp/bin/mysql') ? '/opt/lampp/bin/mysql' : 'mysql';
+        return $this->findBinary('mysql');
     }
 
     private function dbArgs(): array
@@ -100,17 +132,33 @@ class BackupController extends Controller
         $path     = $dir . '/' . $filename;
         $db       = $this->dbArgs();
 
-        $passArg = $db['password'] !== '' ? '-p' . escapeshellarg($db['password']) : '';
-        $cmd = sprintf(
-            '%s --host=%s --port=%s -u%s %s %s > %s 2>&1',
-            $this->mysqldump(),
-            escapeshellarg($db['host']),
-            escapeshellarg($db['port']),
-            escapeshellarg($db['username']),
-            $passArg,
-            escapeshellarg($db['database']),
-            escapeshellarg($path)
-        );
+        $passArg = $db['password'] !== '' ? '-p' . $db['password'] : '';
+        $dump    = $this->mysqldump();
+        $outPath = $this->isWindows() ? str_replace('/', '\\', $path) : $path;
+
+        if ($this->isWindows()) {
+            $cmd = sprintf(
+                'cmd /c ""%s" --host=%s --port=%s -u%s %s %s > "%s" 2>&1"',
+                addslashes($dump),
+                $db['host'],
+                $db['port'],
+                $db['username'],
+                $passArg !== '' ? '-p' . $db['password'] : '',
+                $db['database'],
+                addslashes($outPath)
+            );
+        } else {
+            $cmd = sprintf(
+                '%s --host=%s --port=%s -u%s %s %s > %s 2>&1',
+                escapeshellarg($dump),
+                escapeshellarg($db['host']),
+                escapeshellarg($db['port']),
+                escapeshellarg($db['username']),
+                $passArg !== '' ? '-p' . escapeshellarg($db['password']) : '',
+                escapeshellarg($db['database']),
+                escapeshellarg($outPath)
+            );
+        }
 
         exec($cmd, $output, $code);
 
@@ -149,17 +197,32 @@ class BackupController extends Controller
         }
 
         $db      = $this->dbArgs();
-        $passArg = $db['password'] !== '' ? '-p' . escapeshellarg($db['password']) : '';
-        $cmd = sprintf(
-            '%s --host=%s --port=%s -u%s %s %s < %s 2>&1',
-            $this->mysql(),
-            escapeshellarg($db['host']),
-            escapeshellarg($db['port']),
-            escapeshellarg($db['username']),
-            $passArg,
-            escapeshellarg($db['database']),
-            escapeshellarg($path)
-        );
+        $mysql   = $this->mysql();
+        $inPath  = $this->isWindows() ? str_replace('/', '\\', $path) : $path;
+
+        if ($this->isWindows()) {
+            $cmd = sprintf(
+                'cmd /c ""%s" --host=%s --port=%s -u%s %s %s < "%s" 2>&1"',
+                addslashes($mysql),
+                $db['host'],
+                $db['port'],
+                $db['username'],
+                $db['password'] !== '' ? '-p' . $db['password'] : '',
+                $db['database'],
+                addslashes($inPath)
+            );
+        } else {
+            $cmd = sprintf(
+                '%s --host=%s --port=%s -u%s %s %s < %s 2>&1',
+                escapeshellarg($mysql),
+                escapeshellarg($db['host']),
+                escapeshellarg($db['port']),
+                escapeshellarg($db['username']),
+                $db['password'] !== '' ? '-p' . escapeshellarg($db['password']) : '',
+                escapeshellarg($db['database']),
+                escapeshellarg($inPath)
+            );
+        }
 
         exec($cmd, $output, $code);
 
