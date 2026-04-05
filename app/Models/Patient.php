@@ -76,6 +76,11 @@ class Patient extends Model
         return $this->age . '/' . strtoupper(substr($this->sex, 0, 1));
     }
 
+    public function getBirthdateAttribute(): ?Carbon
+    {
+        return $this->date_of_birth;
+    }
+
     // ── Auto-generate patient_code ─────────────────────────
 
     protected static function booted(): void

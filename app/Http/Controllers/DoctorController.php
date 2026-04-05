@@ -75,6 +75,14 @@ class DoctorController extends Controller
         ->when($filter === 'opd', fn($q) =>
             $q->where('visit_type', 'opd')
         )
+        ->when($search, fn($q) =>
+            $q->whereHas('patient', fn($p) =>
+                $p->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name', 'like', "%{$search}%")
+                  ->orWhere('patient_code', 'like', "%{$search}%")
+            )
+        )
+        ->when($date, fn($q) => $q->whereDate('visit_date', $date))
         ->orderByDesc('visit_date')
         ->paginate(15)
         ->withQueryString();

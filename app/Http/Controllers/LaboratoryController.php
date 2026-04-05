@@ -9,6 +9,7 @@ use App\Models\LaboratoryResult;
 use App\Models\PatientVisit;
 use App\Models\QueueRoomAssignment;
 use App\Models\User;
+use App\Services\RoomRoutingEngine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -56,7 +57,9 @@ class LaboratoryController extends Controller
                 'employer_company' => $a->ticket->visit?->employer_company,
                 'has_results'      => $a->ticket->visit?->labRequest !== null,
                 'lab_status'       => $a->ticket->visit?->labRequest?->status ?? 'none',
+                'is_collected'     => in_array($a->ticket->visit?->labRequest?->status, ['collecting','processing','released']),
                 'is_released'      => $a->ticket->visit?->labRequest?->status === 'released',
+                'collected_at'     => $a->ticket->visit?->labRequest?->collected_at?->format('h:i A'),
                 'services'         => collect($a->ticket->visit?->invoice?->items ?? [])
                     ->filter(fn($i) => in_array($i->service_code, [
                         'CBC','UA','FECALYSIS','BLOODTYPING','FBS','RBS','BUN',
@@ -69,10 +72,9 @@ class LaboratoryController extends Controller
             ] : null,
         ]);
 
-        // ── PENDING — Not yet released (any date) ─────
-        // Lab requests that are pending or processing — need attention
+        // ── PENDING — Collected but not yet released ───
         $pendingQuery = LaboratoryRequest::with(['patient', 'visit'])
-            ->whereIn('status', ['pending', 'processing'])
+            ->whereIn('status', ['pending', 'collecting', 'processing'])
             ->when($search, fn($q) =>
                 $q->whereHas('patient', fn($p) =>
                     $p->where('first_name', 'like', "%{$search}%")
@@ -80,6 +82,8 @@ class LaboratoryController extends Controller
                     ->orWhere('patient_code', 'like', "%{$search}%")
                 )
             )
+            ->when($statusFilter !== 'all', fn($q) => $q->where('status', $statusFilter))
+            ->when($dateFilter, fn($q) => $q->whereDate('created_at', $dateFilter))
             ->latest()
             ->paginate(10, ['*'], 'pending_page')
             ->withQueryString();
@@ -95,6 +99,7 @@ class LaboratoryController extends Controller
             'visit_type'     => $r->visit?->visit_type,
             'visit_date'     => $r->created_at->format('M d, Y'),
             'employer'       => $r->visit?->employer_company,
+            'collected_at'   => $r->collected_at?->format('h:i A'),
         ]);
         $pendingQuery->setCollection($pending);
 
@@ -132,10 +137,10 @@ class LaboratoryController extends Controller
             'todayQueue' => $todayQueue,
             'pending'    => $pendingQuery,
             'history'    => $historyQuery,
-            'filters'    => ['search' => $search, 'date' => $dateFilter],
+            'filters'    => ['search' => $search, 'date' => $dateFilter, 'status' => $statusFilter],
             'summary' => [
                 'today'    => count($todayQueue),
-                'pending'  => LaboratoryRequest::whereIn('status', ['pending','processing'])->count(),
+                'pending'  => LaboratoryRequest::whereIn('status', ['pending','collecting','processing'])->count(),
                 'released_today' => LaboratoryRequest::where('status','released')
                                     ->whereDate('released_at', today())->count(),
             ],
@@ -406,6 +411,40 @@ class LaboratoryController extends Controller
             ->with('success', "Lab results {$action} for {$visit->patient->full_name}.");
     }
 
+    // ── MARK SAMPLE COLLECTED ──────────────────────────
+    // Called when lab staff physically receives the sample.
+    // Creates the lab request stub (collecting status) and
+    // completes the queue assignment so the next patient can be called.
+
+    public function markCollected(PatientVisit $visit)
+    {
+        DB::transaction(function () use ($visit) {
+            // Create or update lab request as "collecting"
+            LaboratoryRequest::updateOrCreate(
+                ['patient_visit_id' => $visit->id],
+                [
+                    'patient_id'   => $visit->patient_id,
+                    'requested_by' => Auth::id(),
+                    'request_date' => today(),
+                    'status'       => 'collecting',
+                    'collected_at' => now(),
+                ]
+            );
+
+            // Complete the queue room assignment → frees queue for next patient
+            $assignment = QueueRoomAssignment::where('patient_visit_id', $visit->id)
+                ->where('room', 'laboratory')
+                ->whereIn('status', ['waiting', 'calling', 'serving'])
+                ->first();
+
+            if ($assignment) {
+                app(RoomRoutingEngine::class)->completeRoom($assignment);
+            }
+        });
+
+        return back()->with('success', "Sample collected for {$visit->patient->full_name}. Results can be entered from the Pending tab.");
+    }
+
    public function print(PatientVisit $visit)
     {
         $visit->load(['patient', 'labRequest.results.labTest']);
@@ -458,7 +497,7 @@ class LaboratoryController extends Controller
                 'noted_by_name'         => $labRequest->noted_by_name,
                 'noted_by_license'      => $labRequest->noted_by_license,
                 'noted_by_signature'    => $this->sigUrl($labRequest->noted_by_signature),
-                'remarks'               => $labRequest->remarks,
+                'remarks'               => $labRequest->clinical_notes,
                 'result_date' => $labRequest->result_date?->format('M d, Y') ?? $visit->visit_date->format('M d, Y'),
                 'result_time' => $labRequest->result_time ?? '',
             ] : null,

@@ -8,7 +8,7 @@ import {
     Stethoscope, ClipboardList, CheckCircle2,
     AlertTriangle, Clock, Activity, Users,
     FlaskConical, Calendar, ChevronRight,
-    FileText, Printer,
+    FileText, Printer, Search, SlidersHorizontal, X,
 } from 'lucide-vue-next'
 import { VISIT_TYPE_BADGE as visitTypeBadge, VISIT_TYPE_LABEL as visitTypeLabel } from '@/config/visitTypes.js'
 
@@ -316,25 +316,55 @@ const peClassColor = {
         <div v-if="activeTab === 'pending'">
 
             <!-- Filter bar -->
-            <div class="flex items-center gap-2 mb-4">
-                <div class="flex items-center gap-1.5">
-                    <button v-for="f in [
-                        { value: 'all',            label: 'All' },
-                        { value: 'pre_employment', label: 'Pre-Employment' },
-                        { value: 'opd',            label: 'OPD' },
-                        { value: 'annual_pe', label: 'Annual PE' },
-                        { value: 'exit_pe',   label: 'Exit PE'   },
-                    ]" :key="f.value"
-                        @click="applyFilter(f.value)"
-                        :class="[
-                            'px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all',
-                            filter === f.value
-                                ? 'text-white border-transparent'
-                                : 'border-border text-muted-foreground hover:border-slate-300'
-                        ]"
-                        :style="filter === f.value ? 'background-color:#1B4F9B' : ''">
-                        {{ f.label }}
+            <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mb-4">
+                <div class="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-100">
+                    <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                        <SlidersHorizontal class="w-3.5 h-3.5"/> Filter
+                    </span>
+                    <button v-if="searchInput || dateInput || (filter && filter !== 'all')"
+                        @click="searchInput=''; dateInput=''; doSearch(); applyFilter('all')"
+                        class="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-700 transition-colors">
+                        <X class="w-3 h-3"/> Clear filters
                     </button>
+                </div>
+                <div class="p-3 space-y-2.5">
+                    <div class="flex items-center gap-2">
+                        <div class="relative flex-1 max-w-sm">
+                            <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400"/>
+                            <input v-model="searchInput"
+                                placeholder="Search patient name or code..."
+                                class="pl-9 h-8 text-xs w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                @keyup.enter="doSearch"/>
+                        </div>
+                        <div class="flex items-center gap-1.5 border border-slate-200 rounded-lg px-2.5 h-8 bg-white">
+                            <Calendar class="w-3.5 h-3.5 text-slate-400"/>
+                            <input v-model="dateInput" type="date"
+                                class="border-0 bg-transparent text-xs w-32 focus:outline-none"
+                                @change="doSearch"/>
+                        </div>
+                        <button class="h-8 text-xs gap-1.5 px-3 rounded-md font-semibold text-white flex items-center"
+                            style="background-color:#1B4F9B"
+                            @click="doSearch">
+                            <Search class="w-3.5 h-3.5 mr-1"/> Search
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="text-xs text-slate-400 font-medium w-14 flex-shrink-0">Type</span>
+                        <button v-for="f in [
+                            { value: 'all',            label: 'All' },
+                            { value: 'pre_employment', label: 'Pre-Employment' },
+                            { value: 'opd',            label: 'OPD' },
+                            { value: 'annual_pe',      label: 'Annual PE' },
+                            { value: 'exit_pe',        label: 'Exit PE' },
+                        ]" :key="f.value"
+                            @click="applyFilter(f.value)"
+                            class="px-2.5 py-1 text-xs font-semibold rounded-full border transition-all"
+                            :style="filter === f.value
+                                ? 'background-color:#1B4F9B;color:white;border-color:#1B4F9B;box-shadow:0 1px 4px rgba(27,79,155,0.3);'
+                                : 'border-color:#e2e8f0;color:#64748b;background:white;'">
+                            {{ f.label }}
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -554,27 +584,36 @@ const peClassColor = {
         <div v-if="activeTab === 'history'">
 
             <!-- Search bar -->
-            <div class="flex items-center gap-3 mb-4 w-158">
-                <div class="relative flex-1">
-                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
-                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                    </svg>
-                    <input v-model="searchInput" @keyup.enter="doSearch"
-                        placeholder="Search patient name or code..."
-                        class="w-full h-9 pl-9 pr-4 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"/>
+            <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mb-4">
+                <div class="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-100">
+                    <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                        <SlidersHorizontal class="w-3.5 h-3.5"/> Filter
+                    </span>
+                    <button v-if="searchInput || dateInput" @click="clearSearch"
+                        class="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-700 transition-colors">
+                        <X class="w-3 h-3"/> Clear filters
+                    </button>
                 </div>
-                <input v-model="dateInput" type="date" @change="doSearch"
-                    class="h-9 px-3 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-                <Button v-if="searchInput || dateInput" variant="outline" size="sm"
-                    class="text-xs h-9" @click="clearSearch">
-                    Clear
-                </Button>
-                <Button size="sm" class="text-xs h-9 gap-1.5 text-white" style="background:#1B4F9B;"
-                    @click="doSearch">
-                    Search
-                </Button>
+                <div class="p-3">
+                    <div class="flex items-center gap-2">
+                        <div class="relative flex-1 max-w-sm">
+                            <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400"/>
+                            <input v-model="searchInput" @keyup.enter="doSearch"
+                                placeholder="Search patient name or code..."
+                                class="w-full h-8 pl-9 pr-4 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"/>
+                        </div>
+                        <div class="flex items-center gap-1.5 border border-slate-200 rounded-lg px-2.5 h-8 bg-white">
+                            <Calendar class="w-3.5 h-3.5 text-slate-400"/>
+                            <input v-model="dateInput" type="date" @change="doSearch"
+                                class="border-0 bg-transparent text-xs w-32 focus:outline-none"/>
+                        </div>
+                        <button class="h-8 text-xs px-3 rounded-md font-semibold text-white flex items-center gap-1.5"
+                            style="background:#1B4F9B"
+                            @click="doSearch">
+                            <Search class="w-3.5 h-3.5"/> Search
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- Empty state -->

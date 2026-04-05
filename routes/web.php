@@ -97,10 +97,11 @@ Route::middleware('auth')->group(function () {
     // ── Laboratory ────────────────────────────────────
     Route::middleware('role:admin|lab_technician|doctor|nurse')
         ->prefix('laboratory')->name('laboratory.')->group(function () {
-            Route::get('/',               [\App\Http\Controllers\LaboratoryController::class, 'index'])->name('index');
-            Route::get('/enter/{visit}',  [\App\Http\Controllers\LaboratoryController::class, 'enter'])->name('enter');
-            Route::post('/enter/{visit}', [\App\Http\Controllers\LaboratoryController::class, 'saveResults'])->name('save');
-            Route::get('/print/{visit}',  [\App\Http\Controllers\LaboratoryController::class, 'print'])->name('print'); // ← INSIDE prefix now
+            Route::get('/',                   [\App\Http\Controllers\LaboratoryController::class, 'index'])->name('index');
+            Route::post('/collect/{visit}',   [\App\Http\Controllers\LaboratoryController::class, 'markCollected'])->name('collect');
+            Route::get('/enter/{visit}',      [\App\Http\Controllers\LaboratoryController::class, 'enter'])->name('enter');
+            Route::post('/enter/{visit}',     [\App\Http\Controllers\LaboratoryController::class, 'saveResults'])->name('save');
+            Route::get('/print/{visit}',      [\App\Http\Controllers\LaboratoryController::class, 'print'])->name('print');
         });
 
     // ── Reports ───────────────────────────────────────
@@ -155,19 +156,21 @@ Route::middleware('auth')->group(function () {
     // ── X-Ray & Ultrasound ────────────────────────────
     Route::middleware('role:admin|xray_tech|doctor')
         ->prefix('xray')->name('xray.')->group(function () {
-            Route::get('/',               [\App\Http\Controllers\XRayController::class, 'index'])->name('index');
-            Route::get('/enter/{visit}',  [\App\Http\Controllers\XRayController::class, 'enter'])->name('enter');
-            Route::post('/enter/{visit}', [\App\Http\Controllers\XRayController::class, 'saveFindings'])->name('save');
-            Route::get('/print/{visit}',  [\App\Http\Controllers\XRayController::class, 'print'])->name('print');
+            Route::get('/',                   [\App\Http\Controllers\XRayController::class, 'index'])->name('index');
+            Route::post('/collect/{visit}',   [\App\Http\Controllers\XRayController::class, 'markCollected'])->name('collect');
+            Route::get('/enter/{visit}',      [\App\Http\Controllers\XRayController::class, 'enter'])->name('enter');
+            Route::post('/enter/{visit}',     [\App\Http\Controllers\XRayController::class, 'saveFindings'])->name('save');
+            Route::get('/print/{visit}',      [\App\Http\Controllers\XRayController::class, 'print'])->name('print');
         });
 
     // ── Drug Test ─────────────────────────────────────
     Route::middleware('role:admin|drug_test_staff|doctor')
         ->prefix('drug-test')->name('drug-test.')->group(function () {
-            Route::get('/',               [\App\Http\Controllers\DrugTestController::class, 'index'])->name('index');
-            Route::get('/enter/{visit}',  [\App\Http\Controllers\DrugTestController::class, 'enter'])->name('enter');
-            Route::post('/enter/{visit}', [\App\Http\Controllers\DrugTestController::class, 'save'])->name('save');
-            Route::get('/print/{visit}',  [\App\Http\Controllers\DrugTestController::class, 'print'])->name('print');
+            Route::get('/',                   [\App\Http\Controllers\DrugTestController::class, 'index'])->name('index');
+            Route::post('/collect/{visit}',   [\App\Http\Controllers\DrugTestController::class, 'markCollected'])->name('collect');
+            Route::get('/enter/{visit}',      [\App\Http\Controllers\DrugTestController::class, 'enter'])->name('enter');
+            Route::post('/enter/{visit}',     [\App\Http\Controllers\DrugTestController::class, 'save'])->name('save');
+            Route::get('/print/{visit}',      [\App\Http\Controllers\DrugTestController::class, 'print'])->name('print');
         });
 
         // ── Prescriptions ─────────────────────────────────────

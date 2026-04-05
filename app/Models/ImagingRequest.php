@@ -24,7 +24,8 @@ class ImagingRequest extends Model
         'request_number', 'patient_id', 'patient_visit_id',
         'imaging_type', 'requested_by',
         'radiographic_findings', 'impression', 'is_provisional',
-        'status', 'rad_tech_name', 'rad_tech_license', 'rad_tech_signature',
+        'status', 'collected_at',
+        'rad_tech_name', 'rad_tech_license', 'rad_tech_signature',
         'radiologist_name', 'radiologist_license', 'radiologist_signature',
         'released_at', 'released_by',
         'exam_date', 'exam_time',
@@ -32,8 +33,9 @@ class ImagingRequest extends Model
 
     protected $casts = [
         'is_provisional' => 'boolean',
+        'collected_at'   => 'datetime',
         'released_at'    => 'datetime',
-        'exam_date' => 'date',
+        'exam_date'      => 'date',
     ];
 
     // ── Auto-generate request number ───────────────────

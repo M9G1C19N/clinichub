@@ -13,8 +13,9 @@ class NurseController extends Controller
 {
     public function index(Request $request)
     {
-        $search = $request->get('search', '');
-        $date   = $request->get('date', '');
+        $search    = $request->get('search', '');
+        $date      = $request->get('date', '');
+        $visitType = $request->get('visit_type', 'all');
 
         // ── TODAY'S QUEUE — include completed so patients
         // don't disappear after queue is marked done ──────
@@ -60,6 +61,8 @@ class NurseController extends Controller
                       ->orWhere('patient_code', 'like', "%{$search}%")
                 )
             )
+            ->when($visitType !== 'all', fn($q) => $q->where('visit_type', $visitType))
+            ->when($date, fn($q) => $q->whereDate('visit_date', $date))
             ->latest('visit_date')
             ->paginate(10, ['*'], 'pending_page')
             ->withQueryString();
@@ -88,6 +91,11 @@ class NurseController extends Controller
             ->when($date, fn($q) =>
                 $q->whereHas('visit', fn($v) =>
                     $v->whereDate('visit_date', $date)
+                )
+            )
+            ->when($visitType !== 'all', fn($q) =>
+                $q->whereHas('visit', fn($v) =>
+                    $v->where('visit_type', $visitType)
                 )
             )
             ->latest()
@@ -120,7 +128,7 @@ class NurseController extends Controller
             'todayQueue' => $todayQueue,
             'pending'    => $pendingQuery,
             'history'    => $historyQuery,
-            'filters'    => ['search' => $search, 'date' => $date],
+            'filters'    => ['search' => $search, 'date' => $date, 'visit_type' => $visitType],
             'summary'    => [
                 'today'      => count($todayQueue),
                 'pending'    => PatientVisit::whereDoesntHave('vitals')

@@ -24,6 +24,7 @@ class LaboratoryRequest extends Model
     protected $fillable = [
         'request_number', 'patient_id', 'patient_visit_id',
         'requested_by', 'request_date', 'priority', 'status',
+        'collected_at',
         'clinical_notes', 'released_at', 'released_by',
         'examined_by_name', 'examined_by_license', 'examined_by_signature',
         'noted_by_name', 'noted_by_license', 'noted_by_signature',
@@ -32,8 +33,9 @@ class LaboratoryRequest extends Model
 
     protected $casts = [
         'request_date' => 'date',
+        'collected_at' => 'datetime',
         'released_at'  => 'datetime',
-        'result_date' => 'date',
+        'result_date'  => 'date',
     ];
 
     // ── Auto-generate request number ───────────────────

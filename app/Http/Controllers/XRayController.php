@@ -6,8 +6,10 @@ use App\Models\ImagingRequest;
 use App\Models\PatientVisit;
 use App\Models\QueueRoomAssignment;
 use App\Models\User;
+use App\Services\RoomRoutingEngine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class XRayController extends Controller
 {
@@ -15,8 +17,9 @@ class XRayController extends Controller
 
     public function index(Request $request)
     {
-        $search     = $request->get('search', '');
-        $dateFilter = $request->get('date', '');
+        $search       = $request->get('search', '');
+        $dateFilter   = $request->get('date', '');
+        $statusFilter = $request->get('status', 'all');
 
         // Today's queue — include completed queue assignments
         // so patients don't disappear after queue is marked done
@@ -49,7 +52,9 @@ class XRayController extends Controller
                 'employer_company' => $a->ticket->visit?->employer_company,
                 'has_report'       => $a->ticket->visit?->imagingRequest !== null,
                 'imaging_status'   => $a->ticket->visit?->imagingRequest?->status ?? 'none',
+                'is_collected'     => in_array($a->ticket->visit?->imagingRequest?->status, ['collecting','processing','released']),
                 'is_released'      => $a->ticket->visit?->imagingRequest?->status === 'released',
+                'collected_at'     => $a->ticket->visit?->imagingRequest?->collected_at?->format('h:i A'),
                 'services'         => collect($a->ticket->visit?->invoice?->items ?? [])
                     ->filter(fn($i) => in_array($i->service_code, [
                         'CXRPA','UTZ','UTZ_ABDOMEN','UTZ_KUB','UTZ_PELVIS','ECG','XRAY'
@@ -59,9 +64,9 @@ class XRayController extends Controller
             ] : null,
         ]);
 
-        // Pending reports — any date, not yet released
+        // Pending reports — collected but not yet released
         $pendingQuery = ImagingRequest::with(['patient', 'visit'])
-            ->whereIn('status', ['pending', 'processing'])
+            ->whereIn('status', ['pending', 'collecting', 'processing'])
             ->when($search, fn($q) =>
                 $q->whereHas('patient', fn($p) =>
                     $p->where('first_name', 'like', "%{$search}%")
@@ -69,6 +74,8 @@ class XRayController extends Controller
                     ->orWhere('patient_code', 'like', "%{$search}%")
                 )
             )
+            ->when($statusFilter !== 'all', fn($q) => $q->where('status', $statusFilter))
+            ->when($dateFilter, fn($q) => $q->whereDate('created_at', $dateFilter))
             ->latest()
             ->paginate(10, ['*'], 'pending_page')
             ->withQueryString();
@@ -86,6 +93,7 @@ class XRayController extends Controller
             'visit_date'       => $r->created_at->format('M d, Y'),
             'employer'         => $r->visit?->employer_company,
             'is_provisional'   => $r->is_provisional,
+            'collected_at'     => $r->collected_at?->format('h:i A'),
         ]);
         $pendingQuery->setCollection($pending);
 
@@ -125,10 +133,10 @@ class XRayController extends Controller
             'queue'   => $queue,
             'pending' => $pendingQuery,
             'history' => $historyQuery,
-            'filters' => ['search' => $search, 'date' => $dateFilter],
+            'filters' => ['search' => $search, 'date' => $dateFilter, 'status' => $statusFilter],
             'summary' => [
                 'today'         => count($queue),
-                'pending'       => ImagingRequest::whereIn('status', ['pending','processing'])->count(),
+                'pending'       => ImagingRequest::whereIn('status', ['pending','collecting','processing'])->count(),
                 'released_today'=> ImagingRequest::where('status','released')
                                 ->whereDate('released_at', today())->count(),
             ],
@@ -271,6 +279,53 @@ class XRayController extends Controller
         return redirect()
             ->route('xray.index')
             ->with('success', "Imaging report {$action} for {$visit->patient->full_name}.");
+    }
+
+    // ── MARK PATIENT PROCESSED (image taken) ──────────
+    // Called when the technician has taken the X-Ray/image.
+    // The patient can wait while the radiologist reads the film.
+
+    public function markCollected(PatientVisit $visit)
+    {
+        // Determine imaging type from ordered services
+        $imagingServiceMap = [
+            'CXRPA' => 'chest_xray_pa', 'UTZ' => 'ultrasound_abdomen',
+            'UTZ_ABDOMEN' => 'ultrasound_abdomen', 'UTZ_KUB' => 'kub',
+            'UTZ_PELVIS' => 'ultrasound_pelvis', 'ECG' => 'ecg', 'XRAY' => 'chest_xray_pa',
+        ];
+
+        $visit->load('invoice.items');
+        $orderedServices  = collect($visit->invoice?->items ?? [])->pluck('service_code')->toArray();
+        $primaryType      = 'chest_xray_pa';
+        foreach ($orderedServices as $code) {
+            if (isset($imagingServiceMap[$code])) { $primaryType = $imagingServiceMap[$code]; break; }
+        }
+
+        DB::transaction(function () use ($visit, $primaryType) {
+            ImagingRequest::updateOrCreate(
+                ['patient_visit_id' => $visit->id],
+                [
+                    'patient_id'   => $visit->patient_id,
+                    'requested_by' => Auth::id(),
+                    'imaging_type' => $primaryType,
+                    'status'       => 'collecting',
+                    'collected_at' => now(),
+                    'exam_date'    => today(),
+                    'exam_time'    => now()->format('H:i'),
+                ]
+            );
+
+            $assignment = QueueRoomAssignment::where('patient_visit_id', $visit->id)
+                ->where('room', 'xray_utz')
+                ->whereIn('status', ['waiting', 'calling', 'serving'])
+                ->first();
+
+            if ($assignment) {
+                app(RoomRoutingEngine::class)->completeRoom($assignment);
+            }
+        });
+
+        return back()->with('success', "Image taken for {$visit->patient->full_name}. Findings can be entered from the Pending tab.");
     }
 
     // ── PRINT ─────────────────────────────────────────

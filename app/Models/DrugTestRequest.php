@@ -27,7 +27,7 @@ class DrugTestRequest extends Model
         'specimen_appearance','specimen_sampling','specimen_collection',
         'collector_name','collector_license','collector_signature',
         'head_of_lab_name','head_of_lab_license','head_of_lab_signature',
-        'collected_by','remarks',
+        'collected_by','collected_at','remarks',
         'result','result_remarks','certification_signed',
         'certification_date','status','released_at','released_by','specimen_date',
     ];
@@ -35,6 +35,7 @@ class DrugTestRequest extends Model
     protected $casts = [
         'drugs_to_test'       => 'array',
         'specimen_time'       => 'datetime',
+        'collected_at'        => 'datetime',
         'released_at'         => 'datetime',
         'temp_in_range'       => 'boolean',
         'certification_signed'=> 'boolean',

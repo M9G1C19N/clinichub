@@ -6,16 +6,19 @@ use App\Models\DrugTestRequest;
 use App\Models\PatientVisit;
 use App\Models\QueueRoomAssignment;
 use App\Models\User;
+use App\Services\RoomRoutingEngine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class DrugTestController extends Controller
 {
     // ── DASHBOARD ─────────────────────────────────────
     public function index(Request $request)
     {
-        $search = $request->get('search', '');
-        $date   = $request->get('date', '');
+        $search       = $request->get('search', '');
+        $date         = $request->get('date', '');
+        $statusFilter = $request->get('status', 'all');
 
         // Today's drug test queue — include completed
         $queue = QueueRoomAssignment::with([
@@ -47,14 +50,16 @@ class DrugTestController extends Controller
                 'employer_company' => $a->ticket->visit?->employer_company,
                 'has_result'       => $a->ticket->visit?->drugTestRequest !== null,
                 'drug_status'      => $a->ticket->visit?->drugTestRequest?->status ?? 'none',
+                'is_collected'     => in_array($a->ticket->visit?->drugTestRequest?->status, ['collecting','processing','released']),
                 'is_released'      => $a->ticket->visit?->drugTestRequest?->status === 'released',
                 'result'           => $a->ticket->visit?->drugTestRequest?->result,
+                'collected_at'     => $a->ticket->visit?->drugTestRequest?->collected_at?->format('h:i A'),
             ] : null,
         ]);
 
-        // Pending — not yet released
+        // Pending — collected but not yet released
         $pendingQuery = DrugTestRequest::with(['patient','visit'])
-            ->whereIn('status', ['pending','processing'])
+            ->whereIn('status', ['pending','collecting','processing'])
             ->when($search, fn($q) =>
                 $q->whereHas('patient', fn($p) =>
                     $p->where('first_name','like',"%{$search}%")
@@ -62,6 +67,8 @@ class DrugTestController extends Controller
                       ->orWhere('patient_code','like',"%{$search}%")
                 )
             )
+            ->when($statusFilter !== 'all', fn($q) => $q->where('status', $statusFilter))
+            ->when($date, fn($q) => $q->whereDate('created_at', $date))
             ->latest()
             ->paginate(10, ['*'], 'pending_page')
             ->withQueryString();
@@ -79,6 +86,7 @@ class DrugTestController extends Controller
             'employer'     => $r->company,
             'drugs_label'  => $r->drugs_label,
             'purpose'      => $r->test_purpose_label,
+            'collected_at' => $r->collected_at?->format('h:i A'),
         ]);
         $pendingQuery->setCollection($pending);
 
@@ -117,10 +125,10 @@ class DrugTestController extends Controller
             'queue'   => $queue,
             'pending' => $pendingQuery,
             'history' => $historyQuery,
-            'filters' => ['search' => $search, 'date' => $date],
+            'filters' => ['search' => $search, 'date' => $date, 'status' => $statusFilter],
             'summary' => [
                 'today'         => count($queue),
-                'pending'       => DrugTestRequest::whereIn('status',['pending','processing'])->count(),
+                'pending'       => DrugTestRequest::whereIn('status',['pending','collecting','processing'])->count(),
                 'released_today'=> DrugTestRequest::where('status','released')
                                     ->whereDate('released_at',today())->count(),
             ],
@@ -279,6 +287,69 @@ class DrugTestController extends Controller
         return redirect()
             ->route('drug-test.index')
             ->with('success', "Drug test " . ($validated['release'] ? 'released' : 'saved') . " for {$visit->patient->full_name}.");
+    }
+
+    // ── MARK SPECIMEN COLLECTED ────────────────────────
+    // Called when staff physically receives the urine/specimen.
+    // Stores basic collection info and frees the queue for the next patient.
+
+    public function markCollected(Request $request, PatientVisit $visit)
+    {
+        $validated = $request->validate([
+            'test_purpose'        => ['required', 'string'],
+            'drugs_to_test'       => ['required', 'array'],
+            'specimen_type'       => ['required', 'in:urine,blood,other'],
+            'specimen_time'       => ['nullable', 'string'],
+            'temp_in_range'       => ['nullable', 'boolean'],
+            'specimen_volume'     => ['nullable', 'string', 'max:20'],
+            'specimen_appearance' => ['nullable', 'string', 'max:100'],
+            'specimen_sampling'   => ['nullable', 'in:single,split'],
+            'specimen_collection' => ['nullable', 'in:observed,unobserved'],
+            'collector_name'      => ['nullable', 'string', 'max:100'],
+            'collector_license'   => ['nullable', 'string', 'max:50'],
+            'collector_signature' => ['nullable', 'string'],
+            'company'             => ['nullable', 'string'],
+            'specimen_date'       => ['nullable', 'date'],
+        ]);
+
+        DB::transaction(function () use ($validated, $visit) {
+            DrugTestRequest::updateOrCreate(
+                ['patient_visit_id' => $visit->id],
+                [
+                    'patient_id'          => $visit->patient_id,
+                    'company'             => $validated['company'] ?? $visit->employer_company,
+                    'test_purpose'        => $validated['test_purpose'],
+                    'drugs_to_test'       => $validated['drugs_to_test'],
+                    'specimen_type'       => $validated['specimen_type'],
+                    'specimen_time'       => $validated['specimen_time']
+                                             ? now()->setTimeFromTimeString($validated['specimen_time'])
+                                             : now(),
+                    'temp_in_range'       => $validated['temp_in_range'] ?? null,
+                    'specimen_volume'     => $validated['specimen_volume'] ?? null,
+                    'specimen_appearance' => $validated['specimen_appearance'] ?? null,
+                    'specimen_sampling'   => $validated['specimen_sampling'] ?? 'single',
+                    'specimen_collection' => $validated['specimen_collection'] ?? 'unobserved',
+                    'collector_name'      => $validated['collector_name'] ?? null,
+                    'collector_license'   => $validated['collector_license'] ?? null,
+                    'collector_signature' => $validated['collector_signature'] ?? null,
+                    'collected_by'        => Auth::id(),
+                    'collected_at'        => now(),
+                    'specimen_date'       => $validated['specimen_date'] ?? today(),
+                    'status'              => 'collecting',
+                ]
+            );
+
+            $assignment = QueueRoomAssignment::where('patient_visit_id', $visit->id)
+                ->where('room', 'drug_test')
+                ->whereIn('status', ['waiting', 'calling', 'serving'])
+                ->first();
+
+            if ($assignment) {
+                app(RoomRoutingEngine::class)->completeRoom($assignment);
+            }
+        });
+
+        return back()->with('success', "Specimen collected for {$visit->patient->full_name}. Result can be entered from the Pending tab.");
     }
 
     // ── PRINT ──────────────────────────────────────────

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { Button } from '@/components/ui/button'
@@ -8,7 +8,7 @@ import {
     FlaskConical, CheckCircle2, Clock,
     Activity, AlertTriangle, Search,
     Calendar, FileText, ChevronRight,
-    Loader2,
+    Loader2, SlidersHorizontal, X,
 } from 'lucide-vue-next'
 import { VISIT_TYPE_BADGE as visitTypeBadge } from '@/config/visitTypes.js'
 const props = defineProps({
@@ -22,6 +22,30 @@ const props = defineProps({
 const activeTab = ref('today')
 const search    = ref(props.filters?.search ?? '')
 const date      = ref(props.filters?.date ?? '')
+const statusFilter = ref(props.filters?.status ?? 'all')
+
+// Today's queue client-side filters
+const queueSearch        = ref('')
+const queueStatusFilter  = ref('all')
+const resultStatusFilter = ref('all')
+
+const filteredQueue = computed(() => {
+    let list = props.todayQueue ?? []
+    const s = queueSearch.value.toLowerCase().trim()
+    if (s) {
+        list = list.filter(item =>
+            item.patient.full_name?.toLowerCase().includes(s) ||
+            item.patient.patient_code?.toLowerCase().includes(s)
+        )
+    }
+    if (queueStatusFilter.value !== 'all') {
+        list = list.filter(item => item.status === queueStatusFilter.value)
+    }
+    if (resultStatusFilter.value !== 'all') {
+        list = list.filter(item => (item.visit?.lab_status ?? 'none') === resultStatusFilter.value)
+    }
+    return list
+})
 
 let refreshTimer = null
 onMounted(() => {
@@ -38,12 +62,14 @@ function applyFilters() {
     router.get(route('laboratory.index'), {
         search: search.value,
         date:   date.value,
+        status: statusFilter.value,
     }, { preserveState: true, replace: true })
 }
 
 function clearFilters() {
     search.value = ''
     date.value   = ''
+    statusFilter.value = 'all'
     router.get(route('laboratory.index'), {}, { preserveState: true, replace: true })
 }
 
@@ -51,6 +77,7 @@ function clearFilters() {
 const labStatusConfig = {
     none:       { dot: '#94a3b8', label: 'No Results',  bg: '#f1f5f9', color: '#64748b' },
     pending:    { dot: '#f59e0b', label: 'Pending',     bg: '#fffbeb', color: '#b45309' },
+    collecting: { dot: '#0d9488', label: 'Collected',   bg: '#f0fdfa', color: '#0f766e' },
     processing: { dot: '#3b82f6', label: 'In Progress', bg: '#eff6ff', color: '#1d4ed8' },
     released:   { dot: '#10b981', label: 'Released',    bg: '#f0fdf4', color: '#047857' },
 }
@@ -66,6 +93,15 @@ const queueStatusConfig = {
 function getLabStatus(visit) {
     if (!visit) return 'none'
     return visit.lab_status ?? (visit.has_results ? 'processing' : 'none')
+}
+
+const collectingId = ref(null)
+function collectSample(visitId) {
+    collectingId.value = visitId
+    router.post(route('laboratory.collect', visitId), {}, {
+        preserveScroll: true,
+        onFinish: () => { collectingId.value = null },
+    })
 }
 </script>
 
@@ -133,13 +169,47 @@ function getLabStatus(visit) {
         <!-- ══════════════════════════════════════════════ -->
         <div v-if="activeTab === 'today'">
 
-            <!-- Legend -->
-            <div class="flex items-center gap-4 mb-3 px-1">
-                <span class="text-xs text-slate-400 font-medium">Result Status:</span>
-                <div v-for="(cfg, key) in labStatusConfig" :key="key"
-                    class="flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full" :style="{ background: cfg.dot }"/>
-                    <span class="text-xs text-slate-500">{{ cfg.label }}</span>
+            <!-- Filter bar -->
+            <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mb-4">
+                <div class="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-100">
+                    <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                        <SlidersHorizontal class="w-3.5 h-3.5"/> Filter
+                    </span>
+                    <span class="text-xs text-slate-400">
+                        <strong class="text-slate-700 font-bold">{{ filteredQueue.length }}</strong> / {{ todayQueue.length }} shown
+                    </span>
+                </div>
+                <div class="p-3 space-y-2.5">
+                    <!-- Search -->
+                    <div class="relative max-w-sm">
+                        <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400"/>
+                        <Input v-model="queueSearch" placeholder="Search patient name or code..."
+                            class="pl-9 h-8 text-xs"/>
+                    </div>
+                    <!-- Queue status pills -->
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="text-xs text-slate-400 font-medium w-14 flex-shrink-0">Queue</span>
+                        <button v-for="s in ['all','waiting','calling','serving','completed']" :key="s"
+                            @click="queueStatusFilter = s"
+                            class="px-2.5 py-1 text-xs font-semibold rounded-full border transition-all"
+                            :style="queueStatusFilter === s
+                                ? 'background-color:#3b82f6;color:white;border-color:#3b82f6;box-shadow:0 1px 4px rgba(59,130,246,0.3);'
+                                : 'border-color:#e2e8f0;color:#64748b;background:white;'">
+                            {{ s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1) }}
+                        </button>
+                    </div>
+                    <!-- Result status pills -->
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="text-xs text-slate-400 font-medium w-14 flex-shrink-0">Result</span>
+                        <button v-for="s in ['all','none','collecting','processing','released']" :key="s"
+                            @click="resultStatusFilter = s"
+                            class="px-2.5 py-1 text-xs font-semibold rounded-full border transition-all"
+                            :style="resultStatusFilter === s
+                                ? 'background-color:#3b82f6;color:white;border-color:#3b82f6;box-shadow:0 1px 4px rgba(59,130,246,0.3);'
+                                : 'border-color:#e2e8f0;color:#64748b;background:white;'">
+                            {{ s === 'all' ? 'All' : s === 'none' ? 'No Results' : s === 'collecting' ? 'Collected' : s === 'processing' ? 'In Progress' : 'Released' }}
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -150,6 +220,11 @@ function getLabStatus(visit) {
                     <FlaskConical class="w-6 h-6 text-blue-400"/>
                 </div>
                 <p class="text-sm font-semibold text-slate-500">No patients routed to laboratory today</p>
+            </div>
+
+            <div v-else-if="!filteredQueue.length"
+                class="bg-white rounded-xl border border-slate-200 py-12 text-center">
+                <p class="text-sm font-semibold text-slate-400">No patients match current filters</p>
             </div>
 
             <!-- Queue Table -->
@@ -166,15 +241,18 @@ function getLabStatus(visit) {
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-50">
-                        <tr v-for="item in todayQueue" :key="item.id"
+                        <tr v-for="item in filteredQueue" :key="item.id"
                             class="hover:bg-slate-50/60 transition-colors group">
 
                             <!-- Queue Number -->
                             <td class="px-4 py-3">
-                                <div class="flex flex-col items-start">
-                                    <span class="text-base font-black font-mono text-slate-700 leading-none">
-                                        {{ item.queue_number }}
-                                    </span>
+                                <div class="w-10 h-10 rounded-xl flex items-center justify-center font-black font-mono text-sm border-2"
+                                    :style="{
+                                        background: item.status === 'serving' ? '#ecfdf5' : item.status === 'calling' ? '#eff6ff' : '#f8fafc',
+                                        color: item.status === 'serving' ? '#065f46' : item.status === 'calling' ? '#1e40af' : '#475569',
+                                        borderColor: item.status === 'serving' ? '#6ee7b7' : item.status === 'calling' ? '#93c5fd' : '#e2e8f0',
+                                    }">
+                                    {{ item.queue_number }}
                                 </div>
                             </td>
 
@@ -253,20 +331,35 @@ function getLabStatus(visit) {
 
                             <!-- Action -->
                             <td class="px-4 py-3 text-right">
-                                <Link v-if="item.visit?.id"
-                                    :href="route('laboratory.enter', item.visit.id)">
-                                    <Button size="sm"
-                                        class="text-xs h-7 gap-1.5 text-white opacity-80 group-hover:opacity-100 transition-opacity"
-                                        :style="{
-                                            backgroundColor:
-                                                item.visit?.is_released ? '#10b981' :
-                                                item.visit?.has_results  ? '#f59e0b' : '#3b82f6'
-                                        }">
-                                        {{ item.visit?.is_released ? 'View'   :
-                                           item.visit?.has_results  ? 'Update' : 'Enter' }}
-                                        <ChevronRight class="w-3 h-3"/>
-                                    </Button>
-                                </Link>
+                                <div class="flex flex-col items-end gap-1">
+                                    <!-- Collect Sample: only when active in queue and not yet collected -->
+                                    <button
+                                        v-if="item.visit?.id && ['calling','serving'].includes(item.status) && !item.visit?.is_collected"
+                                        :disabled="collectingId === item.visit.id"
+                                        class="inline-flex items-center gap-1.5 text-xs h-7 px-2.5 rounded-md font-semibold text-white transition-all disabled:opacity-60"
+                                        style="background-color:#0d9488;"
+                                        @click="collectSample(item.visit.id)">
+                                        <FlaskConical class="w-3 h-3"/>
+                                        {{ collectingId === item.visit.id ? 'Saving...' : 'Collect Sample' }}
+                                    </button>
+                                    <!-- Enter/Update/View -->
+                                    <Link v-if="item.visit?.id"
+                                        :href="route('laboratory.enter', item.visit.id)">
+                                        <Button size="sm"
+                                            class="text-xs h-7 gap-1.5 text-white opacity-80 group-hover:opacity-100 transition-opacity"
+                                            :style="{
+                                                backgroundColor:
+                                                    item.visit?.is_released  ? '#10b981' :
+                                                    item.visit?.is_collected ? '#3b82f6' :
+                                                    item.visit?.has_results  ? '#f59e0b' : '#94a3b8'
+                                            }">
+                                            {{ item.visit?.is_released  ? 'View'         :
+                                               item.visit?.is_collected ? 'Enter Results' :
+                                               item.visit?.has_results  ? 'Update'        : 'Enter' }}
+                                            <ChevronRight class="w-3 h-3"/>
+                                        </Button>
+                                    </Link>
+                                </div>
                             </td>
                         </tr>
                     </tbody>
@@ -279,22 +372,57 @@ function getLabStatus(visit) {
         <!-- ══════════════════════════════════════════════ -->
         <div v-if="activeTab === 'pending'">
 
-            <!-- Search bar -->
-            <div class="flex items-center gap-2 mb-4">
-                <div class="relative flex-1 max-w-sm">
-                    <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400"/>
-                    <Input v-model="search"
-                        placeholder="Search patient name or code..."
-                        class="pl-9 h-8 text-xs"
-                        @keyup.enter="applyFilters"/>
+            <!-- Search + filters bar -->
+            <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mb-4">
+                <div class="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-100">
+                    <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                        <SlidersHorizontal class="w-3.5 h-3.5"/> Filter
+                    </span>
+                    <button v-if="search || date || statusFilter !== 'all'"
+                        @click="clearFilters"
+                        class="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-700 transition-colors">
+                        <X class="w-3 h-3"/> Clear filters
+                    </button>
                 </div>
-                <Button size="sm" class="h-8 text-xs gap-1.5"
-                    style="background-color:#1B4F9B; color:white;"
-                    @click="applyFilters">
-                    <Search class="w-3.5 h-3.5"/> Search
-                </Button>
-                <Button v-if="search" size="sm" variant="outline" class="h-8 text-xs"
-                    @click="clearFilters">Clear</Button>
+                <div class="p-3 space-y-2.5">
+                    <div class="flex items-center gap-2">
+                        <div class="relative flex-1 max-w-sm">
+                            <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400"/>
+                            <Input v-model="search"
+                                placeholder="Search patient name or code..."
+                                class="pl-9 h-8 text-xs"
+                                @keyup.enter="applyFilters"/>
+                        </div>
+                        <div class="flex items-center gap-1.5 border border-slate-200 rounded-lg px-2.5 h-8 bg-white">
+                            <Calendar class="w-3.5 h-3.5 text-slate-400"/>
+                            <Input v-model="date" type="date"
+                                class="border-0 shadow-none p-0 h-auto focus-visible:ring-0 text-xs w-32"
+                                @change="applyFilters"/>
+                        </div>
+                        <Button size="sm" class="h-8 text-xs gap-1.5"
+                            style="background-color:#3b82f6; color:white;"
+                            @click="applyFilters">
+                            <Search class="w-3.5 h-3.5"/> Search
+                        </Button>
+                    </div>
+                    <!-- Status pills -->
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="text-xs text-slate-400 font-medium w-14 flex-shrink-0">Status</span>
+                        <button v-for="s in [
+                            { value: 'all',        label: 'All'         },
+                            { value: 'pending',    label: 'Pending'     },
+                            { value: 'collecting', label: 'Collected'   },
+                            { value: 'processing', label: 'In Progress' },
+                        ]" :key="s.value"
+                            @click="statusFilter = s.value; applyFilters()"
+                            class="px-2.5 py-1 text-xs font-semibold rounded-full border transition-all"
+                            :style="statusFilter === s.value
+                                ? 'background-color:#3b82f6;color:white;border-color:#3b82f6;box-shadow:0 1px 4px rgba(59,130,246,0.3);'
+                                : 'border-color:#e2e8f0;color:#64748b;background:white;'">
+                            {{ s.label }}
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div v-if="!pending.data?.length"
@@ -340,21 +468,34 @@ function getLabStatus(visit) {
                             </td>
                             <td class="px-4 py-3 text-xs text-slate-500">{{ r.visit_date }}</td>
                             <td class="px-4 py-3">
-                                <div class="flex items-center gap-1.5">
-                                    <Loader2 v-if="r.status === 'processing'" class="w-3 h-3 text-blue-500 animate-spin"/>
-                                    <Clock v-else class="w-3 h-3 text-amber-500"/>
-                                    <span class="text-xs font-semibold"
-                                        :class="r.status === 'processing' ? 'text-blue-600' : 'text-amber-600'">
-                                        {{ r.status === 'processing' ? 'In Progress' : 'Pending' }}
+                                <div class="flex flex-col gap-0.5">
+                                    <div class="flex items-center gap-1.5">
+                                        <Loader2 v-if="r.status === 'processing'" class="w-3 h-3 text-blue-500 animate-spin"/>
+                                        <CheckCircle2 v-else-if="r.status === 'collecting'" class="w-3 h-3 text-teal-500"/>
+                                        <Clock v-else class="w-3 h-3 text-amber-500"/>
+                                        <span class="text-xs font-semibold"
+                                            :class="{
+                                                'text-blue-600':  r.status === 'processing',
+                                                'text-teal-600':  r.status === 'collecting',
+                                                'text-amber-600': r.status === 'pending',
+                                            }">
+                                            {{ r.status === 'processing' ? 'In Progress' :
+                                               r.status === 'collecting' ? 'Collected' : 'Pending' }}
+                                        </span>
+                                    </div>
+                                    <span v-if="r.collected_at && r.status === 'collecting'"
+                                        class="text-xs text-slate-400 ml-4.5">
+                                        at {{ r.collected_at }}
                                     </span>
                                 </div>
                             </td>
                             <td class="px-4 py-3 text-right">
                                 <Link :href="route('laboratory.enter', r.visit_id)">
                                     <Button size="sm"
-                                        class="text-xs h-7 gap-1 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                        class="text-xs h-7 gap-1 text-white opacity-60 group-hover:opacity-100 transition-opacity"
                                         style="background-color:#3b82f6;">
-                                        {{ r.status === 'processing' ? 'Continue' : 'Enter' }}
+                                        {{ r.status === 'processing' ? 'Continue' :
+                                           r.status === 'collecting' ? 'Enter Results' : 'Enter' }}
                                         <ChevronRight class="w-3 h-3"/>
                                     </Button>
                                 </Link>
@@ -390,27 +531,38 @@ function getLabStatus(visit) {
         <div v-if="activeTab === 'history'">
 
             <!-- Search + Date filter -->
-            <div class="flex items-center gap-2 mb-4">
-                <div class="relative flex-1 max-w-sm">
-                    <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400"/>
-                    <Input v-model="search"
-                        placeholder="Search patient name or code..."
-                        class="pl-9 h-8 text-xs"
-                        @keyup.enter="applyFilters"/>
+            <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mb-4">
+                <div class="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-100">
+                    <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                        <SlidersHorizontal class="w-3.5 h-3.5"/> Filter
+                    </span>
+                    <button v-if="search || date" @click="clearFilters"
+                        class="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-700 transition-colors">
+                        <X class="w-3 h-3"/> Clear filters
+                    </button>
                 </div>
-                <div class="flex items-center gap-1.5 border border-slate-200 rounded-lg px-2.5 h-8 bg-white">
-                    <Calendar class="w-3.5 h-3.5 text-slate-400"/>
-                    <Input v-model="date" type="date"
-                        class="border-0 shadow-none p-0 h-auto focus-visible:ring-0 text-xs w-32"
-                        @change="applyFilters"/>
+                <div class="p-3">
+                    <div class="flex items-center gap-2">
+                        <div class="relative flex-1 max-w-sm">
+                            <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400"/>
+                            <Input v-model="search"
+                                placeholder="Search patient name or code..."
+                                class="pl-9 h-8 text-xs"
+                                @keyup.enter="applyFilters"/>
+                        </div>
+                        <div class="flex items-center gap-1.5 border border-slate-200 rounded-lg px-2.5 h-8 bg-white">
+                            <Calendar class="w-3.5 h-3.5 text-slate-400"/>
+                            <Input v-model="date" type="date"
+                                class="border-0 shadow-none p-0 h-auto focus-visible:ring-0 text-xs w-32"
+                                @change="applyFilters"/>
+                        </div>
+                        <Button size="sm" class="h-8 text-xs gap-1.5"
+                            style="background-color:#1B4F9B; color:white;"
+                            @click="applyFilters">
+                            <Search class="w-3.5 h-3.5"/> Search
+                        </Button>
+                    </div>
                 </div>
-                <Button size="sm" class="h-8 text-xs gap-1.5"
-                    style="background-color:#1B4F9B; color:white;"
-                    @click="applyFilters">
-                    <Search class="w-3.5 h-3.5"/> Search
-                </Button>
-                <Button v-if="search || date" size="sm" variant="outline" class="h-8 text-xs"
-                    @click="clearFilters">Clear</Button>
             </div>
 
             <div v-if="!history.data?.length"
@@ -460,7 +612,7 @@ function getLabStatus(visit) {
                                 </div>
                             </td>
                             <td class="px-4 py-3 text-right">
-                                <div class="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div class="flex items-center justify-end gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
                                     <Link :href="route('laboratory.enter', r.visit_id)">
                                         <Button variant="outline" size="sm" class="text-xs h-7 gap-1">
                                             <FlaskConical class="w-3 h-3"/> View
