@@ -15,7 +15,7 @@ class LaboratoryRequest extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['status', 'priority', 'clinical_notes', 'released_at', 'examined_by_name', 'noted_by_name'])
+            ->logOnly(['status', 'priority', 'clinical_notes', 'released_at', 'examined_by_name', 'noted_by_name', 'claim_status', 'claimed_at'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
             ->setDescriptionForEvent(fn(string $event) => "Lab Request {$this->request_number} {$event}");
@@ -26,6 +26,7 @@ class LaboratoryRequest extends Model
         'requested_by', 'request_date', 'priority', 'status',
         'collected_at',
         'clinical_notes', 'released_at', 'released_by',
+        'claim_status', 'claimed_at', 'claimed_by',
         'examined_by_name', 'examined_by_license', 'examined_by_signature',
         'noted_by_name', 'noted_by_license', 'noted_by_signature',
         'result_date', 'result_time',
@@ -35,6 +36,7 @@ class LaboratoryRequest extends Model
         'request_date' => 'date',
         'collected_at' => 'datetime',
         'released_at'  => 'datetime',
+        'claimed_at'   => 'datetime',
         'result_date'  => 'date',
     ];
 
@@ -73,6 +75,11 @@ class LaboratoryRequest extends Model
     public function releasedBy()
     {
         return $this->belongsTo(User::class, 'released_by');
+    }
+
+    public function claimedBy()
+    {
+        return $this->belongsTo(User::class, 'claimed_by');
     }
 
     public function getHasAbnormalAttribute(): bool

@@ -23,6 +23,9 @@ class LaboratoryController extends Controller
         $search = $request->get('search', '');
         $dateFilter = $request->get('date', '');
         $statusFilter = $request->get('status', 'all');
+        $pickupSearch = $request->get('pickup_search', '');
+        $pickupClaimFilter = $request->get('pickup_claim', 'all');
+        $pickupDateFilter = $request->get('pickup_date', '');
 
         // ── TODAY'S QUEUE ─────────────────────────────
         // Show patients whose queue assignment was for lab TODAY
@@ -133,16 +136,65 @@ class LaboratoryController extends Controller
         ]);
         $historyQuery->setCollection($history);
 
+        // ── READY FOR PICKUP ─────────────────────────────
+        // Released results awaiting or missed physical collection
+        $pickupQuery = LaboratoryRequest::with(['patient', 'visit', 'results', 'claimedBy'])
+            ->where('status', 'released')
+            ->whereIn('claim_status', ['waiting', 'unclaimed'])
+            ->when($pickupSearch, fn($q) =>
+                $q->whereHas('patient', fn($p) =>
+                    $p->where('first_name', 'like', "%{$pickupSearch}%")
+                    ->orWhere('last_name',  'like', "%{$pickupSearch}%")
+                    ->orWhere('patient_code', 'like', "%{$pickupSearch}%")
+                )
+            )
+            ->when($pickupClaimFilter !== 'all', fn($q) => $q->where('claim_status', $pickupClaimFilter))
+            ->when($pickupDateFilter, fn($q) => $q->whereDate('released_at', $pickupDateFilter))
+            ->latest('released_at')
+            ->paginate(15, ['*'], 'pickup_page')
+            ->withQueryString();
+
+        $pickupCollection = $pickupQuery->getCollection()->map(fn($r) => [
+            'id'              => $r->id,
+            'request_number'  => $r->request_number,
+            'claim_status'    => $r->claim_status,
+            'patient_name'    => $r->patient->full_name,
+            'patient_code'    => $r->patient->patient_code,
+            'age_sex'         => $r->patient->age_sex,
+            'visit_id'        => $r->patient_visit_id,
+            'visit_type'      => $r->visit?->visit_type,
+            'employer'        => $r->visit?->employer_company,
+            'released_at'     => $r->released_at?->format('M d, Y h:i A'),
+            'released_at_raw' => $r->released_at?->toISOString(),
+            'has_abnormal'    => $r->results->contains('is_abnormal', true),
+            'abnormal_count'  => $r->results->where('is_abnormal', true)->count(),
+            'claimed_at'      => $r->claimed_at?->format('h:i A'),
+            'claimed_by_name' => $r->claimedBy?->name,
+        ]);
+        $pickupQuery->setCollection($pickupCollection);
+
         return inertia('Laboratory/Index', [
-            'todayQueue' => $todayQueue,
-            'pending'    => $pendingQuery,
-            'history'    => $historyQuery,
-            'filters'    => ['search' => $search, 'date' => $dateFilter, 'status' => $statusFilter],
+            'todayQueue'    => $todayQueue,
+            'pending'       => $pendingQuery,
+            'history'       => $historyQuery,
+            'readyForPickup'=> $pickupQuery,
+            'filters'       => [
+                'search'        => $search,
+                'date'          => $dateFilter,
+                'status'        => $statusFilter,
+                'pickup_search' => $pickupSearch,
+                'pickup_claim'  => $pickupClaimFilter,
+                'pickup_date'   => $pickupDateFilter,
+            ],
             'summary' => [
-                'today'    => count($todayQueue),
-                'pending'  => LaboratoryRequest::whereIn('status', ['pending','collecting','processing'])->count(),
+                'today'          => count($todayQueue),
+                'pending'        => LaboratoryRequest::whereIn('status', ['pending','collecting','processing'])->count(),
                 'released_today' => LaboratoryRequest::where('status','released')
-                                    ->whereDate('released_at', today())->count(),
+                                        ->whereDate('released_at', today())->count(),
+                'waiting_pickup' => LaboratoryRequest::where('status','released')
+                                        ->where('claim_status','waiting')->count(),
+                'unclaimed'      => LaboratoryRequest::where('status','released')
+                                        ->where('claim_status','unclaimed')->count(),
             ],
         ]);
     }
@@ -348,6 +400,7 @@ class LaboratoryController extends Controller
                     'status'              => $validated['release'] ? 'released' : 'processing',
                     'released_at'         => $validated['release'] ? now() : null,
                     'released_by'         => $validated['release'] ? Auth::id() : null,
+                    'claim_status'        => $validated['release'] ? 'waiting' : null,
                     'clinical_notes'      => $validated['general_remarks'] ?? null,
                     'result_date' => $validated['result_date'] ?? now()->format('Y-m-d'),
                     'result_time' => $validated['result_time'] ?? now()->format('H:i'),
@@ -443,6 +496,123 @@ class LaboratoryController extends Controller
         });
 
         return back()->with('success', "Sample collected for {$visit->patient->full_name}. Results can be entered from the Pending tab.");
+    }
+
+    // ── RESULTS TV DISPLAY (public) ────────────────────
+
+    public function resultsDisplay()
+    {
+        $waiting = LaboratoryRequest::with('patient')
+            ->where('status', 'released')
+            ->where('claim_status', 'waiting')
+            ->latest('released_at')
+            ->limit(30)
+            ->get()
+            ->map(fn($r) => [
+                'id'             => $r->id,
+                'request_number' => $r->request_number,
+                'patient_name'   => $r->patient->full_name,
+                'patient_code'   => $r->patient->patient_code,
+                'released_at'    => $r->released_at?->format('h:i A'),
+                'released_date'  => $r->released_at?->format('M d'),
+            ]);
+
+        $unclaimed = LaboratoryRequest::with('patient')
+            ->where('status', 'released')
+            ->where('claim_status', 'unclaimed')
+            ->latest('released_at')
+            ->limit(20)
+            ->get()
+            ->map(fn($r) => [
+                'id'             => $r->id,
+                'request_number' => $r->request_number,
+                'patient_name'   => $r->patient->full_name,
+                'patient_code'   => $r->patient->patient_code,
+                'released_at'    => $r->released_at?->format('h:i A'),
+                'released_date'  => $r->released_at?->format('M d'),
+            ]);
+
+        return inertia('Laboratory/ResultsDisplay', [
+            'waiting'  => $waiting,
+            'unclaimed'=> $unclaimed,
+            'counts'   => [
+                'waiting'  => $waiting->count(),
+                'unclaimed'=> $unclaimed->count(),
+            ],
+        ]);
+    }
+
+    // ── MARK CLAIMED (single) ──────────────────────────
+
+    public function markClaimed(LaboratoryRequest $labRequest)
+    {
+        abort_if($labRequest->status !== 'released', 403, 'Only released results can be claimed.');
+        abort_if($labRequest->claim_status === 'claimed', 422, 'Already marked as claimed.');
+
+        $labRequest->update([
+            'claim_status' => 'claimed',
+            'claimed_at'   => now(),
+            'claimed_by'   => Auth::id(),
+        ]);
+
+        return back()->with('success', "Results for {$labRequest->patient->full_name} marked as claimed.");
+    }
+
+    // ── MARK UNCLAIMED (single) ────────────────────────
+
+    public function markUnclaimed(LaboratoryRequest $labRequest)
+    {
+        abort_if($labRequest->status !== 'released', 403, 'Only released results can be marked unclaimed.');
+        abort_if($labRequest->claim_status === 'claimed', 422, 'Already claimed — cannot mark as unclaimed.');
+
+        $labRequest->update([
+            'claim_status' => 'unclaimed',
+            'claimed_at'   => null,
+            'claimed_by'   => null,
+        ]);
+
+        return back()->with('success', "Results for {$labRequest->patient->full_name} marked as unclaimed.");
+    }
+
+    // ── BULK CLAIM ─────────────────────────────────────
+
+    public function bulkClaim(Request $request)
+    {
+        $validated = $request->validate([
+            'ids'    => ['required', 'array', 'min:1', 'max:100'],
+            'ids.*'  => ['required', 'integer', 'exists:laboratory_requests,id'],
+            'action' => ['required', 'in:claimed,unclaimed'],
+        ]);
+
+        $requests = LaboratoryRequest::whereIn('id', $validated['ids'])
+            ->where('status', 'released')
+            ->whereNull('deleted_at')
+            ->get();
+
+        if ($requests->isEmpty()) {
+            return back()->with('error', 'No valid records found to update.');
+        }
+
+        DB::transaction(function () use ($requests, $validated) {
+            foreach ($requests as $lr) {
+                if ($validated['action'] === 'claimed') {
+                    $lr->update([
+                        'claim_status' => 'claimed',
+                        'claimed_at'   => now(),
+                        'claimed_by'   => Auth::id(),
+                    ]);
+                } else {
+                    $lr->update([
+                        'claim_status' => 'unclaimed',
+                        'claimed_at'   => null,
+                        'claimed_by'   => null,
+                    ]);
+                }
+            }
+        });
+
+        $label = $validated['action'] === 'claimed' ? 'claimed' : 'marked as unclaimed';
+        return back()->with('success', "{$requests->count()} result(s) {$label} successfully.");
     }
 
    public function print(PatientVisit $visit)

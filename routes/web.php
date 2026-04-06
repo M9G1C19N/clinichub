@@ -18,6 +18,9 @@ Route::middleware('guest')->group(function () {
 // TV Display Board — public, no auth needed
 Route::get('/queue-display', [QueueController::class, 'display'])->name('queue.display');
 
+// Lab Results TV Display — public, no auth needed
+Route::get('/lab-results-display', [\App\Http\Controllers\LaboratoryController::class, 'resultsDisplay'])->name('laboratory.results-display');
+
 // Kiosk — public self-service terminal, no auth needed
 Route::get('/queue/kiosk',          [QueueController::class, 'kiosk'])->name('queue.kiosk');
 Route::post('/queue/kiosk-checkin', [QueueController::class, 'kioskCheckIn'])->name('queue.kiosk-checkin');
@@ -97,11 +100,14 @@ Route::middleware('auth')->group(function () {
     // ── Laboratory ────────────────────────────────────
     Route::middleware('role:admin|lab_technician|doctor|nurse')
         ->prefix('laboratory')->name('laboratory.')->group(function () {
-            Route::get('/',                   [\App\Http\Controllers\LaboratoryController::class, 'index'])->name('index');
-            Route::post('/collect/{visit}',   [\App\Http\Controllers\LaboratoryController::class, 'markCollected'])->name('collect');
-            Route::get('/enter/{visit}',      [\App\Http\Controllers\LaboratoryController::class, 'enter'])->name('enter');
-            Route::post('/enter/{visit}',     [\App\Http\Controllers\LaboratoryController::class, 'saveResults'])->name('save');
-            Route::get('/print/{visit}',      [\App\Http\Controllers\LaboratoryController::class, 'print'])->name('print');
+            Route::get('/',                          [\App\Http\Controllers\LaboratoryController::class, 'index'])->name('index');
+            Route::post('/collect/{visit}',          [\App\Http\Controllers\LaboratoryController::class, 'markCollected'])->name('collect');
+            Route::get('/enter/{visit}',             [\App\Http\Controllers\LaboratoryController::class, 'enter'])->name('enter');
+            Route::post('/enter/{visit}',            [\App\Http\Controllers\LaboratoryController::class, 'saveResults'])->name('save');
+            Route::get('/print/{visit}',             [\App\Http\Controllers\LaboratoryController::class, 'print'])->name('print');
+            Route::post('/claim/{labRequest}',       [\App\Http\Controllers\LaboratoryController::class, 'markClaimed'])->name('claim');
+            Route::post('/unclaim/{labRequest}',     [\App\Http\Controllers\LaboratoryController::class, 'markUnclaimed'])->name('unclaim');
+            Route::post('/bulk-claim',               [\App\Http\Controllers\LaboratoryController::class, 'bulkClaim'])->name('bulk-claim');
         });
 
     // ── Reports ───────────────────────────────────────
