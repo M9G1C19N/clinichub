@@ -17,22 +17,21 @@ const rs   = (code) => isAb(code) ? 'font-weight:900;color:#dc2626;' : ''
 <template>
     <div style="font-family:Arial,sans-serif;font-size:10px;color:#111;background:white;width:210mm;padding:5mm 7mm;box-sizing:border-box;">
 
-        <LabSlipHeader title="GLYCATED HEMOGLOBIN (HbA1c)" :patient="patient" :visit="visit" :lab-request="labRequest"/>
+        <LabSlipHeader title="IMMUNOLOGY AND SEROLOGY" :patient="patient" :visit="visit" :lab-request="labRequest"/>
 
-        <!-- Single row table: EXAMINATION | RESULT | REFERENCE RANGE -->
         <table style="width:100%;border-collapse:collapse;font-size:9.5px;margin-top:10px;margin-bottom:8px;">
             <thead>
                 <tr>
-                    <th style="text-align:left;padding:3px 6px;border-bottom:1.5px solid #111;font-size:9px;width:35%;">EXAMINATION</th>
-                    <th style="text-align:left;padding:3px 6px;border-bottom:1.5px solid #111;font-size:9px;width:30%;">RESULT</th>
-                    <th style="text-align:left;padding:3px 6px;border-bottom:1.5px solid #111;font-size:9px;width:35%;">REFERENCE RANGE</th>
+                    <th style="text-align:left;padding:3px 6px;border-bottom:1.5px solid #111;font-size:9px;width:50%;">EXAMINATION</th>
+                    <th style="text-align:left;padding:3px 6px;border-bottom:1.5px solid #111;font-size:9px;width:25%;">RESULT</th>
+                    <th style="text-align:left;padding:3px 6px;border-bottom:1.5px solid #111;font-size:9px;width:25%;">REFERENCE RANGE</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td style="padding:8px 6px;border-bottom:1px solid #e5e5e5;">HBA1c</td>
-                    <td style="padding:8px 6px;border-bottom:1px solid #e5e5e5;" :style="rs('HBA1C')">{{ r('HBA1C') }}</td>
-                    <td style="padding:8px 6px;border-bottom:1px solid #e5e5e5;font-size:8.5px;color:#444;">&lt; 6.5%</td>
+                    <td style="padding:8px 6px;border-bottom:1px solid #e5e5e5;">Prostatic Specific Antigen (PSA)</td>
+                    <td style="padding:8px 6px;border-bottom:1px solid #e5e5e5;" :style="rs('PSA')">{{ r('PSA') }}</td>
+                    <td style="padding:8px 6px;border-bottom:1px solid #e5e5e5;font-size:8.5px;color:#444;">0 - 4 ng/mL</td>
                 </tr>
             </tbody>
         </table>

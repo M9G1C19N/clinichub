@@ -117,12 +117,15 @@ const labCategoryLabels = {
     stool:      'Fecalysis / Stool Exam',
     serology:   'Serology',
     thyroid:    'Thyroid Function',
+    hba1c:      'HbA1c (Glycated Hemoglobin)',
+    ogtt:       'OGTT (Glucose Tolerance)',
+    psa:        'PSA (Prostatic Specific Antigen)',
     other:      'Other Tests',
 }
 const labResultsByCategory = computed(() => {
     if (!props.labResults?.results) return []
     const filtered = props.labResults.results.filter(r => r.result_value)
-    const order = ['hematology','chemistry','urinalysis','stool','serology','thyroid','other']
+    const order = ['hematology','chemistry','urinalysis','stool','serology','thyroid','hba1c','ogtt','psa','other']
     const grouped = {}
     filtered.forEach(r => {
         const cat = r.category ?? 'other'

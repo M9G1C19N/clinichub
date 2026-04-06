@@ -28,7 +28,7 @@ const rs   = (code) => isAb(code) ? 'font-weight:900;color:#dc2626;' : 'font-wei
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;font-size:9.5px;">
             <span>ORAL LOAD OGTT</span>
             <div style="border:1px solid #aaa;min-width:90px;padding:2px 6px;font-weight:700;">
-                {{ labRequest?.ogtt_load ?? r('OGTT_LOAD') || '75GRAMS' }}
+                {{ (labRequest?.ogtt_load ?? r('OGTT_LOAD')) || '75GRAMS' }}
             </div>
         </div>
 

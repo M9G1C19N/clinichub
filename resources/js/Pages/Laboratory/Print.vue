@@ -6,7 +6,11 @@ import LabSlipCBC from '@/Components/Lab/Slips/LabSlipCBC.vue'
 import LabSlipUrinalysis from '@/Components/Lab/Slips/LabSlipUrinalysis.vue'
 import LabSlipFecalysis from '@/Components/Lab/Slips/LabSlipFecalysis.vue'
 import LabSlipChemistry from '@/Components/Lab/Slips/LabSlipChemistry.vue'
-import LabSlipSerology from '@/Components/Lab/Slips/LabSlipSerology.vue'
+import LabSlipSerology from '@/Components/Lab/Slips/Labslipserology.vue'
+import LabSlipThyroid from '@/Components/Lab/Slips/Labslipclinicalchemistry.vue'
+import LabSlipHba1c from '@/Components/Lab/Slips/Labsliphba1c.vue'
+import LabSlipOgtt from '@/Components/Lab/Slips/Labslipogtt.vue'
+import LabSlipPSA from '@/Components/Lab/Slips/LabSlipPSA.vue'
 
 const props = defineProps({
     visit:      Object,
@@ -85,11 +89,15 @@ function printAll() {
 
 // Determine which slips to show based on available categories
 const slipConfig = [
-    { id: 'slip-cbc',       category: 'hematology',  label: 'CBC',              component: LabSlipCBC },
-    { id: 'slip-urinalysis',category: 'urinalysis',  label: 'Urinalysis',       component: LabSlipUrinalysis },
-    { id: 'slip-fecalysis', category: 'stool',       label: 'Fecalysis',        component: LabSlipFecalysis },
-    { id: 'slip-chemistry', category: 'chemistry',   label: 'Blood Chemistry',  component: LabSlipChemistry },
-    { id: 'slip-serology',  category: 'serology',    label: 'Immunology & Serology', component: LabSlipSerology },
+    { id: 'slip-cbc',       category: 'hematology',  label: 'CBC',                      component: LabSlipCBC },
+    { id: 'slip-urinalysis',category: 'urinalysis',  label: 'Urinalysis',               component: LabSlipUrinalysis },
+    { id: 'slip-fecalysis', category: 'stool',       label: 'Fecalysis',                component: LabSlipFecalysis },
+    { id: 'slip-chemistry', category: 'chemistry',   label: 'Blood Chemistry',          component: LabSlipChemistry },
+    { id: 'slip-serology',  category: 'serology',    label: 'Immunology & Serology',    component: LabSlipSerology },
+    { id: 'slip-thyroid',   category: 'thyroid',     label: 'Thyroid Function',         component: LabSlipThyroid },
+    { id: 'slip-hba1c',     category: 'hba1c',       label: 'HbA1c',                    component: LabSlipHba1c },
+    { id: 'slip-ogtt',      category: 'ogtt',        label: 'OGTT',                     component: LabSlipOgtt },
+    { id: 'slip-psa',       category: 'psa',         label: 'PSA',                      component: LabSlipPSA },
 ]
 
 const availableSlips = computed(() =>
@@ -102,6 +110,10 @@ const categoryColors = {
     stool:      '#F59E0B',
     chemistry:  '#EF4444',
     serology:   '#10B981',
+    thyroid:    '#6366F1',
+    hba1c:      '#EC4899',
+    ogtt:       '#14B8A6',
+    psa:        '#0EA5E9',
 }
 </script>
 

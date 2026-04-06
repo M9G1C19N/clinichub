@@ -17,7 +17,7 @@ const rs   = (code) => isAb(code) ? 'font-weight:900;color:#dc2626;' : ''
 <template>
     <div style="font-family:Arial,sans-serif;font-size:10px;color:#111;background:white;width:210mm;padding:5mm 7mm;box-sizing:border-box;">
 
-        <LabSlipHeader title="CLINICAL CHEMISTRY" :patient="patient" :visit="visit" :lab-request="labRequest"/>
+        <LabSlipHeader title="THYROID FUNCTION TEST" :patient="patient" :visit="visit" :lab-request="labRequest"/>
 
         <!-- Results table — 4 columns: EXAMINATION | RESULT | RESULT | REFERENCE RANGE -->
         <!-- The double RESULT column matches the physical form (one col for written, one for printed) -->

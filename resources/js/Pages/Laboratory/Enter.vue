@@ -50,8 +50,11 @@ const categoryLabel = {
     chemistry:  'Blood Chemistry',
     urinalysis: 'Urinalysis',
     stool:      'Stool Exam',
-    serology:   'Serology',
-    thyroid:    'Thyroid Panel',
+    serology:   'Immunology & Serology',
+    thyroid:    'Thyroid Function',
+    hba1c:      'HbA1c (Glycated Hemoglobin)',
+    ogtt:       'OGTT (Glucose Tolerance)',
+    psa:        'PSA (Prostatic Specific Antigen)',
     other:      'Other Tests',
 }
 
@@ -61,7 +64,10 @@ const categoryColor = {
     urinalysis: 'text-amber-700 bg-amber-50 border-amber-200',
     stool:      'text-orange-700 bg-orange-50 border-orange-200',
     serology:   'text-purple-700 bg-purple-50 border-purple-200',
-    thyroid:    'text-teal-700 bg-teal-50 border-teal-200',
+    thyroid:    'text-indigo-700 bg-indigo-50 border-indigo-200',
+    hba1c:      'text-pink-700 bg-pink-50 border-pink-200',
+    ogtt:       'text-teal-700 bg-teal-50 border-teal-200',
+    psa:        'text-sky-700 bg-sky-50 border-sky-200',
 }
 
 const groupedTests = computed(() => {

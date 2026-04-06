@@ -245,14 +245,17 @@ class DoctorController extends Controller
                     'abnormal_flag'  => $r->abnormal_flag,
                     'remarks'        => $r->remarks,
                 ])->sortBy(fn($r) => [
-                    // Sort by category group for clean display
                     match($r['category']) {
                         'hematology' => 1,
                         'chemistry'  => 2,
                         'urinalysis' => 3,
                         'stool'      => 4,
                         'serology'   => 5,
-                        default      => 6
+                        'thyroid'    => 6,
+                        'hba1c'      => 7,
+                        'ogtt'       => 8,
+                        'psa'        => 9,
+                        default      => 10,
                     },
                 ])->values()->toArray(),
             ];

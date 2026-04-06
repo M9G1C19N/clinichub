@@ -72,10 +72,23 @@ class LabTestSeeder extends Seeder
             ['code'=>'HIV2',      'name'=>'HIV 2 Ab',              'cat'=>'serology',  'unit'=>'',        'text'=>true,   'general'=>'Non-Reactive',      'sort'=>73],
             ['code'=>'PREG',      'name'=>'Pregnancy Test',        'cat'=>'serology',  'unit'=>'',        'text'=>true,                                   'sort'=>74],
             ['code'=>'BTYPE2',    'name'=>'Blood Type',            'cat'=>'serology',  'unit'=>'',        'text'=>true,                                   'sort'=>75],
-            ['code'=>'PSA',       'name'=>'Prostatic Specific Antigen', 'cat'=>'serology','unit'=>'ng/mL','general'=>'0-4',                               'sort'=>76],
+            ['code'=>'PSA',       'name'=>'Prostatic Specific Antigen', 'cat'=>'psa',     'unit'=>'ng/mL','general'=>'0-4',                               'sort'=>76],
             ['code'=>'DNG_NS1',   'name'=>'Dengue NS1 Ag',         'cat'=>'serology',  'unit'=>'',        'text'=>true,                                   'sort'=>77],
             ['code'=>'DNG_IGG',   'name'=>'Dengue IgG',            'cat'=>'serology',  'unit'=>'',        'text'=>true,                                   'sort'=>78],
             ['code'=>'DNG_IGM',   'name'=>'Dengue IgM',            'cat'=>'serology',  'unit'=>'',        'text'=>true,                                   'sort'=>79],
+
+            // ── THYROID FUNCTION ─────────────────────────
+            ['code'=>'FT3',       'name'=>'Free T3 (FT3)',         'cat'=>'thyroid',   'unit'=>'pmol/L',  'general'=>'3.1-6.8',                           'sort'=>80],
+            ['code'=>'FT4',       'name'=>'Free T4 (FT4)',         'cat'=>'thyroid',   'unit'=>'pmol/L',  'general'=>'12-22',                             'sort'=>81],
+            ['code'=>'TSH',       'name'=>'TSH',                   'cat'=>'thyroid',   'unit'=>'mIU/L',   'general'=>'0.3-4.2',                           'sort'=>82],
+
+            // ── HbA1c ────────────────────────────────────
+            ['code'=>'HBA1C',     'name'=>'HbA1c (Glycated Hemoglobin)', 'cat'=>'hba1c', 'unit'=>'%',    'general'=>'<6.5',                              'sort'=>85],
+
+            // ── OGTT ─────────────────────────────────────
+            ['code'=>'OGTT_FBS',  'name'=>'OGTT - Fasting',        'cat'=>'ogtt',      'unit'=>'mg/dL',   'general'=>'75-115',                            'sort'=>90],
+            ['code'=>'OGTT_1HR',  'name'=>'OGTT - 1 Hour',         'cat'=>'ogtt',      'unit'=>'mg/dL',   'general'=>'<180',                              'sort'=>91],
+            ['code'=>'OGTT_2HR',  'name'=>'OGTT - 2 Hours',        'cat'=>'ogtt',      'unit'=>'mg/dL',   'general'=>'<153',                              'sort'=>92],
         ];
 
         foreach ($tests as $t) {

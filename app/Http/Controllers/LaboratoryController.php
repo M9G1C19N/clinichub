@@ -68,7 +68,7 @@ class LaboratoryController extends Controller
                         'CBC','UA','FECALYSIS','BLOODTYPING','FBS','RBS','BUN',
                         'CREATININE','URICACID','CHOLESTEROL','TRIGLYCERIDES',
                         'HDLLDL','SGOT','SGPT','HBSAG','VDRL','PREGNANCY','DENGUE',
-                        'THYROID','PSA','BLOOD_CHEMISTRY'
+                        'THYROID','PSA','BLOOD_CHEMISTRY','HBA1C','OGTT',
                     ]))
                     ->map(fn($i) => ['code' => $i->service_code, 'name' => $i->service_name])
                     ->values()->toArray(),
@@ -234,7 +234,9 @@ class LaboratoryController extends Controller
             'PREGNANCY'       => ['serology'],
             'DENGUE'          => ['serology'],
             'THYROID'         => ['thyroid'],
-            'PSA'             => ['serology'],
+            'PSA'             => ['psa'],
+            'HBA1C'           => ['hba1c'],
+            'OGTT'            => ['ogtt'],
         ];
 
         // Get ordered lab services from invoice
@@ -258,7 +260,7 @@ class LaboratoryController extends Controller
         if (in_array('HBSAG',       $orderedServices)) $specificTestCodes[] = 'HBSAG';
         if (in_array('VDRL',        $orderedServices)) $specificTestCodes[] = 'VDRL';
         if (in_array('PREGNANCY',   $orderedServices)) $specificTestCodes[] = 'PREG';
-        if (in_array('PSA',         $orderedServices)) $specificTestCodes[] = 'PSA';
+        // PSA, HBA1C, OGTT, THYROID: fetched via their own category — no specific code override needed
 
         $tests = LabTest::active()
             ->where(function($q) use ($neededCategories, $specificTestCodes) {
