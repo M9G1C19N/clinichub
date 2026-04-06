@@ -52,7 +52,7 @@ function printSystemReceipt() {
     document.body.appendChild(iframe)
     const doc = iframe.contentDocument || iframe.contentWindow.document
     doc.open()
-    doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+    doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Sales Receipt</title>
     <style>
         * { box-sizing:border-box; margin:0; padding:0; }
         @page { size: A4 portrait; margin: 10mm; }

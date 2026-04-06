@@ -53,7 +53,7 @@ const invoiceStatusConfig = {
                 </div>
             </div>
             <div style="text-align:right;">
-                <div style="font-size:20px; font-weight:900; color:#0F2044; letter-spacing:1px;">OFFICIAL RECEIPT</div>
+                <div style="font-size:20px; font-weight:900; color:#0F2044; letter-spacing:1px;">SALES RECEIPT</div>
                 <div style="font-size:10px; margin-top:4px; color:#555;">
                     Invoice No.: <strong style="color:#0F2044; font-size:13px;">{{ invoice.invoice_number }}</strong>
                 </div>

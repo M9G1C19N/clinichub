@@ -36,6 +36,9 @@ class ServiceCatalogSeeder extends Seeder
             ['code' => 'PREGNANCY',     'name' => 'Pregnancy Test',             'category' => 'laboratory', 'room' => 'laboratory',     'price' => 200.00,  'turnaround' => 1],
             ['code' => 'DENGUE',        'name' => 'Dengue Duo Test',            'category' => 'laboratory', 'room' => 'laboratory',     'price' => 800.00,  'turnaround' => 2],
             ['code' => 'THYROID',       'name' => 'Thyroid Panel (TSH)',        'category' => 'laboratory', 'room' => 'laboratory',     'price' => 600.00,  'turnaround' => 8],
+            ['code' => 'HBA1C',         'name' => 'HbA1c (Glycated Hemoglobin)','category' => 'laboratory', 'room' => 'laboratory',     'price' => 550.00,  'turnaround' => 8, 'fasting' => true],
+            ['code' => 'OGTT',          'name' => 'OGTT (Glucose Tolerance Test)','category' => 'laboratory','room' => 'laboratory',     'price' => 500.00,  'turnaround' => 4, 'fasting' => true],
+            ['code' => 'PSA',           'name' => 'Prostatic Specific Antigen (PSA)','category' => 'laboratory','room' => 'laboratory',  'price' => 450.00,  'turnaround' => 4],
 
             // ── X-Ray & Ultrasound ───────────────────────
             ['code' => 'CXRPA',         'name' => 'Chest X-Ray PA View',        'category' => 'xray_utz',   'room' => 'xray_utz',       'price' => 350.00,  'turnaround' => 24],
