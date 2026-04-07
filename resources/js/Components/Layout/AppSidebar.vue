@@ -7,7 +7,7 @@ import {
     Settings, BarChart3, ShieldCheck, UserCog, Pill,
     ChevronLeft, ChevronRight, LogOut, Activity, Monitor,
     Microscope, ScanLine, Syringe, HeartPulse, PenLine,
-    DatabaseBackup, RefreshCw, MonitorPlay,
+    DatabaseBackup, RefreshCw, MonitorPlay, Tag,
 } from 'lucide-vue-next'
 import { CLINIC_LOGO, CLINIC_INFO } from '@/config/clinic.js'
 
@@ -37,7 +37,8 @@ const navMap = {
         { label: 'Billing',        href: '/billing',          icon: Receipt },
         { label: 'Reports',        href: '/reports',          icon: BarChart3 },
         { divider: true },
-        { label: 'Service Catalog',href: '/admin/services',        icon: Settings },
+        { label: 'Service Catalog',href: '/admin/services',          icon: Settings },
+        { label: 'Pkg Discounts', href: '/admin/package-discounts', icon: Tag },
         { label: 'Users & Staff',  href: '/admin/users',          icon: UserCog },
         { label: 'E-Signatures',   href: '/admin/esignatures',    icon: PenLine },
         { label: 'Booking Photos', href: '/admin/booking-photos', icon: Monitor },

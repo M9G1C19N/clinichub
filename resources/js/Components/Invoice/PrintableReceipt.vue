@@ -152,7 +152,7 @@ const invoiceStatusConfig = {
             <div style="min-width:200px; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
                 <div style="display:flex; justify-content:space-between; padding:5px 12px; border-bottom:1px solid #e2e8f0; font-size:10px;">
                     <span style="color:#555;">Subtotal</span>
-                    <span>₱{{ formatAmount(Number(invoice.total_amount) + Number(invoice.discount_amount ?? 0)) }}</span>
+                    <span>₱ {{ formatAmount(invoice.total_amount) }}</span>
                 </div>
                 <div v-if="invoice.discount_amount > 0"
                     style="display:flex; justify-content:space-between; padding:5px 12px; border-bottom:1px solid #e2e8f0; font-size:10px;">
@@ -161,7 +161,7 @@ const invoiceStatusConfig = {
                 </div>
                 <div style="display:flex; justify-content:space-between; padding:6px 12px; border-bottom:1px solid #e2e8f0; background:#0F2044; color:white;">
                     <span style="font-weight:700; font-size:10.5px;">TOTAL</span>
-                    <span style="font-weight:900; font-size:13px;">₱ {{ formatAmount(invoice.total_amount) }}</span>
+                    <span style="font-weight:900; font-size:13px;">₱ {{ formatAmount(Number(invoice.total_amount) - Number(invoice.discount_amount ?? 0)) }}</span>
                 </div>
                 <div v-if="invoice.paid_amount > 0"
                     style="display:flex; justify-content:space-between; padding:5px 12px; border-bottom:1px solid #e2e8f0; font-size:10px; background:#f0fdf4;">

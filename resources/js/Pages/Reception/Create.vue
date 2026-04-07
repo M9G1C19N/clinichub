@@ -15,14 +15,93 @@ import {
     Search, FlaskConical, ScanLine, TestTube,
     Stethoscope, Tag, ChevronRight, Receipt,
     User, CheckCircle2, AlertTriangle, Monitor,
+    Package, Zap, X,
 } from 'lucide-vue-next'
 
 
-// ── SERVICE PACKAGES ──────────────────────────────
+const props = defineProps({
+    patient:          Object,
+    services:         Array,
+    counters:         Array,
+    checkin:          { type: Object, default: null },
+    packageDiscounts: { type: Array, default: () => [] },
+})
+
+const form = useForm({
+    patient_id:         props.patient?.id ?? null,
+    visit_type:         props.checkin?.visit_type ?? 'opd',
+    employer_company:   props.checkin?.employer_company ?? '',
+    chief_complaint:    props.checkin?.chief_complaint ?? '',
+    referral_validated: false,
+    services:           props.checkin?.services ?? [],
+    priority:           props.checkin?.priority ?? 'regular',
+    queue_counter_id:   props.counters[0]?.id ? String(props.counters[0].id) : null,
+    discount_amount:    0,
+    notes:              '',
+    is_field_visit:     false,
+    checkin_id:         props.checkin?.id ?? null,
+})
+
+// ── ACTIVE PRE-EMPLOYMENT PACKAGE ─────────────────────
+const activePackageKey = ref(null)   // key of the currently applied PE package
+
+function applyPreEmpPackage(pkg) {
+    // Replace services with the package's services
+    form.services = [...pkg.service_codes]
+    activePackageKey.value = pkg.package_key
+    recalcPackageDiscount()
+}
+
+function clearActivePackage() {
+    activePackageKey.value = null
+    form.discount_amount   = 0
+}
+
+// Build a lookup map: service_code → base_price
+const servicePriceMap = computed(() => {
+    const map = {}
+    for (const s of props.services) map[s.service_code] = parseFloat(s.base_price)
+    return map
+})
+
+function recalcPackageDiscount() {
+    if (!activePackageKey.value) return
+
+    const pkg = props.packageDiscounts.find(p => p.package_key === activePackageKey.value)
+    if (!pkg) return
+
+    // Base discount: catalog sum of package core services − package_price
+    const pkgCatalogSum = pkg.service_codes.reduce((sum, code) => {
+        return sum + (servicePriceMap.value[code] ?? 0)
+    }, 0)
+    let discount = pkgCatalogSum - pkg.package_price
+
+    // Drug test add-on: applies to any package that doesn't already include DRUGTEST
+    if (
+        !pkg.service_codes.includes('DRUGTEST') &&
+        pkg.addon_drugtest_price !== null &&
+        form.services.includes('DRUGTEST')
+    ) {
+        const drugtestCatalog = servicePriceMap.value['DRUGTEST'] ?? 0
+        discount += drugtestCatalog - pkg.addon_drugtest_price
+    }
+
+    form.discount_amount = Math.max(0, parseFloat(discount.toFixed(2)))
+}
+
+// Re-run whenever services change (catches drug test toggle on pkg3)
+watch(() => [...form.services], () => {
+    if (activePackageKey.value) recalcPackageDiscount()
+})
+
+// If visit type changes away from pre_employment, clear active package
+watch(() => form.visit_type, (val) => {
+    if (val !== 'pre_employment') clearActivePackage()
+})
+
+// ── BASIC QUICK-SELECT PACKAGES (existing behaviour) ──
 const servicePackages = computed(() => {
     const vt = form.visit_type
-
-    // Consultation code depends on visit type
     const consultCode = {
         pre_employment: 'PE_CONSULT',
         annual_pe:      'ANNUAL_PE',
@@ -31,7 +110,6 @@ const servicePackages = computed(() => {
         follow_up:      'OPD',
     }[vt] ?? null
 
-    // Base services — PE types include Blood Chemistry, OPD does not
     const isPE = ['pre_employment','annual_pe','exit_pe'].includes(vt)
     const base5 = isPE
         ? ['CBC', 'BLOOD_CHEMISTRY', 'CXRPA', 'FECALYSIS', 'UA']
@@ -59,42 +137,45 @@ const servicePackages = computed(() => {
     }]
 })
 
-function applyPackage(codes) {
-    // Add all codes from package, don't remove existing selections
+function applyBasicPackage(codes) {
+    // Basic package just adds services without touching the PE package or discount
+    clearActivePackage()
     codes.forEach(code => {
-        if (!form.services.includes(code)) {
-            form.services.push(code)
-        }
+        if (!form.services.includes(code)) form.services.push(code)
     })
 }
 
-function clearServices() {
-    form.services = []
+// ── PRE-EMPLOYMENT PACKAGES (from DB, with discount) ──
+const pePackages = computed(() =>
+    form.visit_type === 'pre_employment' ? props.packageDiscounts : []
+)
+
+// Label helpers for package display
+const svcShortLabel = {
+    CBC:        'CBC',
+    UA:         'Urinalysis',
+    CXRPA:      'Chest X-Ray',
+    FECALYSIS:  'Fecalysis',
+    DRUGTEST:   'Drug Test',
+    PE_CONSULT: 'Physical Exam',
 }
 
-const props = defineProps({
-    patient:  Object,
-    services: Array,
-    counters: Array,
-    checkin:  { type: Object, default: null },
-})
+function pkgServiceLabels(codes) {
+    return codes.map(c => svcShortLabel[c] ?? c).join(' · ')
+}
 
-const form = useForm({
-    patient_id:         props.patient?.id ?? null,
-    visit_type:         props.checkin?.visit_type ?? 'opd',
-    employer_company:   props.checkin?.employer_company ?? '',
-    chief_complaint:    props.checkin?.chief_complaint ?? '',
-    referral_validated: false,
-    services:           props.checkin?.services ?? [],
-    priority:           props.checkin?.priority ?? 'regular',
-    queue_counter_id:   props.counters[0]?.id ? String(props.counters[0].id) : null,
-    discount_amount:    0,
-    notes:              '',
-    is_field_visit:     false,
-    checkin_id:         props.checkin?.id ?? null,
-})
+const pkgColorMap = {
+    pre_emp_pkg_1: { border: '#3B82F6', color: '#1D4ED8', bg: '#EFF6FF', activeBg: '#3B82F6' },
+    pre_emp_pkg_2: { border: '#A855F7', color: '#7E22CE', bg: '#FDF4FF', activeBg: '#A855F7' },
+    pre_emp_pkg_3: { border: '#22C55E', color: '#15803D', bg: '#F0FDF4', activeBg: '#22C55E' },
+}
 
-// Patient search
+function pkgDiscount(pkg) {
+    const sum = pkg.service_codes.reduce((s, c) => s + (servicePriceMap.value[c] ?? 0), 0)
+    return Math.max(0, sum - pkg.package_price)
+}
+
+// ── PATIENT SEARCH ─────────────────────────────────────
 const patientSearch   = ref(props.patient?.full_name ?? '')
 const patientResults  = ref([])
 const selectedPatient = ref(props.patient ?? null)
@@ -114,10 +195,10 @@ function onPatientSearch() {
 }
 
 function selectPatient(p) {
-    selectedPatient.value    = p
-    form.patient_id          = p.id
-    patientSearch.value      = p.full_name
-    patientResults.value     = []
+    selectedPatient.value = p
+    form.patient_id       = p.id
+    patientSearch.value   = p.full_name
+    patientResults.value  = []
 }
 
 function clearPatient() {
@@ -126,7 +207,7 @@ function clearPatient() {
     patientSearch.value   = ''
 }
 
-// Services grouped by category
+// ── SERVICES ───────────────────────────────────────────
 const serviceGroups = computed(() => {
     const groups = {}
     for (const svc of props.services) {
@@ -141,11 +222,14 @@ function toggleService(code) {
     idx === -1 ? form.services.push(code) : form.services.splice(idx, 1)
 }
 
-function isSelected(code) {
-    return form.services.includes(code)
+function isSelected(code) { return form.services.includes(code) }
+
+function clearServices() {
+    form.services = []
+    clearActivePackage()
 }
 
-// Compute invoice preview
+// ── INVOICE PREVIEW ────────────────────────────────────
 const selectedServices = computed(() =>
     props.services.filter(s => form.services.includes(s.service_code))
 )
@@ -158,14 +242,20 @@ const total = computed(() =>
     Math.max(0, subtotal.value - parseFloat(form.discount_amount || 0))
 )
 
-// Category config
+// Label shown in invoice preview for the active package discount
+const activePackageLabel = computed(() => {
+    if (!activePackageKey.value) return null
+    return props.packageDiscounts.find(p => p.package_key === activePackageKey.value)?.package_name ?? null
+})
+
+// ── CATEGORY CONFIG ────────────────────────────────────
 const categoryConfig = {
-    laboratory:   { label: 'Laboratory',      color: '#3B82F6', icon: FlaskConical },
-    xray_utz:     { label: 'X-Ray & UTZ',     color: '#8B5CF6', icon: ScanLine },
-    drug_test:    { label: 'Drug Test',        color: '#F43F5E', icon: TestTube },
-    consultation: { label: 'Consultation',    color: '#10B981', icon: Stethoscope },
-    procedure:    { label: 'Procedure',       color: '#F59E0B', icon: Tag },
-    other:        { label: 'Other',           color: '#6B7280', icon: Tag },
+    laboratory:   { label: 'Laboratory',    color: '#3B82F6', icon: FlaskConical },
+    xray_utz:     { label: 'X-Ray & UTZ',   color: '#8B5CF6', icon: ScanLine },
+    drug_test:    { label: 'Drug Test',     color: '#F43F5E', icon: TestTube },
+    consultation: { label: 'Consultation',  color: '#10B981', icon: Stethoscope },
+    procedure:    { label: 'Procedure',     color: '#F59E0B', icon: Tag },
+    other:        { label: 'Other',         color: '#6B7280', icon: Tag },
 }
 
 function submit() {
@@ -295,12 +385,11 @@ function submit() {
                             <Label class="text-xs">Chief Complaint</Label>
                             <Input v-model="form.chief_complaint" placeholder="e.g. Fever, cough" class="h-8 text-xs"/>
                         </div>
-                        <!-- ── VISIT MODE TOGGLE ─────────────────── -->
+
+                        <!-- Visit Mode Toggle -->
                         <div class="space-y-2">
                             <Label class="text-xs">Visit Mode</Label>
                             <div class="grid grid-cols-2 gap-2">
-
-                                <!-- In-Clinic -->
                                 <button type="button"
                                     @click="form.is_field_visit = false"
                                     :class="[
@@ -317,7 +406,6 @@ function submit() {
                                     <span class="font-normal opacity-60 text-xs">Auto case no.</span>
                                 </button>
 
-                                <!-- Field / Off-Site -->
                                 <button type="button"
                                     @click="form.is_field_visit = true"
                                     :class="[
@@ -337,7 +425,6 @@ function submit() {
                                 </button>
                             </div>
 
-                            <!-- Warning shown when field mode selected -->
                             <div v-if="form.is_field_visit"
                                 class="flex items-start gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
                                 <svg class="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" fill="none"
@@ -371,9 +458,9 @@ function submit() {
                             <Select v-model="form.queue_counter_id">
                                 <SelectTrigger class="h-8 text-xs"><SelectValue/></SelectTrigger>
                                 <SelectContent>
-                                <SelectItem v-for="c in counters" :key="c.id" :value="String(c.id)">
-                                    {{ c.counter_name }}
-                                </SelectItem>
+                                    <SelectItem v-for="c in counters" :key="c.id" :value="String(c.id)">
+                                        {{ c.counter_name }}
+                                    </SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -409,7 +496,20 @@ function submit() {
                                     <span>₱ {{ subtotal.toLocaleString('en-PH', {minimumFractionDigits:2}) }}</span>
                                 </div>
 
-                                <div class="flex items-center justify-between gap-2">
+                                <!-- Active package discount display -->
+                                <div v-if="activePackageKey && parseFloat(form.discount_amount) > 0"
+                                    class="flex items-center justify-between gap-2 py-1 px-2 rounded-lg bg-emerald-50 border border-emerald-200">
+                                    <div class="flex items-center gap-1.5">
+                                        <Package class="w-3 h-3 text-emerald-600 flex-shrink-0"/>
+                                        <span class="text-xs text-emerald-700 font-semibold">{{ activePackageLabel }} Discount</span>
+                                    </div>
+                                    <span class="text-xs font-bold text-emerald-700">
+                                        − ₱ {{ parseFloat(form.discount_amount).toLocaleString('en-PH', {minimumFractionDigits:2}) }}
+                                    </span>
+                                </div>
+
+                                <!-- Manual discount (shown when no active package) -->
+                                <div v-if="!activePackageKey" class="flex items-center justify-between gap-2">
                                     <span class="text-xs text-slate-500">Discount</span>
                                     <Input v-model="form.discount_amount"
                                         type="number" min="0" step="0.01"
@@ -429,7 +529,7 @@ function submit() {
                     </div>
 
                     <!-- Submit -->
-                   <Button type="submit"
+                    <Button type="submit"
                         :disabled="form.processing || !form.patient_id || form.services.length === 0"
                         class="w-full gap-2 text-white" style="background-color:#1B4F9B">
                         <svg v-if="form.processing" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
@@ -440,7 +540,6 @@ function submit() {
                         {{ form.processing ? 'Processing...' : 'Register Visit & Issue Ticket' }}
                     </Button>
 
-                    <!-- Show ALL validation errors, not just patient_id and services -->
                     <div v-if="Object.keys(form.errors).length > 0"
                         class="mt-3 p-3 bg-red-50 border border-red-200 rounded-xl space-y-1">
                         <p class="text-xs font-bold text-red-700 mb-1">Please fix these errors:</p>
@@ -451,7 +550,7 @@ function submit() {
                     </div>
 
                     <p v-if="form.errors.patient_id" class="text-xs text-red-500 text-center">{{ form.errors.patient_id }}</p>
-                    <p v-if="form.errors.services" class="text-xs text-red-500 text-center">{{ form.errors.services }}</p>
+                    <p v-if="form.errors.services"   class="text-xs text-red-500 text-center">{{ form.errors.services }}</p>
 
                 </div>
 
@@ -474,26 +573,136 @@ function submit() {
                             </div>
                         </div>
 
-                        <!-- Quick Package Buttons — only shown when packages are available -->
-                        <div v-if="servicePackages.length > 0" class="px-5 py-3 border-b bg-slate-50/60 flex items-center gap-2 flex-wrap">
+                        <!-- ── BASIC Quick-Select row ── -->
+                        <div v-if="servicePackages.length > 0"
+                            class="px-5 py-3 border-b bg-slate-50/60 flex items-center gap-2 flex-wrap">
                             <span class="text-xs font-bold text-slate-500 mr-1">Quick Select:</span>
                             <button v-for="pkg in servicePackages" :key="pkg.key"
                                 type="button"
-                                @click="applyPackage(pkg.codes)"
+                                @click="applyBasicPackage(pkg.codes)"
                                 class="group flex items-center gap-2 px-3 py-1.5 rounded-lg border-2 text-xs font-semibold transition-all hover:shadow-sm"
                                 :style="{
                                     borderColor: pkg.color,
-                                    color: pkg.color,
-                                    background: pkg.color + '10'
+                                    color:       pkg.color,
+                                    background:  pkg.color + '10'
                                 }">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                                </svg>
+                                <Zap class="w-3.5 h-3.5"/>
                                 {{ pkg.label }}
                                 <span class="text-xs opacity-60 font-normal hidden group-hover:inline">— {{ pkg.desc }}</span>
                             </button>
                         </div>
 
+                        <!-- ── PRE-EMPLOYMENT PACKAGE CARDS ── -->
+                        <div v-if="pePackages.length > 0"
+                            class="px-5 py-4 border-b bg-gradient-to-r from-slate-50 to-blue-50/30 space-y-3">
+
+                            <div class="flex items-center gap-2 mb-1">
+                                <Package class="w-3.5 h-3.5 text-slate-500"/>
+                                <span class="text-xs font-bold text-slate-600 uppercase tracking-widest">
+                                    Pre-Employment Packages
+                                </span>
+                                <!-- Active package pill -->
+                                <div v-if="activePackageKey"
+                                    class="flex items-center gap-1 ml-auto px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
+                                    <CheckCircle2 class="w-3 h-3"/>
+                                    {{ pePackages.find(p => p.package_key === activePackageKey)?.package_name ?? '' }} applied
+                                    <button type="button" @click="clearActivePackage" class="ml-0.5 hover:text-red-500">
+                                        <X class="w-3 h-3"/>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-3 gap-3">
+                                <button v-for="pkg in pePackages" :key="pkg.package_key"
+                                    type="button"
+                                    @click="applyPreEmpPackage(pkg)"
+                                    :class="[
+                                        'text-left rounded-xl border-2 p-3 transition-all hover:shadow-md',
+                                        activePackageKey === pkg.package_key
+                                            ? 'ring-2 ring-offset-1 shadow-md'
+                                            : 'hover:scale-[1.01]'
+                                    ]"
+                                    :style="{
+                                        borderColor: pkgColorMap[pkg.package_key]?.border ?? '#64748B',
+                                        background:  activePackageKey === pkg.package_key
+                                            ? (pkgColorMap[pkg.package_key]?.border ?? '#64748B') + '15'
+                                            : pkgColorMap[pkg.package_key]?.bg ?? '#F8FAFC',
+                                        ringColor: pkgColorMap[pkg.package_key]?.border ?? '#64748B',
+                                    }">
+
+                                    <!-- Package name + active check -->
+                                    <div class="flex items-start justify-between gap-1 mb-2">
+                                        <span class="text-xs font-bold leading-tight"
+                                            :style="{ color: pkgColorMap[pkg.package_key]?.color ?? '#1E293B' }">
+                                            {{ pkg.package_name }}
+                                        </span>
+                                        <CheckCircle2 v-if="activePackageKey === pkg.package_key"
+                                            class="w-3.5 h-3.5 flex-shrink-0 mt-0.5"
+                                            :style="{ color: pkgColorMap[pkg.package_key]?.border }"/>
+                                    </div>
+
+                                    <!-- Services list -->
+                                    <p class="text-xs text-slate-500 leading-relaxed mb-3">
+                                        {{ pkgServiceLabels(pkg.service_codes) }}
+                                        <span v-if="!pkg.service_codes.includes('DRUGTEST')"
+                                            class="italic text-slate-400"> + Drug Test (add-on)</span>
+                                    </p>
+
+                                    <!-- Pricing -->
+                                    <div class="space-y-1">
+                                        <div v-if="pkg.package_price > 0" class="space-y-0.5">
+                                            <div class="flex items-center justify-between">
+                                                <span class="text-xs text-slate-400 line-through">
+                                                    ₱{{ pePackages && servicePriceMap
+                                                        ? pkg.service_codes.reduce((s,c) => s+(servicePriceMap[c]??0),0).toLocaleString('en-PH',{minimumFractionDigits:2})
+                                                        : '—' }}
+                                                </span>
+                                                <span v-if="pkgDiscount(pkg) > 0"
+                                                    class="text-xs font-bold px-1.5 py-0.5 rounded-full text-white"
+                                                    :style="{ background: pkgColorMap[pkg.package_key]?.border ?? '#64748B' }">
+                                                    Save ₱{{ pkgDiscount(pkg).toLocaleString('en-PH',{minimumFractionDigits:2}) }}
+                                                </span>
+                                            </div>
+                                            <div class="text-sm font-bold"
+                                                :style="{ color: pkgColorMap[pkg.package_key]?.color ?? '#1E293B' }">
+                                                ₱{{ pkg.package_price.toLocaleString('en-PH',{minimumFractionDigits:2}) }}
+                                            </div>
+                                        </div>
+                                        <div v-else
+                                            class="text-xs text-slate-400 italic">Price not set — contact admin</div>
+                                    </div>
+
+                                    <!-- Drug test add-on note for packages without DRUGTEST -->
+                                    <div v-if="!pkg.service_codes.includes('DRUGTEST') && pkg.addon_drugtest_price !== null"
+                                        class="mt-2 pt-2 border-t border-dashed"
+                                        :style="{ borderColor: pkgColorMap[pkg.package_key]?.border + '40' }">
+                                        <p class="text-xs text-slate-500">
+                                            <TestTube class="w-3 h-3 inline mr-0.5"/>
+                                            Drug Test add-on:
+                                            <span class="font-semibold"
+                                                :style="{ color: pkgColorMap[pkg.package_key]?.color }">
+                                                ₱{{ pkg.addon_drugtest_price.toLocaleString('en-PH',{minimumFractionDigits:2}) }}
+                                            </span>
+                                            <span class="text-slate-400">(discounted)</span>
+                                        </p>
+                                    </div>
+                                </button>
+                            </div>
+
+                            <!-- Drug test add-on hint when a package without DRUGTEST is active -->
+                            <div v-if="activePackageKey && pePackages.find(p => p.package_key === activePackageKey && !p.service_codes.includes('DRUGTEST'))"
+                                class="flex items-start gap-2 p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-700">
+                                <TestTube class="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-rose-500"/>
+                                <span>
+                                    <strong>{{ pePackages.find(p => p.package_key === activePackageKey)?.package_name }} active.</strong>
+                                    {{ pePackages.find(p => p.package_key === activePackageKey)?.addon_drugtest_price !== null
+                                        ? 'If you add Drug Test below, it will be billed at the discounted add-on price.'
+                                        : 'Drug Test added below will be billed at full catalog price.' }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- ── Individual service buttons ── -->
                         <div class="p-5 space-y-6">
                             <div v-for="(svcs, cat) in serviceGroups" :key="cat">
 
@@ -533,8 +742,7 @@ function submit() {
                                         ]">
                                             ₱{{ Number(svc.base_price).toLocaleString() }}
                                         </span>
-                                        <span v-if="svc.requires_fasting"
-                                            :title="'Requires fasting'"
+                                        <span v-if="svc.requires_fasting" title="Requires fasting"
                                             class="text-amber-400">⚠</span>
                                     </button>
                                 </div>

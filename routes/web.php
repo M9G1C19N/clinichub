@@ -150,6 +150,11 @@ Route::middleware('auth')->group(function () {
         Route::delete('/esignatures/{esignature}',           [\App\Http\Controllers\Admin\EsignatureController::class, 'destroy'])->name('esignatures.destroy');
         Route::patch('/esignatures/{esignature}/toggle',     [\App\Http\Controllers\Admin\EsignatureController::class, 'toggleActive'])->name('esignatures.toggle');
 
+        // Package Discounts
+        Route::get('/package-discounts', [\App\Http\Controllers\Admin\PackageDiscountController::class, 'index'])->name('package-discounts.index');
+        Route::patch('/package-discounts/{packageDiscount}', [\App\Http\Controllers\Admin\PackageDiscountController::class, 'update'])->name('package-discounts.update');
+        Route::patch('/package-discounts/{packageDiscount}/toggle', [\App\Http\Controllers\Admin\PackageDiscountController::class, 'toggleActive'])->name('package-discounts.toggle');
+
         // Booking page photo management
         Route::get('/booking-photos',                      [\App\Http\Controllers\Admin\BookingPhotoController::class, 'index'])->name('booking-photos.index');
         Route::post('/booking-photos',                     [\App\Http\Controllers\Admin\BookingPhotoController::class, 'store'])->name('booking-photos.store');

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\KioskCheckIn;
+use App\Models\PackageDiscount;
 use App\Models\Patient;
 use App\Models\PatientVisit;
 use App\Models\Payment;
@@ -303,11 +304,24 @@ class ReceptionController extends Controller
         ]);
 
 
+        $packageDiscounts = PackageDiscount::where('is_active', true)
+            ->orderBy('id')
+            ->get()
+            ->map(fn($p) => [
+                'id'                   => $p->id,
+                'package_key'          => $p->package_key,
+                'package_name'         => $p->package_name,
+                'service_codes'        => $p->service_codes,
+                'package_price'        => (float) $p->package_price,
+                'addon_drugtest_price' => $p->addon_drugtest_price !== null ? (float) $p->addon_drugtest_price : null,
+            ]);
+
         return inertia('Reception/Create', [
-            'patient'  => $patient,
-            'services' => $services,
-            'counters' => $counters,
-            'checkin'  => $checkin,
+            'patient'          => $patient,
+            'services'         => $services,
+            'counters'         => $counters,
+            'checkin'          => $checkin,
+            'packageDiscounts' => $packageDiscounts,
         ]);
     }
 
