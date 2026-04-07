@@ -30,11 +30,18 @@ class RoomRoutingEngine
         'PREGNANCY'   => 'laboratory',
         'DENGUE'      => 'laboratory',
         'THYROID'     => 'laboratory',
+        'RBS'         => 'laboratory',
+        'PSA'         => 'laboratory',
+        'HBA1C'       => 'laboratory',
+        'OGTT'        => 'laboratory',
 
         // X-Ray & Ultrasound
         'CXRPA'       => 'xray_utz',
         'XRAY'        => 'xray_utz',
         'UTZ'         => 'xray_utz',
+        'UTZ_ABDOMEN' => 'xray_utz',
+        'UTZ_KUB'     => 'xray_utz',
+        'UTZ_PELVIS'  => 'xray_utz',
         'ECG'         => 'xray_utz',
 
         'BLOOD_CHEMISTRY' => 'laboratory',

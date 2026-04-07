@@ -147,11 +147,11 @@ defineProps({
                     <div style="font-weight:900; font-size:11px; text-transform:uppercase; letter-spacing:0.3px;">
                         {{ imagingRequest?.rad_tech_name ?? '' }}
                     </div>
-                    <div style="font-size:10px; color:#555; margin-top:2px;">
-                        LIC. NO. {{ imagingRequest?.rad_tech_license ?? '' }}
-                    </div>
                     <div style="font-size:10px; font-weight:600; margin-top:1px;">
                         Radiologic Technologist
+                    </div>
+                    <div style="font-size:10px; color:#555; margin-top:2px;">
+                        LIC. NO. {{ imagingRequest?.rad_tech_license ?? '' }}
                     </div>
                 </div>
             </div>

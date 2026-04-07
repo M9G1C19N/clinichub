@@ -205,7 +205,7 @@ function submit() {
             <div class="flex gap-5 items-start">
 
                 <!-- ── LEFT: Invoice Preview ────────── -->
-                <div class="w-72 flex-shrink-0 space-y-4">
+                <div class="w-100 flex-shrink-0 space-y-4">
 
                     <!-- Patient card -->
                     <div class="bg-card rounded-xl border shadow-sm p-4">
