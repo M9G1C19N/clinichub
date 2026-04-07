@@ -35,7 +35,7 @@ function printSlip(slipId) {
     <style>
         * { box-sizing:border-box; margin:0; padding:0; }
         @page { size: 210mm 148mm landscape; margin: 0; }
-        body { background: white; }
+        body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         img { max-width: 100%; }
     </style></head>
     <body>${content.innerHTML}</body></html>`)
@@ -70,7 +70,7 @@ function printAll() {
     <style>
         * { box-sizing:border-box; margin:0; padding:0; }
         @page { size: 210mm 148mm landscape; margin: 0; }
-        body { background: white; }
+        body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         img { max-width: 100%; }
         .slip { page-break-after: always; }
         .slip:last-child { page-break-after: avoid; }

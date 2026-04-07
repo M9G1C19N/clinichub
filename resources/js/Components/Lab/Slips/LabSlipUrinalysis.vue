@@ -9,25 +9,27 @@ const props = defineProps({
     results:    Object,
 })
 
-const r = (code) => props.results?.[code]?.value ?? ''
+const r    = (code) => props.results?.[code]?.value ?? ''
 const isAb = (code) => props.results?.[code]?.is_abnormal ?? false
-const rs = (code) => isAb(code) ? 'font-weight:900;color:#dc2626;' : 'font-weight:600;'
+const rs   = (code) => isAb(code) ? 'font-weight:900;color:#dc2626;' : 'font-weight:600;'
 </script>
 
 <template>
-    <div style="font-family:Arial,sans-serif;font-size:10px;color:#111;background:white;width:210mm;padding:5mm 7mm;box-sizing:border-box;">
+    <div style="font-family:Arial,sans-serif;font-size:12px;color:#111;background:white;
+                width:210mm;min-height:140mm;max-height:148mm;padding:6mm 9mm;
+                box-sizing:border-box;display:flex;flex-direction:column;">
 
         <LabSlipHeader title="URINALYSIS" :patient="patient" :visit="visit" :lab-request="labRequest"/>
 
-        <!-- RESULTS — 2 columns: Qualitative + Microscopic -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;margin-bottom:6px;">
+        <!-- RESULTS — 2 columns, flex:1 to fill space -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 20px;margin-bottom:6px;flex:1;">
 
             <!-- LEFT: Qualitative Examination -->
             <div>
-                <div style="font-weight:700;font-size:9px;text-align:center;margin-bottom:4px;border-bottom:1px solid #aaa;padding-bottom:2px;">
+                <div style="font-weight:700;font-size:11px;text-align:center;margin-bottom:5px;border-bottom:1.5px solid #aaa;padding-bottom:3px;">
                     QUALITATIVE EXAMINATION
                 </div>
-                <table style="width:100%;border-collapse:collapse;font-size:9.5px;">
+                <table style="width:100%;border-collapse:collapse;font-size:11px;">
                     <tr v-for="row in [
                         {code:'UA_COLOR', name:'Color'},
                         {code:'UA_TRANS', name:'Transparency'},
@@ -41,18 +43,18 @@ const rs = (code) => isAb(code) ? 'font-weight:900;color:#dc2626;' : 'font-weigh
                         {code:'UA_KET',   name:'Ketones'},
                         {code:'UA_BILI',  name:'Bilirubin'},
                     ]" :key="row.code">
-                        <td style="padding:2.5px 3px;width:55%;">{{ row.name }}</td>
-                        <td style="padding:2.5px 3px;" :style="rs(row.code)">{{ r(row.code) }}</td>
+                        <td style="padding:3.5px 4px;width:55%;border-bottom:1px solid #f0f0f0;">{{ row.name }}</td>
+                        <td style="padding:3.5px 4px;border-bottom:1px solid #f0f0f0;" :style="rs(row.code)">{{ r(row.code) }}</td>
                     </tr>
                 </table>
             </div>
 
             <!-- RIGHT: Microscopic Examination -->
             <div>
-                <div style="font-weight:700;font-size:9px;text-align:center;margin-bottom:4px;border-bottom:1px solid #aaa;padding-bottom:2px;">
+                <div style="font-weight:700;font-size:11px;text-align:center;margin-bottom:5px;border-bottom:1.5px solid #aaa;padding-bottom:3px;">
                     MICROSCOPIC EXAMINATION
                 </div>
-                <table style="width:100%;border-collapse:collapse;font-size:9.5px;">
+                <table style="width:100%;border-collapse:collapse;font-size:11px;">
                     <tr v-for="row in [
                         {code:'UA_RBC', name:'Red Blood Cells'},
                         {code:'UA_PUS', name:'Pus Cells'},
@@ -64,14 +66,14 @@ const rs = (code) => isAb(code) ? 'font-weight:900;color:#dc2626;' : 'font-weigh
                         {code:'UA_CAS', name:'Casts'},
                         {code:'UA_OTH', name:'Others'},
                     ]" :key="row.code">
-                        <td style="padding:2.5px 3px;width:55%;">{{ row.name }}</td>
-                        <td style="padding:2.5px 3px;" :style="rs(row.code)">{{ r(row.code) }}</td>
+                        <td style="padding:3.5px 4px;width:55%;border-bottom:1px solid #f0f0f0;">{{ row.name }}</td>
+                        <td style="padding:3.5px 4px;border-bottom:1px solid #f0f0f0;" :style="rs(row.code)">{{ r(row.code) }}</td>
                     </tr>
                     <tr>
-                        <td colspan="2" style="padding-top:4px;font-size:9px;color:#555;">NOTE:</td>
+                        <td colspan="2" style="padding-top:6px;font-size:10.5px;color:#555;">NOTE:</td>
                     </tr>
                     <tr>
-                        <td colspan="2" style="padding:1px 3px;font-size:9px;">{{ labRequest?.remarks ?? '' }}</td>
+                        <td colspan="2" style="padding:2px 4px;font-size:10.5px;">{{ labRequest?.remarks ?? '' }}</td>
                     </tr>
                 </table>
             </div>
