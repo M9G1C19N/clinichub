@@ -7,7 +7,7 @@ import {
     Settings, BarChart3, ShieldCheck, UserCog, Pill,
     ChevronLeft, ChevronRight, LogOut, Activity, Monitor,
     Microscope, ScanLine, Syringe, HeartPulse, PenLine,
-    DatabaseBackup, RefreshCw, MonitorPlay, Tag,
+    DatabaseBackup, RefreshCw, MonitorPlay, Tag, Building2,
 } from 'lucide-vue-next'
 import { CLINIC_LOGO, CLINIC_INFO } from '@/config/clinic.js'
 
@@ -34,8 +34,9 @@ const navMap = {
         { label: 'Drug Test',      href: '/drug-test',        icon: TestTube },
         { label: 'Doctor',         href: '/doctor',           icon: Stethoscope },
         { label: 'Appointments',   href: '/appointments',     icon: Calendar },
-        { label: 'Billing',        href: '/billing',          icon: Receipt },
-        { label: 'Reports',        href: '/reports',          icon: BarChart3 },
+        { label: 'Billing',        href: '/billing',                  icon: Receipt },
+        { label: 'Company Billing',href: '/billing/company-billing',  icon: Building2 },
+        { label: 'Reports',        href: '/reports',                  icon: BarChart3 },
         { divider: true },
         { label: 'Service Catalog',href: '/admin/services',          icon: Settings },
         { label: 'Pkg Discounts', href: '/admin/package-discounts', icon: Tag },
@@ -109,11 +110,12 @@ const navMap = {
     ],
 
     billing: [
-        { label: 'Dashboard',      href: '/dashboard',        icon: LayoutDashboard },
-        { label: 'Billing',        href: '/billing',          icon: Receipt },
-        { label: 'Reports',        href: '/billing/reports',  icon: BarChart3 },
-        { label: 'Appointments',   href: '/appointments',     icon: Calendar },
-        { label: 'Patients',       href: '/patients',         icon: Users },
+        { label: 'Dashboard',      href: '/dashboard',                icon: LayoutDashboard },
+        { label: 'Billing',        href: '/billing',                  icon: Receipt },
+        { label: 'Company Billing',href: '/billing/company-billing',  icon: Building2 },
+        { label: 'Reports',        href: '/billing/reports',          icon: BarChart3 },
+        { label: 'Appointments',   href: '/appointments',             icon: Calendar },
+        { label: 'Patients',       href: '/patients',                 icon: Users },
     ],
 }
 

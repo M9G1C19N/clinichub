@@ -24,14 +24,16 @@ class Invoice extends Model
         'invoice_number', 'patient_id', 'patient_visit_id',
         'status', 'total_amount', 'discount_amount',
         'paid_amount', 'balance', 'notes', 'created_by', 'paid_at',
+        'billed_to_company',
     ];
 
     protected $casts = [
-        'total_amount'    => 'decimal:2',
-        'discount_amount' => 'decimal:2',
-        'paid_amount'     => 'decimal:2',
-        'balance'         => 'decimal:2',
-        'paid_at'         => 'datetime',
+        'total_amount'      => 'decimal:2',
+        'discount_amount'   => 'decimal:2',
+        'paid_amount'       => 'decimal:2',
+        'balance'           => 'decimal:2',
+        'paid_at'           => 'datetime',
+        'billed_to_company' => 'boolean',
     ];
 
     // ── Auto-generate invoice number ───────────────────

@@ -11,9 +11,11 @@
         "inertiajs/inertia-laravel": "^3.0",
         "laravel/framework": "^13.0",
         "laravel/reverb": "^1.9",
+        "laravel/socialite": "^5.26",
         "laravel/tinker": "^3.0",
         "spatie/laravel-activitylog": "^4.12",
         "spatie/laravel-permission": "^7.2",
+        "spatie/laravel-sitemap": "^8.0",
         "tightenco/ziggy": "^2.6"
     },
     "require-dev": {

@@ -23,7 +23,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // URL::forceScheme('https');
+        if (config('app.env') === 'production') {
+            URL::forceScheme('https');
+        }
         Gate::before(function ($user, $ability) {
             if ($user->hasRole('admin')) {
                 return true; // Admin bypasses all permission checks

@@ -95,10 +95,11 @@ class BillingController extends Controller
                 'discount_amount' => (float) $invoice->discount_amount,
                 'paid_amount'     => (float) $invoice->paid_amount,
                 'balance'         => (float) $invoice->balance,
-                'notes'           => $invoice->notes,
-                'created_at'      => $invoice->created_at->format('M d, Y h:i A'),
-                'paid_at'         => $invoice->paid_at?->format('M d, Y h:i A'),
-                'created_by'      => $invoice->createdBy?->name,
+                'notes'              => $invoice->notes,
+                'billed_to_company'  => (bool) $invoice->billed_to_company,
+                'created_at'         => $invoice->created_at->format('M d, Y h:i A'),
+                'paid_at'            => $invoice->paid_at?->format('M d, Y h:i A'),
+                'created_by'         => $invoice->createdBy?->name,
             ],
             'patient' => [
                 'id'           => $invoice->patient->id,
@@ -189,5 +190,123 @@ class BillingController extends Controller
         $invoice->update(['status' => 'cancelled']);
 
         return back()->with('success', 'Invoice voided.');
+    }
+
+    public function recordCompanyPayment(Request $request)
+    {
+        $validated = $request->validate([
+            'company'          => ['required', 'string'],
+            'amount'           => ['required', 'numeric', 'min:0.01'],
+            'method'           => ['required', 'in:cash,gcash,maya,card,philhealth,other'],
+            'reference_number' => ['nullable', 'string', 'max:100'],
+            'notes'            => ['nullable', 'string'],
+        ]);
+
+        // Load all unpaid/partial invoices for this company, oldest first
+        $invoices = Invoice::with(['visit', 'payments'])
+            ->whereHas('visit', fn($v) =>
+                $v->where('employer_company', $validated['company'])
+            )
+            ->whereIn('status', ['unpaid', 'partial'])
+            ->oldest()
+            ->get();
+
+        $remaining = (float) $validated['amount'];
+
+        DB::transaction(function () use ($invoices, $validated, &$remaining) {
+            foreach ($invoices as $invoice) {
+                if ($remaining <= 0) break;
+
+                $apply = min($remaining, (float) $invoice->balance);
+                if ($apply <= 0) continue;
+
+                Payment::create([
+                    'invoice_id'       => $invoice->id,
+                    'amount'           => $apply,
+                    'method'           => $validated['method'],
+                    'reference_number' => $validated['reference_number'] ?? null,
+                    'notes'            => ($validated['notes'] ?? '') . ' [Company Payment: ' . $validated['company'] . ']',
+                    'received_by'      => Auth::id(),
+                ]);
+
+                $invoice->recalculate();
+                $remaining -= $apply;
+            }
+        });
+
+        $applied = (float) $validated['amount'] - $remaining;
+        return back()->with('success',
+            '₱' . number_format($applied, 2) . ' applied to ' . $validated['company'] . ' invoices.'
+            . ($remaining > 0 ? ' ₱' . number_format($remaining, 2) . ' was excess (no more unpaid invoices).' : '')
+        );
+    }
+
+    public function toggleCompanyBilling(Invoice $invoice)
+    {
+        $invoice->update(['billed_to_company' => !$invoice->billed_to_company]);
+
+        $state = $invoice->billed_to_company ? 'marked as Company Billing' : 'unmarked from Company Billing';
+        return back()->with('success', "Invoice {$invoice->invoice_number} {$state}.");
+    }
+
+    public function companyBilling(Request $request)
+    {
+        // Fetch all invoices flagged for company billing or unpaid pre-employment with an employer
+        $invoices = Invoice::with(['patient', 'visit', 'payments'])
+            ->where(function ($q) {
+                $q->where('billed_to_company', true)
+                  ->orWhere(function ($q2) {
+                      $q2->whereIn('status', ['unpaid', 'partial'])
+                         ->whereHas('visit', fn($v) =>
+                             $v->where('visit_type', 'pre_employment')
+                               ->whereNotNull('employer_company')
+                               ->where('employer_company', '!=', '')
+                         );
+                  });
+            })
+            ->whereNotIn('status', ['cancelled'])
+            ->latest()
+            ->get();
+
+        // Group by employer company
+        $grouped = $invoices
+            ->filter(fn($inv) => $inv->visit?->employer_company)
+            ->groupBy(fn($inv) => $inv->visit->employer_company)
+            ->map(function ($group, $company) {
+                $mapped = $group->map(fn($inv) => [
+                    'id'                 => $inv->id,
+                    'invoice_number'     => $inv->invoice_number,
+                    'patient_name'       => $inv->patient->full_name,
+                    'patient_code'       => $inv->patient->patient_code,
+                    'status'             => $inv->status,
+                    'total_amount'       => (float) $inv->total_amount,
+                    'discount_amount'    => (float) $inv->discount_amount,
+                    'paid_amount'        => (float) $inv->paid_amount,
+                    'balance'            => (float) $inv->balance,
+                    'billed_to_company'  => (bool)  $inv->billed_to_company,
+                    'visit_date'         => $inv->visit?->visit_date?->format('M d, Y'),
+                    'created_at'         => $inv->created_at->format('M d, Y'),
+                ]);
+
+                return [
+                    'company'         => $company,
+                    'invoices'        => $mapped->values(),
+                    'total_balance'   => $mapped->sum('balance'),
+                    'total_amount'    => $mapped->sum('total_amount'),
+                    'invoice_count'   => $mapped->count(),
+                    'unpaid_count'    => $mapped->where('status', 'unpaid')->count() + $mapped->where('status', 'partial')->count(),
+                ];
+            })
+            ->sortByDesc('total_balance')
+            ->values();
+
+        return inertia('Billing/CompanyBilling', [
+            'companies' => $grouped,
+            'summary'   => [
+                'company_count'   => $grouped->count(),
+                'total_balance'   => $grouped->sum('total_balance'),
+                'invoice_count'   => $grouped->sum('invoice_count'),
+            ],
+        ]);
     }
 }

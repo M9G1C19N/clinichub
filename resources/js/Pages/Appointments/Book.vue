@@ -76,7 +76,10 @@ function formatDate(d) {
 </script>
 
 <template>
-    <Head title="Book an Appointment" />
+    <Head title="Book an Appointment — Saint Peter Diagnostics and Laboratory | Claver, Surigao del Norte">
+        <meta name="description" content="Book your appointment online at Saint Peter Diagnostics and Laboratory in Claver, Surigao del Norte. Services: laboratory tests, X-ray, ultrasound, drug test, prenatal check-up, and general consultation. Call 0951-683-2212." />
+        <meta name="keywords" content="Saint Peter Diagnostics Laboratory Claver Surigao, book appointment, laboratory tests, X-ray, ultrasound, drug test, prenatal" />
+    </Head>
 
     <div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
 

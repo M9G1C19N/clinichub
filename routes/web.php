@@ -201,7 +201,10 @@ Route::middleware('auth')->group(function () {
             Route::get('/invoice/{invoice}',         [\App\Http\Controllers\BillingController::class, 'show'])->name('show');
             Route::post('/invoice/{invoice}/payment',[\App\Http\Controllers\BillingController::class, 'recordPayment'])->name('payment');
             Route::post('/invoice/{invoice}/discount',[\App\Http\Controllers\BillingController::class, 'applyDiscount'])->name('discount');
-            Route::post('/invoice/{invoice}/void',   [\App\Http\Controllers\BillingController::class, 'voidInvoice'])->name('void');
+            Route::post('/invoice/{invoice}/void',          [\App\Http\Controllers\BillingController::class, 'voidInvoice'])->name('void');
+            Route::post('/invoice/{invoice}/toggle-company',  [\App\Http\Controllers\BillingController::class, 'toggleCompanyBilling'])->name('toggle-company');
+            Route::get('/company-billing',                    [\App\Http\Controllers\BillingController::class, 'companyBilling'])->name('company-billing');
+            Route::post('/company-billing/payment',           [\App\Http\Controllers\BillingController::class, 'recordCompanyPayment'])->name('company-payment');
         });
 
     // ── Appointments (Staff Management) ──────────────────
@@ -215,4 +218,17 @@ Route::middleware('auth')->group(function () {
             Route::post('/{appointment}/notes',              [AppointmentController::class, 'updateNotes'])->name('notes');
         });
 
+
+});
+
+// Google OAuth — must be outside auth middleware
+Route::get('/auth/google', [AuthController::class, 'redirectToGoogle']);
+Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
+
+// Sitemap — public
+Route::get('/sitemap.xml', function () {
+    return \Spatie\Sitemap\Sitemap::create()
+        ->add(\Spatie\Sitemap\Tags\Url::create('https://saintpeterdiagnosticsandlaboratory.com/'))
+        ->add(\Spatie\Sitemap\Tags\Url::create('https://saintpeterdiagnosticsandlaboratory.com/book-appointment'))
+        ->toResponse(request());
 });

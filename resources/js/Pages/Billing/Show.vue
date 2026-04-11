@@ -65,6 +65,11 @@ function voidInvoice() {
     router.post(route('billing.void', props.invoice.id))
 }
 
+// ── Company billing toggle ────────────────────────────
+function toggleCompanyBilling() {
+    router.post(route('billing.toggle-company', props.invoice.id), {}, { preserveScroll: true })
+}
+
 // ── Print ─────────────────────────────────────────────
 function printBillingInvoice() {
     const content = document.getElementById('billing-invoice-area')
@@ -158,6 +163,10 @@ const methodColor = {
                             <span :class="['text-xs font-bold px-2.5 py-1 rounded-full', statusConfig[invoice.status]?.class]">
                                 {{ statusConfig[invoice.status]?.label }}
                             </span>
+                            <span v-if="invoice.billed_to_company"
+                                class="text-xs font-bold px-2.5 py-1 rounded-full bg-purple-100 text-purple-700 flex items-center gap-1">
+                                <Building2 class="w-3 h-3"/> Company Billing
+                            </span>
                         </div>
                         <p class="text-slate-400 text-xs mt-0.5">{{ invoice.created_at }} · by {{ invoice.created_by }}</p>
                     </div>
@@ -237,6 +246,21 @@ const methodColor = {
                         Field Visit
                     </div>
                     <Separator/>
+
+                    <!-- Company billing toggle (only for pre-employment with employer) -->
+                    <div v-if="visit.visit_type === 'pre_employment' && visit.employer_company" class="pt-1">
+                        <button @click="toggleCompanyBilling"
+                            :class="['w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold border transition-all',
+                                invoice.billed_to_company
+                                    ? 'bg-purple-100 text-purple-700 border-purple-300 hover:bg-purple-200'
+                                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-purple-50 hover:text-purple-700 hover:border-purple-200']">
+                            <Building2 class="w-3.5 h-3.5 flex-shrink-0"/>
+                            {{ invoice.billed_to_company ? 'Billed to Company' : 'Mark as Company Billing' }}
+                        </button>
+                        <p class="text-xs text-slate-400 mt-1 pl-1">
+                            {{ invoice.billed_to_company ? 'This invoice is included in company billing reports.' : 'Click to flag for company billing.' }}
+                        </p>
+                    </div>
                 </div>
 
                 <!-- Amount summary -->
