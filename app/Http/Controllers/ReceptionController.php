@@ -430,6 +430,7 @@ class ReceptionController extends Controller
             $rooms = $ticket->roomAssignments->map(fn($a) => [
                 'room'         => $a->room,
                 'queue_number' => $a->queue_number,
+                'is_gated'     => in_array($a->room, \App\Services\RoomRoutingEngine::GATED_ROOMS),
             ])->values()->toArray();
 
             // Mark kiosk check-in as processed if this visit originated from one
@@ -443,14 +444,17 @@ class ReceptionController extends Controller
                 ->route('reception.show', $invoice->id)
                 ->with('success', "Visit registered! Invoice {$invoice->invoice_number} created. Ticket {$ticket->ticket_number} issued.")
                 ->with('newTicket', [
-                    'ticket_number' => $ticket->ticket_number,
-                    'patient_name'  => $ticket->patient->full_name,
-                    'patient_code'  => $ticket->patient->patient_code,
-                    'visit_type'    => $ticket->visit_type,
-                    'priority'      => $ticket->priority,
-                    'services'      => $ticket->services_requested ?? [],
-                    'rooms'         => $rooms,
-                    'issued_at'     => $ticket->issued_at->format('M d, Y h:i A'),
+                    'ticket_number'    => $ticket->ticket_number,
+                    'patient_name'     => $ticket->patient->full_name,
+                    'patient_code'     => $ticket->patient->patient_code,
+                    'visit_type'       => $ticket->visit_type,
+                    'priority'         => $ticket->priority,
+                    'services'         => $ticket->services_requested ?? [],
+                    'rooms'            => $rooms,
+                    'issued_at'        => $ticket->issued_at->format('M d, Y h:i A'),
+                    'case_number'      => $visit->case_number,
+                    'employer_company' => $visit->employer_company,
+                    'chief_complaint'  => $visit->chief_complaint,
                 ]);
 
         } catch (\Throwable $e) {
@@ -513,17 +517,21 @@ class ReceptionController extends Controller
                 'created_at'       => $p->created_at->format('M d, Y h:i A'),
             ]),
             'ticket' => $invoice->visit->queueTicket ? [
-                'ticket_number' => $invoice->visit->queueTicket->ticket_number,
-                'patient_name'  => $invoice->patient->full_name,
-                'patient_code'  => $invoice->patient->patient_code,
-                'visit_type'    => $invoice->visit->queueTicket->visit_type,
-                'priority'      => $invoice->visit->queueTicket->priority,
-                'services'      => $invoice->visit->queueTicket->services_requested ?? [],
-                'rooms'         => $invoice->visit->queueTicket->roomAssignments->map(fn($a) => [
+                'ticket_number'    => $invoice->visit->queueTicket->ticket_number,
+                'patient_name'     => $invoice->patient->full_name,
+                'patient_code'     => $invoice->patient->patient_code,
+                'visit_type'       => $invoice->visit->queueTicket->visit_type,
+                'priority'         => $invoice->visit->queueTicket->priority,
+                'services'         => $invoice->visit->queueTicket->services_requested ?? [],
+                'rooms'            => $invoice->visit->queueTicket->roomAssignments->map(fn($a) => [
                     'room'         => $a->room,
                     'queue_number' => $a->queue_number,
+                    'is_gated'     => in_array($a->room, \App\Services\RoomRoutingEngine::GATED_ROOMS),
                 ])->values()->toArray(),
-                'issued_at'     => $invoice->visit->queueTicket->issued_at?->format('M d, Y h:i A'),
+                'issued_at'        => $invoice->visit->queueTicket->issued_at?->format('M d, Y h:i A'),
+                'case_number'      => $invoice->visit->case_number,
+                'employer_company' => $invoice->visit->employer_company,
+                'chief_complaint'  => $invoice->visit->chief_complaint,
             ] : null,
         ]);
     }

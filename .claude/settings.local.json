@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php artisan:*)",
+      "Bash(php -l app/Http/Controllers/AppointmentController.php)",
+      "Bash(php -l app/Models/Appointment.php)",
+      "Bash(php -l app/Http/Controllers/DashboardController.php)",
+      "Bash(npm run:*)",
+      "Bash(grep -n \"imaging_requests\\\\|ImagingRequest\" /opt/lampp/htdocs/clinichub/database/migrations/*.php)",
+      "Bash(php:*)",
+      "Bash(grep:*)",
+      "Bash(wc:*)",
+      "Bash(python3 -c \"import json,sys; data=json.load\\(sys.stdin\\); [print\\(t['name']\\) for t in data.get\\('tables',[]\\)]\")",
+      "Bash(/opt/lampp/bin/mysql -u root clinichub -e \"SELECT * FROM queue_counters;\")",
+      "Bash(/opt/lampp/bin/php artisan:*)",
+      "Bash(/opt/lampp/bin/mysql:*)",
+      "Bash(ls -la /opt/lampp/htdocs/clinichub/database/migrations/*drug*)",
+      "Bash(mysql -u root clinichub -e \"SHOW TABLES;\")",
+      "Bash(mysql:*)",
+      "Bash(git:*)",
+      "Bash(sudo /opt/lampp/lampp start)",
+      "Bash(/opt/lampp/lampp start:*)"
+    ]
+  }
+}

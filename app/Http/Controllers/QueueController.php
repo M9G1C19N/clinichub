@@ -30,6 +30,7 @@ class QueueController extends Controller
         $tickets = QueueTicket::with([
             'patient',
             'counter',
+            'visit',
             'roomAssignments' => fn($q) => $q->orderBy('routing_sequence'),
         ])
         ->today()
@@ -43,15 +44,18 @@ class QueueController extends Controller
         ->orderBy('issued_at')
         ->get()
         ->map(fn($t) => [
-            'id'             => $t->id,
-            'ticket_number'  => $t->ticket_number,
-            'patient_name'   => $t->patient->full_name,
-            'patient_code'   => $t->patient->patient_code,
-            'visit_type'     => $t->visit_type,
-            'priority'       => $t->priority,
-            'status'         => $t->status,
-            'issued_at'      => $t->issued_at->format('h:i A'),
-            'services'       => $t->services_requested ?? [],
+            'id'               => $t->id,
+            'ticket_number'    => $t->ticket_number,
+            'patient_name'     => $t->patient->full_name,
+            'patient_code'     => $t->patient->patient_code,
+            'visit_type'       => $t->visit_type,
+            'priority'         => $t->priority,
+            'status'           => $t->status,
+            'issued_at'        => $t->issued_at->format('M d, Y h:i A'),
+            'services'         => $t->services_requested ?? [],
+            'case_number'      => $t->visit?->case_number,
+            'employer_company' => $t->visit?->employer_company,
+            'chief_complaint'  => $t->visit?->chief_complaint,
             'rooms'              => $t->roomAssignments->map(fn($r) => [
                 'room'         => $r->room,
                 'room_label'   => $r->room_label,
@@ -175,24 +179,30 @@ class QueueController extends Controller
             $rooms     = $ticket->roomAssignments->map(fn($a) => [
                 'room'         => $a->room,
                 'queue_number' => $a->queue_number,
+                'is_gated'     => in_array($a->room, RoomRoutingEngine::GATED_ROOMS),
             ])->values()->toArray();
 
             return [$ticket, $roomCount, $rooms];
         });
 
+        $ticket->loadMissing(['patient', 'visit']);
         $patient = $ticket->patient;
+        $visit   = $ticket->visit;
 
         return back()
             ->with('success', "Ticket {$ticket->ticket_number} issued! Routed to {$roomCount} room(s).")
             ->with('newTicket', [
-                'ticket_number'  => $ticket->ticket_number,
-                'patient_name'   => $patient->full_name,
-                'patient_code'   => $patient->patient_code,
-                'visit_type'     => $ticket->visit_type,
-                'priority'       => $ticket->priority,
-                'services'       => $ticket->services_requested ?? [],
-                'rooms'          => $rooms,
-                'issued_at'      => $ticket->issued_at->format('M d, Y h:i A'),
+                'ticket_number'    => $ticket->ticket_number,
+                'patient_name'     => $patient->full_name,
+                'patient_code'     => $patient->patient_code,
+                'visit_type'       => $ticket->visit_type,
+                'priority'         => $ticket->priority,
+                'services'         => $ticket->services_requested ?? [],
+                'rooms'            => $rooms,
+                'issued_at'        => $ticket->issued_at->format('M d, Y h:i A'),
+                'case_number'      => $visit?->case_number,
+                'employer_company' => $visit?->employer_company,
+                'chief_complaint'  => $visit?->chief_complaint,
             ]);
     }
 
