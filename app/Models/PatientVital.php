@@ -18,7 +18,6 @@ class PatientVital extends Model
         'respiratory_rate',
         'temperature_celsius',
         'oxygen_saturation',
-        'heart_rate',
         'visual_acuity_right',
         'visual_acuity_left',
         'ishihara_result',

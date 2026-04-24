@@ -8,6 +8,7 @@ class QueueRoomAssignment extends Model
 {
     const ROOM_LABELS = [
         'laboratory'     => 'Laboratory',
+        'audiometry'     => 'Audiometry',
         'xray_utz'       => 'X-Ray & Ultrasound',
         'drug_test'      => 'Drug Test',
         'nurse_station'  => 'Nurse Station',
@@ -92,6 +93,7 @@ class QueueRoomAssignment extends Model
     {
         $prefix = match($room) {
             'laboratory'     => 'L',
+            'audiometry'     => 'A',
             'xray_utz'       => 'X',
             'drug_test'      => 'D',
             'nurse_station'  => 'N',

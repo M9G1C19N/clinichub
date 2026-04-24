@@ -8,6 +8,7 @@ import {
     ChevronLeft, ChevronRight, LogOut, Activity, Monitor,
     Microscope, ScanLine, Syringe, HeartPulse, PenLine,
     DatabaseBackup, RefreshCw, MonitorPlay, Tag, Building2,
+    Ear,
 } from 'lucide-vue-next'
 import { CLINIC_LOGO, CLINIC_INFO } from '@/config/clinic.js'
 
@@ -30,6 +31,7 @@ const navMap = {
         { label: 'Queue',          href: '/queue',            icon: HeartPulse },
         { label: 'Kiosk',         href: '/queue/kiosk',      icon: MonitorPlay },
         { label: 'Laboratory',     href: '/laboratory',       icon: FlaskConical },
+        { label: 'Audiometry',     href: '/audiometry',       icon: Ear },
         { label: 'X-Ray & UTZ',    href: '/xray',             icon: ScanLine },
         { label: 'Drug Test',      href: '/drug-test',        icon: TestTube },
         { label: 'Doctor',         href: '/doctor',           icon: Stethoscope },
@@ -89,6 +91,7 @@ const navMap = {
         { divider: true },
         { label: 'Lab Room Screen',href: '/queue/room/laboratory', icon: Monitor, badge: 'Room Screen' },
         { label: 'Lab Requests',   href: '/laboratory',       icon: FlaskConical },
+        { label: 'Audiometry',     href: '/audiometry',       icon: Ear },
     ],
 
     xray_tech: [

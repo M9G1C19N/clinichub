@@ -45,6 +45,7 @@ class RoomRoutingEngine
         'ECG'         => 'xray_utz',
 
         'BLOOD_CHEMISTRY' => 'laboratory',
+        'AUDIOMETRY'      => 'audiometry',
 
         // Drug Test — ALWAYS FIRST (urine specimen time-sensitive)
         'DRUGTEST'    => 'drug_test',
@@ -63,6 +64,7 @@ class RoomRoutingEngine
 
     const ROOM_LABELS = [
         'laboratory'     => 'Laboratory',
+        'audiometry'     => 'Audiometry',
         'xray_utz'       => 'X-Ray & Ultrasound',
         'drug_test'      => 'Drug Test',
         'nurse_station'  => 'Nurse Station',
@@ -118,14 +120,23 @@ class RoomRoutingEngine
             }
         }
 
-        // Visit types that require nurse intake + doctor consultation
-        $needsNurseAndDoctor = ['pre_employment', 'annual_pe', 'exit_pe', 'opd', 'follow_up'];
-        if (in_array($visitType, $needsNurseAndDoctor)) {
-            // Nurse station: parallel (unlocks immediately alongside lab/xray/drug test)
+        // Physical exam visit types always need nurse intake + doctor (no exceptions)
+        $alwaysNurseDoctor = ['pre_employment', 'annual_pe', 'exit_pe'];
+
+        // OPD/follow_up only get nurse+doctor when a consultation service is explicitly ordered.
+        // Pure diagnostic visits (e.g. OPD + Audiometry only) skip nurse/doctor entirely.
+        $conditionalNurseDoctor = ['opd', 'follow_up'];
+        $consultationCodes = ['OPD', 'CONSULTATION', 'PE_CONSULT', 'ANNUAL_PE', 'EXIT_PE', 'FOLLOW_UP'];
+        $hasConsultation = !empty(array_filter(
+            array_map('strtoupper', $services),
+            fn($code) => in_array($code, $consultationCodes)
+        ));
+
+        if (in_array($visitType, $alwaysNurseDoctor) ||
+            (in_array($visitType, $conditionalNurseDoctor) && $hasConsultation)) {
             if (!in_array('nurse_station', $rooms)) {
                 $rooms[] = 'nurse_station';
             }
-            // Interview room (doctor): gated — only unlocks after nurse + all diagnostic rooms done
             if (!in_array('interview_room', $rooms)) {
                 $rooms[] = 'interview_room';
             }

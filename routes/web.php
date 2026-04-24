@@ -164,6 +164,18 @@ Route::middleware('auth')->group(function () {
         Route::delete('/booking-photos/{photo}',           [\App\Http\Controllers\Admin\BookingPhotoController::class, 'destroy'])->name('booking-photos.destroy');
     });
 
+    // ── Screening Audiometry ──────────────────────────
+    Route::middleware('role:admin|lab_technician')
+        ->prefix('audiometry')->name('audiometry.')->group(function () {
+            Route::get('/',                        [\App\Http\Controllers\AudiometryController::class, 'index'])->name('index');
+            Route::post('/collect/{visit}',        [\App\Http\Controllers\AudiometryController::class, 'markCollected'])->name('collect');
+            Route::get('/enter/{visit}',           [\App\Http\Controllers\AudiometryController::class, 'enter'])->name('enter');
+            Route::post('/enter/{visit}',          [\App\Http\Controllers\AudiometryController::class, 'save'])->name('save');
+            Route::get('/print/{visit}',           [\App\Http\Controllers\AudiometryController::class, 'print'])->name('print');
+            Route::post('/claim/{audResult}',      [\App\Http\Controllers\AudiometryController::class, 'markClaimed'])->name('claim');
+            Route::post('/unclaim/{audResult}',    [\App\Http\Controllers\AudiometryController::class, 'markUnclaimed'])->name('unclaim');
+        });
+
     // ── X-Ray & Ultrasound ────────────────────────────
     Route::middleware('role:admin|xray_tech|doctor')
         ->prefix('xray')->name('xray.')->group(function () {

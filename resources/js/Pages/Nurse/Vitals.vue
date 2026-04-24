@@ -31,7 +31,6 @@ const form = useForm({
     respiratory_rate:         props.vitals?.respiratory_rate         ?? '',
     temperature_celsius:      props.vitals?.temperature_celsius      ?? '',
     oxygen_saturation:        props.vitals?.oxygen_saturation        ?? '',
-    heart_rate:               props.vitals?.heart_rate               ?? '',
     visual_acuity_right:      props.vitals?.visual_acuity_right      ?? '',
     visual_acuity_left:       props.vitals?.visual_acuity_left       ?? '',
     ishihara_result:          props.vitals?.ishihara_result          ?? '',
@@ -320,13 +319,6 @@ function submit() {
                             <div class="space-y-1.5">
                                 <Label class="text-xs">Pulse Rate (bpm)</Label>
                                 <Input v-model="form.pulse_rate"
-                                    type="number" min="30" max="250"
-                                    placeholder="e.g. 72"/>
-                            </div>
-
-                            <div class="space-y-1.5">
-                                <Label class="text-xs">Heart Rate (bpm)</Label>
-                                <Input v-model="form.heart_rate"
                                     type="number" min="30" max="250"
                                     placeholder="e.g. 72"/>
                             </div>

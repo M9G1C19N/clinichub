@@ -19,7 +19,8 @@
       "Bash(mysql:*)",
       "Bash(git:*)",
       "Bash(sudo /opt/lampp/lampp start)",
-      "Bash(/opt/lampp/lampp start:*)"
+      "Bash(/opt/lampp/lampp start:*)",
+      "Bash(xargs -I {} basename {})"
     ]
   }
 }

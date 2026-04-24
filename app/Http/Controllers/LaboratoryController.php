@@ -30,6 +30,13 @@ class LaboratoryController extends Controller
         // ── TODAY'S QUEUE ─────────────────────────────
         // Show patients whose queue assignment was for lab TODAY
         // regardless of queue status — they still need results entered
+        $labServiceCodes = [
+            'CBC','UA','FECALYSIS','BLOODTYPING','FBS','RBS','BUN',
+            'CREATININE','URICACID','CHOLESTEROL','TRIGLYCERIDES',
+            'HDLLDL','SGOT','SGPT','HBSAG','VDRL','PREGNANCY','DENGUE',
+            'THYROID','PSA','BLOOD_CHEMISTRY','HBA1C','OGTT',
+        ];
+
         $todayQueue = QueueRoomAssignment::with([
             'ticket.patient',
             'ticket.visit.labRequest',
@@ -64,12 +71,7 @@ class LaboratoryController extends Controller
                 'is_released'      => $a->ticket->visit?->labRequest?->status === 'released',
                 'collected_at'     => $a->ticket->visit?->labRequest?->collected_at?->format('h:i A'),
                 'services'         => collect($a->ticket->visit?->invoice?->items ?? [])
-                    ->filter(fn($i) => in_array($i->service_code, [
-                        'CBC','UA','FECALYSIS','BLOODTYPING','FBS','RBS','BUN',
-                        'CREATININE','URICACID','CHOLESTEROL','TRIGLYCERIDES',
-                        'HDLLDL','SGOT','SGPT','HBSAG','VDRL','PREGNANCY','DENGUE',
-                        'THYROID','PSA','BLOOD_CHEMISTRY','HBA1C','OGTT',
-                    ]))
+                    ->filter(fn($i) => in_array($i->service_code, $labServiceCodes))
                     ->map(fn($i) => ['code' => $i->service_code, 'name' => $i->service_name])
                     ->values()->toArray(),
             ] : null,
