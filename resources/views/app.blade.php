@@ -4,6 +4,24 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>ClinicHub — St. Peter Diagnostics</title>
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" href="/images/spdl-logo.png">
+    <link rel="apple-touch-icon" href="/images/spdl-logo.png">
+
+    <!-- Open Graph / Google Search -->
+    <meta name="description" content="Saint Peter Diagnostics and Laboratory — Medical and Dental Clinic in Claver, Surigao del Norte.">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Saint Peter Diagnostics and Laboratory">
+    <meta property="og:description" content="Medical and Dental Clinic — Surigao-Davao Coastal Road, Brgy. Ladgaron, Claver, Surigao del Norte 8410">
+    <meta property="og:image" content="/images/spdl-logo.png">
+    <meta property="og:image:alt" content="Saint Peter Diagnostics and Laboratory Logo">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Saint Peter Diagnostics and Laboratory">
+    <meta name="twitter:description" content="Medical and Dental Clinic in Claver, Surigao del Norte">
+    <meta name="twitter:image" content="/images/spdl-logo.png">
+
     @routes
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @inertiaHead
