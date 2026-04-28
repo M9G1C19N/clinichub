@@ -31,6 +31,7 @@ class EsignatureController extends Controller
                     'ptr_number'      => $u->esignature->ptr_number,
                     'signature_url'   => $u->esignature->signature_url,
                     'is_active'       => $u->esignature->is_active,
+                    'signature_scale' => $u->esignature->signature_scale ?? 1.0,
                 ] : null,
             ]);
 
@@ -40,21 +41,23 @@ class EsignatureController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'user_id'        => ['required', 'exists:users,id'],
-            'title'          => ['nullable', 'string', 'max:150'],
-            'license_number' => ['nullable', 'string', 'max:80'],
-            'ptr_number'     => ['nullable', 'string', 'max:80'],
-            'signature'      => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
-            'is_active'      => ['boolean'],
+            'user_id'         => ['required', 'exists:users,id'],
+            'title'           => ['nullable', 'string', 'max:150'],
+            'license_number'  => ['nullable', 'string', 'max:80'],
+            'ptr_number'      => ['nullable', 'string', 'max:80'],
+            'signature'       => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            'is_active'       => ['boolean'],
+            'signature_scale' => ['nullable', 'numeric', 'min:0.5', 'max:2.0'],
         ]);
 
         $existing = Esignature::where('user_id', $validated['user_id'])->first();
         $data = [
-            'user_id'        => $validated['user_id'],
-            'title'          => $validated['title'] ?? null,
-            'license_number' => $validated['license_number'] ?? null,
-            'ptr_number'     => $validated['ptr_number'] ?? null,
-            'is_active'      => $validated['is_active'] ?? true,
+            'user_id'         => $validated['user_id'],
+            'title'           => $validated['title'] ?? null,
+            'license_number'  => $validated['license_number'] ?? null,
+            'ptr_number'      => $validated['ptr_number'] ?? null,
+            'is_active'       => $validated['is_active'] ?? true,
+            'signature_scale' => $validated['signature_scale'] ?? 1.0,
         ];
 
         if ($request->hasFile('signature')) {

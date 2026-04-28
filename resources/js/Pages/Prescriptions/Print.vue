@@ -115,7 +115,7 @@ function triggerPrint() {
                     <div style="min-height:22px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:2px;">
                         <img v-if="doctor.signature_url"
                             :src="doctor.signature_url"
-                            style="max-height:40px;max-width:150px;object-fit:contain;"
+                            :style="{ height: Math.round(40 * (doctor.signature_scale ?? 1)) + 'px', maxWidth: '150px', objectFit: 'contain' }"
                             alt="Signature"/>
                     </div>
                     <div style="border-top:1px solid #333;min-width:170px;padding-top:3px;">

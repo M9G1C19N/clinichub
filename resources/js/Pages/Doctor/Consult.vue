@@ -333,6 +333,12 @@ const bpStatus = computed(() => {
                         <Save class="w-4 h-4"/>
                         Save Draft
                     </Button>
+                    <a v-if="consultation" :href="route('doctor.print', visit.id)" target="_blank">
+                        <Button variant="outline" class="gap-2">
+                            <Printer class="w-4 h-4"/>
+                            Print Draft
+                        </Button>
+                    </a>
                     <Button class="gap-2 text-white shadow-sm" @click="finalize"
                         :disabled="form.processing"
                         :style="{ backgroundColor: isPreEmployment ? '#8B5CF6' : '#1B4F9B' }">
@@ -1079,7 +1085,7 @@ const bpStatus = computed(() => {
                                         class="resize-none"/>
                                 </div>
                                 <div class="space-y-1.5">
-                                    <Label class="text-xs">Recommendation</Label>
+                                    <Label class="text-xs">Recommendation / Remarks</Label>
                                     <Textarea v-model="form.pe_recommendation" :rows="4"
                                         placeholder="Doctor's recommendation and remarks..."
                                         class="resize-none"/>

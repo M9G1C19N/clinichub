@@ -394,10 +394,12 @@ class DrugTestController extends Controller
                 'specimen_collection' => $test->specimen_collection,
                 'collector_name'        => $test->collector_name,
                 'collector_license'     => $test->collector_license,
-                'collector_signature'   => $this->sigUrl($test->collector_signature),
-                'head_of_lab_name'      => $test->head_of_lab_name,
-                'head_of_lab_license'   => $test->head_of_lab_license,
-                'head_of_lab_signature' => $this->sigUrl($test->head_of_lab_signature),
+                'collector_signature'    => $this->sigUrl($test->collector_signature),
+                'collector_sig_scale'    => $this->sigScale($test->collector_signature),
+                'head_of_lab_name'       => $test->head_of_lab_name,
+                'head_of_lab_license'    => $test->head_of_lab_license,
+                'head_of_lab_signature'  => $this->sigUrl($test->head_of_lab_signature),
+                'head_of_lab_sig_scale'  => $this->sigScale($test->head_of_lab_signature),
                 'remarks'             => $test->remarks,
                 'result'              => $test->result,
                 'result_remarks'      => $test->result_remarks,
@@ -425,8 +427,9 @@ class DrugTestController extends Controller
                 'title'         => $u->esignature?->title ?? null,
                 'license_number'=> $u->esignature?->license_number ?? $u->prc_number ?? '',
                 'ptr_number'    => $u->esignature?->ptr_number ?? $u->ptr_number ?? '',
-                'signature_url'  => $u->esignature?->signature_url ?? null,
-                'signature_path' => $u->esignature?->signature_path ?? null,
+                'signature_url'   => $u->esignature?->signature_url ?? null,
+                'signature_path'  => $u->esignature?->signature_path ?? null,
+                'signature_scale' => $u->esignature?->signature_scale ?? 1.0,
             ])
             ->values()
             ->toArray();
@@ -442,5 +445,15 @@ class DrugTestController extends Controller
             return $val;
         }
         return asset('storage/' . $val);
+    }
+
+    private function sigScale(?string $val): float
+    {
+        if (!$val) return 1.0;
+        $path = str_starts_with($val, 'http')
+            ? (preg_match('#/storage/(.+)$#', $val, $m) ? $m[1] : null)
+            : $val;
+        if (!$path) return 1.0;
+        return (float) (\App\Models\Esignature::where('signature_path', $path)->value('signature_scale') ?? 1.0);
     }
 }

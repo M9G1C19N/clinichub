@@ -61,23 +61,25 @@ const previewUrl  = ref(null)
 const fileInput   = ref(null)
 
 const form = useForm({
-    user_id:        '',
-    title:          '',
-    license_number: '',
-    ptr_number:     '',
-    signature:      null,
-    is_active:      true,
+    user_id:         '',
+    title:           '',
+    license_number:  '',
+    ptr_number:      '',
+    signature:       null,
+    is_active:       true,
+    signature_scale: 1.0,
 })
 
 function openEdit(user) {
     editingUser.value   = user
     previewUrl.value    = user.esignature?.signature_url ?? null
-    form.user_id        = user.id
-    form.title          = user.esignature?.title          ?? ''
-    form.license_number = user.esignature?.license_number ?? user.prc_number ?? ''
-    form.ptr_number     = user.esignature?.ptr_number     ?? ''
-    form.signature      = null
-    form.is_active      = user.esignature?.is_active      ?? true
+    form.user_id         = user.id
+    form.title           = user.esignature?.title          ?? ''
+    form.license_number  = user.esignature?.license_number ?? user.prc_number ?? ''
+    form.ptr_number      = user.esignature?.ptr_number     ?? ''
+    form.signature       = null
+    form.is_active       = user.esignature?.is_active      ?? true
+    form.signature_scale = user.esignature?.signature_scale ?? 1.0
     form.clearErrors()
 }
 
@@ -259,14 +261,20 @@ function toggle(esigId) {
                         </span>
 
                         <!-- Signature preview -->
-                        <div class="rounded-xl border border-dashed border-slate-200 bg-white h-16 flex items-center justify-center overflow-hidden">
+                        <div class="rounded-xl border border-dashed border-slate-200 bg-white flex items-center justify-center overflow-hidden px-2"
+                            :style="{ minHeight: '48px', padding: '6px 8px' }">
                             <img v-if="user.esignature?.signature_url"
                                 :src="user.esignature.signature_url"
-                                alt="Signature" class="max-h-12 max-w-full object-contain p-1"/>
+                                :style="{ height: Math.round(40 * (user.esignature.signature_scale ?? 1)) + 'px', maxWidth: '100%', objectFit: 'contain' }"
+                                alt="Signature"/>
                             <span v-else class="text-xs text-slate-400 flex items-center gap-1">
                                 <AlertCircle class="w-3.5 h-3.5 text-amber-400"/> No signature
                             </span>
                         </div>
+                        <p v-if="user.esignature?.signature_scale && user.esignature.signature_scale !== 1"
+                            class="text-xs text-center text-blue-500 font-semibold -mt-1">
+                            {{ Number(user.esignature.signature_scale).toFixed(2) }}× scale
+                        </p>
 
                         <!-- License info -->
                         <div v-if="user.esignature?.license_number || user.esignature?.ptr_number"
@@ -372,6 +380,45 @@ function toggle(esigId) {
                         <input ref="fileInput" type="file" accept="image/png,image/jpeg,image/webp"
                             class="hidden" @change="onFileChange"/>
                         <p v-if="form.errors.signature" class="text-xs text-red-500 mt-1">{{ form.errors.signature }}</p>
+                    </div>
+
+                    <!-- Signature Scale -->
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-semibold text-slate-600">Signature Size in Print</label>
+                            <span class="text-xs font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg">
+                                {{ Number(form.signature_scale).toFixed(2) }}×
+                            </span>
+                        </div>
+                        <input type="range"
+                            v-model.number="form.signature_scale"
+                            min="0.5" max="2.0" step="0.05"
+                            class="w-full h-2 rounded-full appearance-none cursor-pointer accent-blue-600"
+                            style="background: linear-gradient(to right, #1B4F9B 0%, #1B4F9B var(--pct), #e2e8f0 var(--pct), #e2e8f0 100%)"
+                            :style="{ '--pct': ((form.signature_scale - 0.5) / 1.5 * 100) + '%' }"/>
+                        <div class="flex justify-between text-xs text-slate-400 font-medium px-0.5">
+                            <span>0.50×</span><span>1.00×</span><span>1.50×</span><span>2.00×</span>
+                        </div>
+                        <!-- Quick presets -->
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xs text-slate-400">Preset:</span>
+                            <button v-for="p in [0.75, 1.0, 1.25, 1.5]" :key="p"
+                                type="button"
+                                @click="form.signature_scale = p"
+                                :class="['text-xs px-2 py-0.5 rounded-lg font-semibold transition-colors',
+                                    Math.abs(form.signature_scale - p) < 0.01
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200']">
+                                {{ p }}×
+                            </button>
+                        </div>
+                        <!-- Live preview at selected scale -->
+                        <div v-if="previewUrl"
+                            class="border border-dashed border-blue-200 rounded-xl bg-blue-50/30 p-3 flex flex-col items-center gap-1">
+                            <p class="text-xs text-slate-400 mb-1">Preview at {{ Number(form.signature_scale).toFixed(2) }}×</p>
+                            <img :src="previewUrl" alt="Preview"
+                                :style="{ height: Math.round(40 * form.signature_scale) + 'px', maxWidth: '100%', objectFit: 'contain' }"/>
+                        </div>
                     </div>
 
                     <!-- Active toggle -->

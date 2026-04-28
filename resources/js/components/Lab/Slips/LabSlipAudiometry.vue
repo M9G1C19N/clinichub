@@ -344,10 +344,11 @@ function fv(key) {
             <!-- Examined By -->
             <div style="font-size:10px;">
                 <div style="color:#555;margin-bottom:4px;">Examined By:</div>
-                <div style="min-height:40px;display:flex;align-items:flex-end;margin-bottom:3px;">
+                <div style="display:flex;align-items:flex-end;margin-bottom:3px;">
                     <img v-if="audResult?.examined_by_signature"
                         :src="audResult.examined_by_signature"
-                        style="max-height:38px;max-width:150px;object-fit:contain;" alt="Signature"/>
+                        :style="{ height: Math.round(38 * (audResult.examined_by_sig_scale ?? 1)) + 'px', maxWidth: '150px', objectFit: 'contain' }"
+                        alt="Signature"/>
                 </div>
                 <div style="border-top:1.5px solid #333;padding-top:2px;">
                     <div style="font-weight:900;font-size:11px;">{{ audResult?.examined_by_name }}</div>
@@ -357,10 +358,11 @@ function fv(key) {
             <!-- Noted By -->
             <div style="font-size:10px;text-align:right;">
                 <div style="color:#555;margin-bottom:4px;">Noted:</div>
-                <div style="min-height:40px;display:flex;align-items:flex-end;justify-content:flex-end;margin-bottom:3px;">
+                <div style="display:flex;align-items:flex-end;justify-content:flex-end;margin-bottom:3px;">
                     <img v-if="audResult?.noted_by_signature"
                         :src="audResult.noted_by_signature"
-                        style="max-height:38px;max-width:150px;object-fit:contain;" alt="Signature"/>
+                        :style="{ height: Math.round(38 * (audResult.noted_by_sig_scale ?? 1)) + 'px', maxWidth: '150px', objectFit: 'contain' }"
+                        alt="Signature"/>
                 </div>
                 <div style="border-top:1.5px solid #333;padding-top:2px;">
                     <div style="font-weight:900;font-size:11px;">{{ audResult?.noted_by_name }}</div>

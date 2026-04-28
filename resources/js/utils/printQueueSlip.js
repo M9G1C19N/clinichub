@@ -25,8 +25,6 @@ const ROOM_LABEL = {
     interview_room: 'INTERVIEW ROOM (DOCTOR)',
 }
 
-const GATED_ROOMS = new Set(['interview_room'])
-
 const VISIT_LABEL = {
     opd:            'OPD',
     pre_employment: 'Pre-Employment',
@@ -44,7 +42,49 @@ const PRIORITY_COLOR = {
     regular:  '#64748b',
 }
 
-const PE_TYPES = new Set(['pre_employment', 'annual_pe', 'exit_pe'])
+const PE_TYPES   = new Set(['pre_employment', 'annual_pe', 'exit_pe'])
+const SLIP_ROOMS = new Set(['drug_test', 'laboratory', 'xray_utz'])
+
+const CHECKLIST_DEFS = [
+    {
+        label:     'VITAL SIGNS',
+        room:      'nurse_station',
+        condition: (roomMap) => !!roomMap['nurse_station'],
+    },
+    {
+        label:     'PHYSICAL EXAM / MEDICAL HISTORY',
+        room:      'interview_room',
+        condition: (roomMap) => !!roomMap['interview_room'],
+    },
+    {
+        label:     'BLOOD EXTRACTION',
+        room:      'laboratory',
+        condition: (_roomMap, services) =>
+            services.some(s => SERVICE_ROOM_MAP[s] === 'laboratory' && s !== 'UA' && s !== 'FECALYSIS'),
+    },
+    {
+        label:     'URINE SAMPLE',
+        room:      'laboratory',
+        condition: (_roomMap, services) => services.includes('UA'),
+    },
+    {
+        label:     'STOOL SAMPLE',
+        room:      'laboratory',
+        condition: (_roomMap, services) => services.includes('FECALYSIS'),
+    },
+    {
+        label:     'DRUG TEST',
+        room:      'drug_test',
+        condition: (roomMap) => !!roomMap['drug_test'],
+    },
+    {
+        label:     'CHEST X-RAY / X-RAY & ULTRASOUND',
+        room:      'xray_utz',
+        condition: (roomMap) => !!roomMap['xray_utz'],
+    },
+]
+
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
 
 function esc(str) {
     return String(str ?? '')
@@ -60,9 +100,10 @@ export function printQueueSlip(ticket) {
     const priorityClr = PRIORITY_COLOR[ticket.priority] ?? '#64748b'
     const visitLabel  = VISIT_LABEL[ticket.visit_type] ?? ticket.visit_type ?? ''
     const services    = ticket.services ?? []
-    const rooms       = ticket.rooms ?? []
+    const allRooms    = ticket.rooms ?? []
     const caseNo      = ticket.case_number ?? 'N/A'
     const isPE        = PE_TYPES.has(ticket.visit_type)
+    const logoSrc     = `${window.location.origin}/images/spdl-logo.png`
 
     let extraLabel = ''
     let extraValue = ''
@@ -74,98 +115,109 @@ export function printQueueSlip(ticket) {
         extraValue = ticket.chief_complaint
     }
 
-    function getRoomServices(roomKey) {
-        if (roomKey === 'nurse_station') return ['Vital Signs', 'Nursing Assessment']
-        return services.filter(s => SERVICE_ROOM_MAP[s] === roomKey)
-    }
+    const roomMap = {}
+    allRooms.forEach(r => { roomMap[r.room] = r })
+
+    const SLIP_ORDER = ['drug_test', 'laboratory', 'xray_utz']
+    const slipRooms  = SLIP_ORDER.map(key => roomMap[key]).filter(Boolean)
+
+    // ── LEFT: room slips ────────────────────────────────────────────────────
 
     function roomSlipHtml(r) {
         const label    = ROOM_LABEL[r.room] ?? r.room.replace(/_/g, ' ').toUpperCase()
-        const isGated  = GATED_ROOMS.has(r.room)
-        const roomSvcs = getRoomServices(r.room)
+        const roomSvcs = services.filter(s => SERVICE_ROOM_MAP[s] === r.room)
         const svcsText = roomSvcs.join(' &middot; ')
-
-        // Merge company/complaint + services onto one line to save vertical space
-        let comboLine = ''
-        if (extraLabel && svcsText) {
-            comboLine = `<b>${esc(extraLabel)}:</b> ${esc(extraValue)} &nbsp;|&nbsp; <b>Services:</b> ${svcsText}`
-        } else if (extraLabel) {
-            comboLine = `<b>${esc(extraLabel)}:</b> ${esc(extraValue)}`
-        } else if (svcsText) {
-            comboLine = `<b>Services:</b> ${svcsText}`
-        }
 
         return `
 <div class="room-slip">
-  <div class="slip-body">
-    <div class="slip-top">
-      <div class="slip-left">
-        <div class="room-name">${esc(label)}${isGated ? ' <span class="star">&#9733;</span>' : ''}</div>
-        <div class="patient-line">${esc(ticket.patient_name)} &nbsp;&bull;&nbsp; <span class="pcode">${esc(ticket.patient_code)}</span></div>
-      </div>
-      <div class="slip-right">
-        <div class="room-qnum">${esc(r.queue_number)}</div>
-      </div>
-    </div>
-    <div class="meta-row">
-      <b>Case #:</b> ${esc(caseNo)}<span class="sep">|</span><b>Ticket:</b> ${esc(ticket.ticket_number)}<span class="sep">|</span>${esc(visitLabel)}<span class="sep">|</span><span class="pbadge" style="background:${priorityClr}">${esc(priority)}</span><span class="sep">|</span>${esc(ticket.issued_at)}
-    </div>
-    ${comboLine ? `<div class="combo-row">${comboLine}</div>` : ''}
-    ${isGated ? `<div class="gated-note">&#9733; Proceed here ONLY after completing all other rooms</div>` : ''}
-    <div class="sdivider"></div>
+  <div class="slip-header">
+    <div class="slip-room-name">${esc(label)}</div>
+    <div class="slip-qnum">${esc(r.queue_number)}</div>
+  </div>
+  <div class="slip-patient-name">${esc(ticket.patient_name)}</div>
+  <div class="slip-patient-code">${esc(ticket.patient_code)}</div>
+  <div class="slip-meta">
+    <b>Case #:</b>&nbsp;${esc(caseNo)}&nbsp;<span class="sep">|</span>&nbsp;<b>Ticket:</b>&nbsp;${esc(ticket.ticket_number)}&nbsp;<span class="sep">|</span>&nbsp;<span class="sl-visit">${esc(visitLabel)}</span>&nbsp;<span class="sep">|</span>&nbsp;<span class="pbadge" style="background:${priorityClr}">${esc(priority)}</span>
+  </div>
+  ${extraLabel ? `<div class="slip-extra"><b>${esc(extraLabel)}:</b> ${esc(extraValue)}</div>` : ''}
+  ${svcsText ? `<div class="slip-svcs"><b>Svcs:</b> ${svcsText}</div>` : ''}
+  <div class="slip-sdiv"></div>
+  <div class="sig-block">
     <div class="sig-row">
-      <span class="slbl">Received by:</span><span class="sline sline-name"></span>
-      <span class="slbl">Date:</span><span class="sline sline-dt"></span>
-      <span class="slbl">Time:</span><span class="sline sline-dt"></span>
+      <span class="sig-lbl">Received by:</span><span class="sig-line sig-name"></span>
+      &nbsp;<span class="sig-lbl">Date:</span><span class="sig-line sig-date"></span>
+      &nbsp;<span class="sig-lbl">Time:</span><span class="sig-line sig-time"></span>
     </div>
-    <div class="sig-row sig-last">
-      <span class="slbl">Signature:</span><span class="sline sline-full"></span>
+    <div class="sig-row">
+      <span class="sig-lbl">Signature:</span><span class="sig-line sig-full"></span>
     </div>
   </div>
-</div>
-<div class="cut-line">&#9988;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash; CUT HERE &mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&#9988;</div>`
-    }
-
-    function checklistHtml() {
-        const hasGated = rooms.some(r => GATED_ROOMS.has(r.room))
-        const rows = rooms.map(r => {
-            const label   = ROOM_LABEL[r.room] ?? r.room.replace(/_/g, ' ').toUpperCase()
-            const isGated = GATED_ROOMS.has(r.room)
-            return `
-<div class="cl-row">
-  <span class="cl-box">&#9744;</span>
-  <span class="cl-room">${esc(label)}${isGated ? ' <span class="star">&#9733;</span>' : ''}</span>
-  <span class="cl-qnum">${esc(r.queue_number)}</span>
-  <span class="cl-slbl">Staff Signature:</span>
-  <span class="cl-sline"></span>
-</div>`
-        }).join('')
-
-        return `
-<div class="pcopy">
-  <div class="pc-title">&#9733; PATIENT COPY &mdash; ROUTING CHECKLIST &#9733;</div>
-  <div class="pc-info">
-    <b>${esc(ticket.patient_name)}</b><span class="sep">|</span>Case #: <b>${esc(caseNo)}</b><span class="sep">|</span>Ticket: <b>${esc(ticket.ticket_number)}</b><span class="sep">|</span>${esc(visitLabel)}<span class="sep">|</span><span class="pbadge" style="background:${priorityClr}">${esc(priority)}</span><span class="sep">|</span>${esc(ticket.issued_at)}
-  </div>
-  ${extraLabel ? `<div class="pc-extra"><b>${esc(extraLabel)}:</b> ${esc(extraValue)}</div>` : ''}
-  <div class="pc-div"></div>
-  ${rows}
-  ${hasGated ? `<div class="cl-note">&#9733; = Proceed to Interview Room (Doctor) only after ALL other rooms are completed</div>` : ''}
 </div>`
     }
 
-    // ── Compute zoom so content always fills top half of A4 ──────────────────
-    // A4 usable height (297mm - 6mm top margin - 6mm bottom margin) = 285mm
-    // Target = top half = 285mm / 2 = 142mm
-    // Estimated natural content height (mm): header(8) + N×slip(31) + N×cut(2) + checklist(27)
-    const TARGET_MM   = 142
-    const naturalMm   = 8 + rooms.length * 33 + 27
-    const zoomFactor  = naturalMm > TARGET_MM
-        ? (TARGET_MM / naturalMm).toFixed(4)
-        : '1'
-    // ────────────────────────────────────────────────────────────────────────
+    const leftHtml = slipRooms.length > 0
+        ? slipRooms.map(r => roomSlipHtml(r)).join(`
+<div class="slip-cut">
+  <span class="slip-cut-label">&#9988;&nbsp; CUT HERE &nbsp;&#9988;</span>
+</div>`)
+        : '<div class="no-slips">No applicable rooms</div>'
 
-    const slipsHtml   = rooms.map(r => roomSlipHtml(r)).join('')
+    // ── RIGHT: checklist ────────────────────────────────────────────────────
+
+    let romanIdx = 0
+    const checklistItems = CHECKLIST_DEFS
+        .filter(def => def.condition(roomMap, services))
+        .map(def => ({
+            roman: ROMAN[romanIdx++],
+            label: def.label,
+            qnum:  roomMap[def.room]?.queue_number ?? '—',
+        }))
+
+    // Each item is flex:1 so items spread evenly to fill remaining height
+    const checklistHtml = checklistItems.map(item => `
+<div class="cc-item">
+  <div class="cc-item-body">
+    <div class="cc-item-top">
+      <span class="cc-roman">${item.roman}.</span>
+      <span class="cc-item-name">${esc(item.label)}</span>
+      <span class="cc-qnum">Q#&nbsp;<b>${esc(item.qnum)}</b></span>
+    </div>
+    <div class="cc-item-sig">
+      <span class="cc-sig-lbl">Staff Signature:</span>
+      <span class="cc-sig-line"></span>
+    </div>
+  </div>
+</div>`).join('')
+
+    const vitalSignsHtml = roomMap['nurse_station'] ? `
+<div class="vs-section">
+  <div class="vs-title">Vital Signs</div>
+  <div class="vs-grid">
+    <div class="vs-row">
+      <span class="vs-lbl">A. Weight (kg.)</span>
+      <span class="vs-line"></span>
+    </div>
+    <div class="vs-row">
+      <span class="vs-lbl">B. Height (m)</span>
+      <span class="vs-line"></span>
+    </div>
+    <div class="vs-row">
+      <span class="vs-lbl">D. Pulse (beats/min)</span>
+      <span class="vs-line"></span>
+    </div>
+    <div class="vs-row vs-bp-row">
+      <span class="vs-lbl">E. BP</span>
+      <span class="vs-line vs-bp"></span>
+      <span class="vs-slash">/</span>
+      <span class="vs-line vs-bp"></span>
+      <span class="vs-unit">mmHg</span>
+    </div>
+  </div>
+  <div class="vs-row vs-lmp">
+    <span class="vs-lbl">Last Normal Menstrual Period</span>
+    <span class="vs-line"></span>
+  </div>
+</div>` : ''
 
     const html = `<!DOCTYPE html>
 <html>
@@ -174,91 +226,221 @@ export function printQueueSlip(ticket) {
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /*
-   * Print on standard A4. CSS zoom scales the content so it always occupies
-   * exactly the top half of the A4 sheet — cut along the guide line below.
-   */
   @page { size: A4 portrait; margin: 6mm; }
 
   body {
     font-family: Arial, Helvetica, sans-serif;
-    font-size: 8px;
+    font-size: 10px;
     color: #1e293b;
     background: white;
-    /* zoom forces content to fit in top-half of A4 when there are many rooms */
-    zoom: ${zoomFactor};
-    width: ${Math.round(197 / Number(zoomFactor))}mm;
+    width: 198mm;
   }
 
-  /* ── CLINIC HEADER ─────────────────────────────── */
-  .clinic-hdr {
-    text-align: center;
-    padding-bottom: 3px;
-    border-bottom: 1.5px solid #0F2044;
-    margin-bottom: 3px;
+  /* ── TWO-COLUMN WRAPPER — top half of A4 (140mm) ─── */
+  .page-wrap {
+    display: flex;
+    flex-direction: row;
+    width: 198mm;
+    height: 140mm;
+    align-items: stretch;
+    overflow: hidden;
   }
-  .clinic-name { font-size: 11px; font-weight: 900; color: #0F2044; text-transform: uppercase; letter-spacing: 0.4px; line-height: 1.15; }
-  .clinic-sub  { font-size: 7px; color: #64748b; line-height: 1.3; }
-  .slip-ttl    { font-size: 8px; font-weight: 700; color: #0F2044; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 1px; }
 
-  /* ── ROOM SLIP ─────────────────────────────────── */
-  .room-slip { border: 1.5px solid #1e293b; border-radius: 2px; background: white; page-break-inside: avoid; break-inside: avoid; }
-  .slip-body { padding: 3px 7px; }
+  /* ── LEFT COLUMN ─────────────────────────────────── */
+  .left-col {
+    width: 88mm;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
 
-  .slip-top  { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2px; }
-  .slip-left { flex: 1; min-width: 0; }
-  .slip-right{ flex-shrink: 0; padding-left: 6px; text-align: right; }
+  /* ── CENTER: vertical cut line ───────────────────── */
+  .cut-col {
+    width: 9mm;
+    flex-shrink: 0;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cut-vline {
+    position: absolute;
+    top: 0; bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    border-left: 1.5px dashed #94a3b8;
+  }
+  .cut-scissors {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12mm;
+    background: white;
+    padding: 4mm 1mm;
+  }
+  .cut-icon { font-size: 11px; color: #94a3b8; transform: rotate(90deg); display: block; }
 
-  .room-name    { font-size: 12px; font-weight: 900; color: #0F2044; line-height: 1.1; }
-  .patient-line { font-size: 8.5px; font-weight: 700; color: #1e293b; margin-top: 2px; line-height: 1.2; }
-  .pcode        { font-family: monospace; font-weight: 400; color: #64748b; font-size: 7.5px; }
-  .room-qnum    { font-size: 26px; font-weight: 900; color: #0F2044; line-height: 1; letter-spacing: 0.5px; }
+  /* ── RIGHT COLUMN ─────────────────────────────────── */
+  .right-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding-left: 2mm;
+    overflow: hidden;
+    min-width: 0;
+  }
 
-  .meta-row  { font-size: 7.5px; color: #475569; display: flex; flex-wrap: wrap; align-items: center; gap: 1px 3px; margin-bottom: 1.5px; line-height: 1.3; }
-  .combo-row { font-size: 7.5px; color: #334155; margin-bottom: 1.5px; line-height: 1.3; }
-  .gated-note{ font-size: 7px; color: #b45309; font-style: italic; margin-bottom: 1px; }
+  /* ══ LEFT: ROOM SLIP STYLES ════════════════════════ */
+  .room-slip {
+    height: 44mm;
+    flex-shrink: 0;
+    border: 2px solid #1e293b;
+    border-radius: 3px;
+    padding: 2.5mm 3mm 2mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: white;
+  }
+  .slip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1mm;
+  }
+  .slip-room-name { font-size: 13px; font-weight: 900; color: #0F2044; line-height: 1.1; flex: 1; }
+  .slip-qnum      { font-size: 32px; font-weight: 900; color: #0F2044; line-height: 1; letter-spacing: -0.5px; text-align: right; margin-left: 2mm; flex-shrink: 0; }
+  .slip-patient-name { font-size: 10.5px; font-weight: 700; color: #1e293b; line-height: 1.2; margin-bottom: 0.3mm; }
+  .slip-patient-code { font-size: 8px; font-family: monospace; color: #64748b; margin-bottom: 1mm; }
+  .slip-meta {
+    font-size: 7.5px; color: #475569; line-height: 1.5; margin-bottom: 0.8mm;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0 1px;
+  }
+  .sep      { color: #cbd5e1; }
+  .sl-visit { font-weight: 700; }
+  .pbadge   { display: inline-block; font-size: 7px; font-weight: 700; padding: 1px 4px; border-radius: 6px; color: white; line-height: 1.4; }
+  .slip-extra { font-size: 7.5px; color: #334155; margin-bottom: 0.5mm; line-height: 1.3; }
+  .slip-svcs  { font-size: 7px; color: #475569; margin-bottom: 0.5mm; line-height: 1.3; }
+  .slip-sdiv  { border-top: 1px dashed #94a3b8; margin: 1mm 0; flex-shrink: 0; }
+  .sig-block  { display: flex; flex-direction: column; gap: 1mm; flex-shrink: 0; }
+  .sig-row    { display: flex; align-items: flex-end; gap: 1px; font-size: 7.5px; color: #475569; }
+  .sig-lbl    { white-space: nowrap; flex-shrink: 0; }
+  .sig-line   { border-bottom: 1px solid #1e293b; display: inline-block; }
+  .sig-name   { width: 20mm; }
+  .sig-date   { width: 12mm; }
+  .sig-time   { width: 10mm; }
+  .sig-full   { flex: 1; min-width: 30mm; }
 
-  .pbadge { display: inline-block; font-size: 7px; font-weight: 700; padding: 0.5px 4px; border-radius: 6px; color: white; line-height: 1.4; }
-  .sep    { color: #cbd5e1; margin: 0 1px; }
-  .star   { color: #d97706; }
-
-  .sdivider { border-top: 1px dashed #94a3b8; margin: 3px 0 2px; }
-  .sig-row  { display: flex; align-items: flex-end; gap: 2px; font-size: 7.5px; color: #475569; margin-bottom: 2.5px; }
-  .sig-last { margin-bottom: 0; }
-  .slbl     { white-space: nowrap; flex-shrink: 0; }
-  .sline    { border-bottom: 1px solid #1e293b; display: inline-block; }
-  .sline-name { width: 30mm; }
-  .sline-dt   { width: 15mm; }
-  .sline-full { flex: 1; min-width: 40mm; }
-
-  /* ── CUT LINE BETWEEN SLIPS ────────────────────── */
-  .cut-line { text-align: center; font-size: 7px; color: #94a3b8; padding: 1.5px 0; }
-
-  /* ── PATIENT CHECKLIST ─────────────────────────── */
-  .pcopy { border: 2px solid #0F2044; border-radius: 2px; padding: 4px 7px; background: #f8fafc; page-break-inside: avoid; break-inside: avoid; }
-  .pc-title { font-size: 8.5px; font-weight: 900; text-align: center; color: #0F2044; letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 2px; }
-  .pc-info  { font-size: 7.5px; color: #475569; display: flex; flex-wrap: wrap; align-items: center; gap: 1px 3px; margin-bottom: 1.5px; line-height: 1.3; }
-  .pc-extra { font-size: 7.5px; color: #334155; margin-bottom: 1.5px; }
-  .pc-div   { border-top: 1px solid #cbd5e1; margin: 2px 0; }
-
-  .cl-row  { display: flex; align-items: center; gap: 3px; margin-bottom: 3.5px; font-size: 7.5px; }
-  .cl-box  { font-size: 11px; flex-shrink: 0; line-height: 1; }
-  .cl-room { font-weight: 700; color: #0F2044; min-width: 38mm; }
-  .cl-qnum { font-weight: 900; color: #0F2044; font-size: 8.5px; min-width: 12mm; font-family: monospace; }
-  .cl-slbl { color: #64748b; flex-shrink: 0; white-space: nowrap; }
-  .cl-sline{ flex: 1; border-bottom: 1px solid #1e293b; display: inline-block; min-width: 20mm; }
-  .cl-note { font-size: 7px; color: #b45309; font-style: italic; text-align: center; margin-top: 2px; }
-
-  /* ── MID-PAGE CUT GUIDE (fold & cut A4 in half) ── */
-  .page-cut-guide {
-    margin-top: 6mm;
-    text-align: center;
-    font-size: 8px;
-    color: #94a3b8;
-    letter-spacing: 1px;
+  .slip-cut {
+    height: 4mm; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; position: relative;
+  }
+  .slip-cut::before {
+    content: ''; position: absolute; left: 0; right: 0; top: 50%;
     border-top: 1.5px dashed #94a3b8;
-    padding-top: 3px;
-    page-break-inside: avoid;
+  }
+  .slip-cut-label {
+    position: relative; z-index: 1; background: white; padding: 0 3px;
+    font-size: 6.5px; color: #94a3b8; letter-spacing: 0.3px; font-style: italic;
+  }
+  .no-slips { font-size: 10px; color: #94a3b8; text-align: center; padding: 8mm; }
+
+  /* ══ RIGHT: CUSTOMER'S COPY STYLES ════════════════ */
+
+  /* Header */
+  .cc-header {
+    display: flex; align-items: center; gap: 2mm;
+    border-bottom: 2px solid #0F2044; padding-bottom: 1mm; margin-bottom: 1mm;
+    flex-shrink: 0;
+  }
+  .cc-logo img     { width: 12mm; height: 12mm; object-fit: contain; flex-shrink: 0; }
+  .cc-clinic       { flex: 1; line-height: 1.2; }
+  .cc-clinic-name  { font-size: 11px; font-weight: 900; color: #0F2044; text-transform: uppercase; letter-spacing: 0.2px; line-height: 1.1; }
+  .cc-clinic-sub   { font-size: 8.5px; color: #475569; }
+  .cc-clinic-addr  { font-size: 7.5px; color: #64748b; line-height: 1.25; }
+  .cc-title-block  { text-align: center; border: 2px solid #0F2044; padding: 1.5mm 2mm; border-radius: 3px; flex-shrink: 0; background: #0F2044; }
+  .cc-title        { font-size: 12px; font-weight: 900; color: white; letter-spacing: 0.8px; text-transform: uppercase; line-height: 1.2; }
+  .cc-subtitle     { font-size: 7px; color: #93c5fd; }
+
+  /* Patient info — 3-column grid */
+  .cc-patient {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.7mm 3mm;
+    margin-bottom: 1mm;
+    flex-shrink: 0;
+  }
+  .cc-field      { display: flex; flex-direction: column; border-bottom: 1px solid #cbd5e1; padding-bottom: 0.5mm; }
+  .cc-field-full { grid-column: 1 / -1; }
+  .cc-field-two  { grid-column: span 2; }
+  .cc-lbl        { font-size: 7.5px; color: #64748b; text-transform: uppercase; letter-spacing: 0.2px; line-height: 1.2; }
+  .cc-val        { font-size: 11px; font-weight: 700; color: #1e293b; line-height: 1.25; min-height: 3mm; }
+
+  /* Vital signs — 2-column compact grid */
+  .vs-section {
+    border: 1.5px solid #0F2044; border-radius: 3px;
+    padding: 1mm 2.5mm 1mm; margin-bottom: 1mm; flex-shrink: 0;
+  }
+  .vs-title {
+    font-size: 11px; font-weight: 900; color: #0F2044; text-align: center;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    border-bottom: 1.5px solid #cbd5e1; padding-bottom: 0.5mm; margin-bottom: 0.8mm;
+  }
+  .vs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1mm 4mm; margin-bottom: 0.8mm; }
+  .vs-row      { display: flex; align-items: flex-end; gap: 2mm; font-size: 10px; color: #1e293b; }
+  .vs-lbl      { flex-shrink: 0; line-height: 1.4; white-space: nowrap; font-weight: 600; }
+  .vs-line     { flex: 1; border-bottom: 1.5px solid #1e293b; min-height: 2.5mm; }
+  .vs-bp       { width: 13mm; flex: none; }
+  .vs-slash    { flex-shrink: 0; font-weight: 900; font-size: 11px; }
+  .vs-unit     { flex-shrink: 0; color: #64748b; font-size: 9px; }
+  .vs-lmp      { margin-top: 0; }
+
+  .cc-divider { border-top: 1.5px solid #0F2044; margin-bottom: 1mm; flex-shrink: 0; }
+
+  /* Checklist title */
+  .cc-checklist-title {
+    font-size: 8px; font-weight: 900; color: #0F2044;
+    text-transform: uppercase; letter-spacing: 0.4px;
+    text-align: center; margin-bottom: 0.8mm; flex-shrink: 0;
+  }
+
+  /* Checklist container — flex:1 fills remaining height */
+  .cc-checklist {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    min-height: 0;
+  }
+
+  /* Each item stretches evenly in remaining space */
+  .cc-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-bottom: 1px dashed #e2e8f0;
+    padding: 0;
+  }
+  .cc-item:last-child { border-bottom: none; }
+
+  .cc-item-top {
+    display: flex; align-items: baseline; gap: 1mm; margin-bottom: 0.3mm;
+  }
+  .cc-roman     { font-size: 8px; font-weight: 900; color: #0F2044; min-width: 6.5mm; text-align: right; flex-shrink: 0; }
+  .cc-item-name { font-size: 8px; font-weight: 700; color: #1e293b; flex: 1; line-height: 1.2; }
+  .cc-qnum      { font-size: 7.5px; color: #475569; flex-shrink: 0; white-space: nowrap; }
+  .cc-item-sig  { display: flex; align-items: center; gap: 1mm; padding-left: 7.5mm; }
+  .cc-sig-lbl   { font-size: 7px; color: #64748b; flex-shrink: 0; white-space: nowrap; }
+  .cc-sig-line  { flex: 1; border-bottom: 1px solid #1e293b; }
+
+  /* ── HORIZONTAL CUT GUIDE ─────────────────────────── */
+  .h-cut-guide {
+    margin-top: 3mm; border-top: 1.5px dashed #94a3b8;
+    text-align: center; padding-top: 2px;
+    font-size: 7.5px; color: #94a3b8; letter-spacing: 0.5px;
   }
 
   @media print {
@@ -268,19 +450,99 @@ export function printQueueSlip(ticket) {
 </head>
 <body>
 
-<div class="clinic-hdr">
-  <div class="clinic-name">Saint Peter Diagnostics &amp; Laboratory</div>
-  <div class="clinic-sub">Claver, Surigao del Norte</div>
-  <div class="slip-ttl">Patient Routing Slip</div>
+<div class="page-wrap">
+
+  <!-- LEFT: Room slips (Drug Test / Laboratory / X-Ray & UTZ) -->
+  <div class="left-col">
+    ${leftHtml}
+  </div>
+
+  <!-- CENTER: Vertical cut line -->
+  <div class="cut-col">
+    <div class="cut-vline"></div>
+    <div class="cut-scissors">
+      <span class="cut-icon">&#9988;</span>
+      <span class="cut-icon">&#9988;</span>
+    </div>
+  </div>
+
+  <!-- RIGHT: Customer's Copy -->
+  <div class="right-col">
+
+    <div class="cc-header">
+      <div class="cc-logo"><img src="${logoSrc}" alt="SPDL Logo"></div>
+      <div class="cc-clinic">
+        <div class="cc-clinic-name">Saint Peter Diagnostics and Laboratory</div>
+        <div class="cc-clinic-sub">Medical and Dental Clinic</div>
+        <div class="cc-clinic-addr">Surigao-Davao Coastal Road, Brgy. Ladgaron, Claver, Surigao del Norte 8410</div>
+        <div class="cc-clinic-addr">Tel. 09516832212 &nbsp;|&nbsp; spdl.claver2007@gmail.com</div>
+      </div>
+      <div class="cc-title-block">
+        <div class="cc-title">CUSTOMER'S<br>COPY</div>
+        <div class="cc-subtitle">Routing Slip</div>
+      </div>
+    </div>
+
+    <div class="cc-patient">
+      <div class="cc-field cc-field-full">
+        <span class="cc-lbl">Patient Name</span>
+        <span class="cc-val">${esc(ticket.patient_name)}</span>
+      </div>
+      <div class="cc-field">
+        <span class="cc-lbl">Age / Sex</span>
+        <span class="cc-val">${esc(ticket.age_sex ?? '—')}</span>
+      </div>
+      <div class="cc-field">
+        <span class="cc-lbl">Birthdate</span>
+        <span class="cc-val">${esc(ticket.date_of_birth ?? '—')}</span>
+      </div>
+      <div class="cc-field">
+        <span class="cc-lbl">Civil Status</span>
+        <span class="cc-val">${esc(ticket.civil_status ?? '—')}</span>
+      </div>
+      <div class="cc-field">
+        <span class="cc-lbl">Control No.</span>
+        <span class="cc-val">${esc(caseNo)}</span>
+      </div>
+      <div class="cc-field">
+        <span class="cc-lbl">Ticket No.</span>
+        <span class="cc-val">${esc(ticket.ticket_number)}</span>
+      </div>
+      <div class="cc-field">
+        <span class="cc-lbl">Exam Type</span>
+        <span class="cc-val">${esc(visitLabel)}</span>
+      </div>
+      ${extraLabel ? `
+      <div class="cc-field cc-field-two">
+        <span class="cc-lbl">${esc(extraLabel)}</span>
+        <span class="cc-val">${esc(extraValue)}</span>
+      </div>` : ''}
+      <div class="cc-field ${extraLabel ? '' : 'cc-field-full'}">
+        <span class="cc-lbl">Date / Time Issued</span>
+        <span class="cc-val">${esc(ticket.issued_at ?? '—')}</span>
+      </div>
+    </div>
+
+    ${vitalSignsHtml}
+
+    <div class="cc-divider"></div>
+
+    <div class="cc-checklist-title">&#9472;&#9472; Routing Checklist &#9472;&#9472;</div>
+
+    <div class="cc-checklist">
+      ${checklistHtml}
+    </div>
+
+  </div>
+
 </div>
 
-${slipsHtml}
-${checklistHtml()}
-
-<div class="page-cut-guide">
-  ✂ &nbsp;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;
+<div class="h-cut-guide">
+  &#9988;&nbsp;
+  &mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;
   &nbsp;FOLD &amp; CUT HERE — DISCARD LOWER HALF&nbsp;
-  &mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash; &nbsp;✂
+  &mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;
+  &nbsp;&#9988;
 </div>
 
 </body>

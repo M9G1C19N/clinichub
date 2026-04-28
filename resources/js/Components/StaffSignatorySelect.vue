@@ -127,7 +127,8 @@ import { computed } from 'vue'
     <!-- Signature preview -->
     <div v-if="selectedStaff?.signature_url"
         class="flex items-center gap-3 p-2 bg-slate-50 rounded-xl border border-slate-200">
-        <img :src="selectedStaff.signature_url" alt="Signature" class="h-10 object-contain"/>
+        <img :src="selectedStaff.signature_url" alt="Signature"
+             :style="{ height: Math.round(40 * (selectedStaff.signature_scale ?? 1)) + 'px', objectFit: 'contain' }"/>
         <div class="text-xs text-slate-500">
             <p class="font-semibold text-slate-700">{{ selectedStaff.name }}</p>
             <p>{{ selectedStaff.title }}</p>

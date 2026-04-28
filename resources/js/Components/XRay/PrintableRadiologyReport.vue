@@ -19,6 +19,9 @@ defineProps({
         padding: 20px 24px;
         max-width: 800px;
         margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        min-height: 277mm;
     ">
         <!-- ── HEADER ─────────────────────────────── -->
         <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:16px;">
@@ -102,45 +105,45 @@ defineProps({
         </div>
 
         <!-- ── FINDINGS ───────────────────────────── -->
-        <div style="display:flex; flex-direction:column;">
-
-            <div style="display:flex; gap:16px; min-height:250px; margin-bottom:8px;">
-                <div style="width:130px; flex-shrink:0; font-weight:700; color:#333; font-size:11.5px; padding-top:2px;">
-                    Radiographic<br/>Findings:
+        <div style="display:flex; gap:16px; margin-bottom:8px;">
+            <div style="width:140px; flex-shrink:0; font-weight:700; color:#333; font-size:13px; padding-top:2px;">
+                Radiographic<br/>Findings:
+            </div>
+            <div style="flex:1; line-height:1.9; font-size:13px;">
+                <div v-if="imagingRequest?.is_provisional"
+                    style="font-weight:700; font-style:italic;">
+                    **SEE ATTACHED CXR OFFICIAL READING**
                 </div>
-                <div style="flex:1; line-height:2; font-size:11.5px;">
-                    <div v-if="imagingRequest?.is_provisional"
-                        style="font-weight:700; font-style:italic;">
-                        **SEE ATTACHED CXR OFFICIAL READING**
-                    </div>
-                    <div v-else style="white-space:pre-line;">
-                        {{ imagingRequest?.radiographic_findings ?? '' }}
-                    </div>
+                <div v-else style="white-space:pre-line;">
+                    {{ imagingRequest?.radiographic_findings ?? '' }}
                 </div>
             </div>
         </div>
 
         <!-- ── IMPRESSION ─────────────────────────── -->
-        <div style="margin-bottom:50px; border-top:1px solid #ccc; padding-top:12px; min-height:220px;">
+        <div style="border-top:1px solid #ccc; padding-top:14px; padding-bottom:24px;">
             <div style="display:flex; gap:16px;">
-                <div style="width:140px; flex-shrink:0; font-weight:900; font-size:12px; color:#111;">
+                <div style="width:140px; flex-shrink:0; font-weight:900; font-size:14px; color:#111;">
                     IMPRESSION:
                 </div>
-                <div style="flex:1; font-weight:900; font-size:13px; letter-spacing:0.3px; color:#0F2044; text-transform:uppercase;">
+                <div style="flex:1; font-weight:900; font-size:16px; letter-spacing:0.3px; color:#0F2044; text-transform:uppercase; line-height:1.5;">
                     {{ imagingRequest?.impression ?? '—' }}
                 </div>
             </div>
         </div>
+
+        <!-- ── SPACER: pushes signatures to bottom ── -->
+        <div style="flex:1;"></div>
 
         <!-- ── SIGNATURES ─────────────────────────── -->
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:40px; margin-bottom:20px;">
 
             <!-- Rad Tech -->
             <div style="text-align:center;">
-                <div style="min-height:50px; display:flex; align-items:flex-end; justify-content:center; margin-bottom:4px;">
+                <div style="position:relative; height:60px; margin-bottom:4px;">
                     <img v-if="imagingRequest?.rad_tech_signature"
                         :src="imagingRequest.rad_tech_signature"
-                        style="max-height:48px; max-width:160px; object-fit:contain;"
+                        :style="{ position:'absolute', bottom:'0', left:'50%', transform:'translateX(-50%)', height: Math.round(48 * (imagingRequest.rad_tech_sig_scale ?? 1)) + 'px', maxWidth: '160px', objectFit: 'contain' }"
                         alt="Signature"/>
                 </div>
                 <div style="border-top:1px solid #333; padding-top:6px;">
@@ -158,10 +161,10 @@ defineProps({
 
             <!-- Radiologist -->
             <div style="text-align:center;">
-                <div style="min-height:50px; display:flex; align-items:flex-end; justify-content:center; margin-bottom:4px;">
+                <div style="position:relative; height:60px; margin-bottom:4px;">
                     <img v-if="imagingRequest?.radiologist_signature"
                         :src="imagingRequest.radiologist_signature"
-                        style="max-height:48px; max-width:160px; object-fit:contain;"
+                        :style="{ position:'absolute', bottom:'0', left:'50%', transform:'translateX(-50%)', height: Math.round(48 * (imagingRequest.radiologist_sig_scale ?? 1)) + 'px', maxWidth: '160px', objectFit: 'contain' }"
                         alt="Signature"/>
                 </div>
                 <div style="border-top:1px solid #333; padding-top:6px;">

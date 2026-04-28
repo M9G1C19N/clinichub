@@ -7,10 +7,10 @@ defineProps({ labRequest: Object })
         <!-- Examined By -->
         <div style="font-size:11px;">
             <div style="color:#555;margin-bottom:6px;">Examined By:</div>
-            <div style="min-height:44px;display:flex;align-items:flex-end;margin-bottom:3px;">
+            <div style="display:flex;align-items:flex-end;margin-bottom:3px;">
                 <img v-if="labRequest?.examined_by_signature"
                     :src="labRequest.examined_by_signature"
-                    style="max-height:42px;max-width:160px;object-fit:contain;"
+                    :style="{ height: Math.round(42 * (labRequest.examined_by_sig_scale ?? 1)) + 'px', maxWidth: '160px', objectFit: 'contain' }"
                     alt="Signature"/>
             </div>
             <div style="border-top:1.5px solid #333;padding-top:3px;">
@@ -22,10 +22,10 @@ defineProps({ labRequest: Object })
         <!-- Noted By -->
         <div style="font-size:11px;text-align:center;">
             <div style="color:#555;margin-bottom:6px;">Noted By:</div>
-            <div style="min-height:44px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:3px;">
+            <div style="display:flex;align-items:flex-end;justify-content:center;margin-bottom:3px;">
                 <img v-if="labRequest?.noted_by_signature"
                     :src="labRequest.noted_by_signature"
-                    style="max-height:42px;max-width:160px;object-fit:contain;"
+                    :style="{ height: Math.round(42 * (labRequest.noted_by_sig_scale ?? 1)) + 'px', maxWidth: '160px', objectFit: 'contain' }"
                     alt="Signature"/>
             </div>
             <div style="border-top:1.5px solid #333;padding-top:3px;">

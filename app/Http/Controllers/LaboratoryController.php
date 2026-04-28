@@ -667,10 +667,12 @@ class LaboratoryController extends Controller
                 'status'                => $labRequest->status,
                 'examined_by_name'      => $labRequest->examined_by_name,
                 'examined_by_license'   => $labRequest->examined_by_license,
-                'examined_by_signature' => $this->sigUrl($labRequest->examined_by_signature),
-                'noted_by_name'         => $labRequest->noted_by_name,
-                'noted_by_license'      => $labRequest->noted_by_license,
-                'noted_by_signature'    => $this->sigUrl($labRequest->noted_by_signature),
+                'examined_by_signature'  => $this->sigUrl($labRequest->examined_by_signature),
+                'examined_by_sig_scale'  => $this->sigScale($labRequest->examined_by_signature),
+                'noted_by_name'          => $labRequest->noted_by_name,
+                'noted_by_license'       => $labRequest->noted_by_license,
+                'noted_by_signature'     => $this->sigUrl($labRequest->noted_by_signature),
+                'noted_by_sig_scale'     => $this->sigScale($labRequest->noted_by_signature),
                 'remarks'               => $labRequest->clinical_notes,
                 'result_date' => $labRequest->result_date?->format('M d, Y') ?? $visit->visit_date->format('M d, Y'),
                 'result_time' => $labRequest->result_time ?? '',
@@ -695,8 +697,9 @@ class LaboratoryController extends Controller
                 'title'         => $u->esignature?->title ?? null,
                 'license_number'=> $u->esignature?->license_number ?? $u->prc_number ?? '',
                 'ptr_number'    => $u->esignature?->ptr_number ?? $u->ptr_number ?? '',
-                'signature_url'  => $u->esignature?->signature_url ?? null,
-                'signature_path' => $u->esignature?->signature_path ?? null,
+                'signature_url'   => $u->esignature?->signature_url ?? null,
+                'signature_path'  => $u->esignature?->signature_path ?? null,
+                'signature_scale' => $u->esignature?->signature_scale ?? 1.0,
             ])
             ->values()
             ->toArray();
@@ -706,12 +709,21 @@ class LaboratoryController extends Controller
     {
         if (!$val) return null;
         if (str_starts_with($val, 'http')) {
-            // Legacy full URL — extract path after /storage/
             if (preg_match('#/storage/(.+)$#', $val, $m)) {
                 return asset('storage/' . $m[1]);
             }
             return $val;
         }
         return asset('storage/' . $val);
+    }
+
+    private function sigScale(?string $val): float
+    {
+        if (!$val) return 1.0;
+        $path = str_starts_with($val, 'http')
+            ? (preg_match('#/storage/(.+)$#', $val, $m) ? $m[1] : null)
+            : $val;
+        if (!$path) return 1.0;
+        return (float) (\App\Models\Esignature::where('signature_path', $path)->value('signature_scale') ?? 1.0);
     }
 }

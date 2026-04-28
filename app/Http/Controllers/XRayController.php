@@ -366,10 +366,12 @@ class XRayController extends Controller
                 'is_provisional'       => $imaging->is_provisional,
                 'rad_tech_name'        => $imaging->rad_tech_name,
                 'rad_tech_license'     => $imaging->rad_tech_license,
-                'rad_tech_signature'   => $this->sigUrl($imaging->rad_tech_signature),
-                'radiologist_name'     => $imaging->radiologist_name,
-                'radiologist_license'  => $imaging->radiologist_license,
-                'radiologist_signature'=> $this->sigUrl($imaging->radiologist_signature),
+                'rad_tech_signature'    => $this->sigUrl($imaging->rad_tech_signature),
+                'rad_tech_sig_scale'    => $this->sigScale($imaging->rad_tech_signature),
+                'radiologist_name'      => $imaging->radiologist_name,
+                'radiologist_license'   => $imaging->radiologist_license,
+                'radiologist_signature' => $this->sigUrl($imaging->radiologist_signature),
+                'radiologist_sig_scale' => $this->sigScale($imaging->radiologist_signature),
                 'status'               => $imaging->status,
                 'exam_date' => $imaging?->exam_date
                     ? (is_string($imaging->exam_date)
@@ -397,8 +399,9 @@ class XRayController extends Controller
                 'title'         => $u->esignature?->title ?? null,
                 'license_number'=> $u->esignature?->license_number ?? $u->prc_number ?? '',
                 'ptr_number'    => $u->esignature?->ptr_number ?? $u->ptr_number ?? '',
-                'signature_url'  => $u->esignature?->signature_url ?? null,
-                'signature_path' => $u->esignature?->signature_path ?? null,
+                'signature_url'   => $u->esignature?->signature_url ?? null,
+                'signature_path'  => $u->esignature?->signature_path ?? null,
+                'signature_scale' => $u->esignature?->signature_scale ?? 1.0,
             ])
             ->values()
             ->toArray();
@@ -414,5 +417,15 @@ class XRayController extends Controller
             return $val;
         }
         return asset('storage/' . $val);
+    }
+
+    private function sigScale(?string $val): float
+    {
+        if (!$val) return 1.0;
+        $path = str_starts_with($val, 'http')
+            ? (preg_match('#/storage/(.+)$#', $val, $m) ? $m[1] : null)
+            : $val;
+        if (!$path) return 1.0;
+        return (float) (\App\Models\Esignature::where('signature_path', $path)->value('signature_scale') ?? 1.0);
     }
 }

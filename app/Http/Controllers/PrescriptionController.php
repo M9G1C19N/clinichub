@@ -215,7 +215,8 @@ class PrescriptionController extends Controller
                 'ptr_number'     => $prescription->doctor_ptr,
                 's2_number'      => $prescription->doctor_s2,
                 'specialization' => $prescription->doctor_specialization,
-                'signature_url'  => $doctorSig,
+                'signature_url'   => $doctorSig,
+                'signature_scale' => $prescription->doctor?->esignature?->signature_scale ?? 1.0,
             ],
         ]);
     }

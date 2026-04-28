@@ -8,11 +8,12 @@ class Esignature extends Model
 {
     protected $fillable = [
         'user_id', 'title', 'license_number', 'ptr_number',
-        'signature_path', 'is_active',
+        'signature_path', 'is_active', 'signature_scale',
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
+        'is_active'       => 'boolean',
+        'signature_scale' => 'float',
     ];
 
     public function user()

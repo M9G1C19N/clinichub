@@ -257,10 +257,10 @@ const rowStyle = (code) =>
                 <!-- UA Staff -->
                 <div style="font-size:8px; margin-top:4px; border-top:1px solid #ddd; padding-top:3px; color:#555;">
                     <div style="color:#777; margin-bottom:4px;">Examined By:</div>
-                    <div style="min-height:32px; display:flex; align-items:flex-end; margin-bottom:2px;">
+                    <div style="display:flex; align-items:flex-end; margin-bottom:2px;">
                         <img v-if="labRequest?.examined_by_signature"
                             :src="labRequest.examined_by_signature"
-                            style="max-height:30px; max-width:120px; object-fit:contain;"
+                            :style="{ height: Math.round(30 * (labRequest.examined_by_sig_scale ?? 1)) + 'px', maxWidth: '120px', objectFit: 'contain' }"
                             alt="Signature"/>
                     </div>
                     <div style="border-top:1px solid #333; padding-top:2px;">
@@ -269,10 +269,10 @@ const rowStyle = (code) =>
                         <strong>Medical Technologist</strong>
                     </div>
                     <div style="color:#777; margin-top:5px; margin-bottom:4px;">Noted By:</div>
-                    <div style="min-height:32px; display:flex; align-items:flex-end; margin-bottom:2px;">
+                    <div style="display:flex; align-items:flex-end; margin-bottom:2px;">
                         <img v-if="labRequest?.noted_by_signature"
                             :src="labRequest.noted_by_signature"
-                            style="max-height:30px; max-width:120px; object-fit:contain;"
+                            :style="{ height: Math.round(30 * (labRequest.noted_by_sig_scale ?? 1)) + 'px', maxWidth: '120px', objectFit: 'contain' }"
                             alt="Signature"/>
                     </div>
                     <div style="border-top:1px solid #333; padding-top:2px;">

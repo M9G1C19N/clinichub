@@ -164,10 +164,10 @@ const isPurpose = (p) => props.drugTest?.test_purpose === p
             <!-- Head of Lab sign-off -->
             <div style="display:flex; justify-content:space-between; margin-top:16px;">
                 <div style="text-align:center;">
-                    <div style="min-height:40px; display:flex; align-items:flex-end; justify-content:center; margin-bottom:2px;">
+                    <div style="display:flex; align-items:flex-end; justify-content:center; margin-bottom:2px;">
                         <img v-if="drugTest?.collector_signature"
                             :src="drugTest.collector_signature"
-                            style="max-height:38px; max-width:150px; object-fit:contain;"
+                            :style="{ height: Math.round(38 * (drugTest.collector_sig_scale ?? 1)) + 'px', maxWidth: '150px', objectFit: 'contain' }"
                             alt="Signature"/>
                     </div>
                     <div style="border-top:1px solid #333; padding-top:4px; min-width:200px;">
@@ -177,10 +177,10 @@ const isPurpose = (p) => props.drugTest?.test_purpose === p
                     </div>
                 </div>
                 <div style="text-align:center;">
-                    <div style="min-height:40px; display:flex; align-items:flex-end; justify-content:center; margin-bottom:2px;">
+                    <div style="display:flex; align-items:flex-end; justify-content:center; margin-bottom:2px;">
                         <img v-if="drugTest?.head_of_lab_signature"
                             :src="drugTest.head_of_lab_signature"
-                            style="max-height:38px; max-width:150px; object-fit:contain;"
+                            :style="{ height: Math.round(38 * (drugTest.head_of_lab_sig_scale ?? 1)) + 'px', maxWidth: '150px', objectFit: 'contain' }"
                             alt="Signature"/>
                     </div>
                     <div style="border-top:1px solid #333; padding-top:4px; min-width:200px;">
