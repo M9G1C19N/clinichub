@@ -262,14 +262,11 @@ class BillingController extends Controller
         $invoices = Invoice::with(['patient', 'visit', 'payments'])
             ->where(function ($q) use ($peTypes) {
                 $q->where('billed_to_company', true)
-                  ->orWhere(function ($q2) use ($peTypes) {
-                      $q2->whereIn('status', ['unpaid', 'partial'])
-                         ->whereHas('visit', fn($v) =>
-                             $v->whereIn('visit_type', $peTypes)
-                               ->whereNotNull('employer_company')
-                               ->where('employer_company', '!=', '')
-                         );
-                  });
+                  ->orWhereHas('visit', fn($v) =>
+                      $v->whereIn('visit_type', $peTypes)
+                        ->whereNotNull('employer_company')
+                        ->where('employer_company', '!=', '')
+                  );
             })
             ->whereNotIn('status', ['cancelled'])
             ->when($visitType, fn($q) =>
