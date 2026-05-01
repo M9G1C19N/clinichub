@@ -162,9 +162,9 @@ const classRec = {
     <div style="font-weight:900;font-size:13px;margin-bottom:4px;">I. MEDICAL HISTORY</div>
 
     <!-- A -->
-    <div style="font-size:12px;margin-bottom:4px;padding:4px 7px;border:1px solid #bbb;">
-        <strong>A. PRESENT SYMPTOMS/COMPLAINTS:</strong>
-        <span style="margin-left:3px;">{{ vitals?.present_symptoms || 'UNREMARKABLE' }}</span>
+    <div style="font-size:12px;margin-bottom:4px;padding:4px 7px;border:1px solid #bbb;display:flex;align-items:baseline;gap:4px;">
+        <strong style="white-space:nowrap;">A. PRESENT SYMPTOMS/COMPLAINTS:</strong>
+        <span style="flex:1;border-bottom:1px solid #444;min-height:14px;display:inline-block;padding-bottom:1px;">{{ vitals?.present_symptoms || '' }}</span>
     </div>
 
     <!-- B — 3 illness cols only (no remarks column) -->
@@ -207,9 +207,18 @@ const classRec = {
 
     <!-- C, D, E -->
     <div style="display:flex;flex-direction:column;gap:3px;margin-bottom:4px;font-size:12px;">
-        <div style="padding:4px 7px;border:1px solid #bbb;"><strong>C. FAMILY MEDICAL HISTORY</strong> {{ vitals?.family_history || '' }}</div>
-        <div style="padding:4px 7px;border:1px solid #bbb;"><strong>D. ACCIDENTS/INJURIES</strong> {{ vitals?.accidents_injuries || 'UNREMARKABLE' }}</div>
-        <div style="padding:4px 7px;border:1px solid #bbb;"><strong>E. SURGICAL HISTORY</strong> {{ vitals?.surgical_history_detail || 'UNREMARKABLE' }}</div>
+        <div style="padding:4px 7px;border:1px solid #bbb;display:flex;align-items:baseline;gap:4px;">
+            <strong style="white-space:nowrap;">C. FAMILY MEDICAL HISTORY</strong>
+            <span style="flex:1;border-bottom:1px solid #444;min-height:14px;display:inline-block;padding-bottom:1px;">{{ vitals?.family_history || '' }}</span>
+        </div>
+        <div style="padding:4px 7px;border:1px solid #bbb;display:flex;align-items:baseline;gap:4px;">
+            <strong style="white-space:nowrap;">D. ACCIDENTS/INJURIES</strong>
+            <span style="flex:1;border-bottom:1px solid #444;min-height:14px;display:inline-block;padding-bottom:1px;">{{ vitals?.accidents_injuries || '' }}</span>
+        </div>
+        <div style="padding:4px 7px;border:1px solid #bbb;display:flex;align-items:baseline;gap:4px;">
+            <strong style="white-space:nowrap;">E. SURGICAL HISTORY</strong>
+            <span style="flex:1;border-bottom:1px solid #444;min-height:14px;display:inline-block;padding-bottom:1px;">{{ vitals?.surgical_history_detail || '' }}</span>
+        </div>
     </div>
 
     <!-- F through I (left) + Remarks (right) — single tall container -->
@@ -226,8 +235,12 @@ const classRec = {
                         <text v-if="vitals?.allergies_flags?.includes(opt.v)" x="6.5" y="10" text-anchor="middle" font-size="9" fill="white" font-weight="bold" font-family="Arial">✓</text>
                     </svg>{{ opt.l }}
                 </span>
+                <span style="display:inline-flex;align-items:baseline;gap:3px;flex:1;">
+                    <span style="font-size:11px;color:#555;">Specify:</span>
+                    <span style="flex:1;border-bottom:1px solid #555;min-width:60px;display:inline-block;font-size:11px;padding-bottom:1px;">{{ vitals?.allergies_others || '' }}</span>
+                </span>
             </div>
-            <!-- G -->
+            <!-- G — female only -->
             <div style="padding:4px 7px;border-bottom:1px solid #bbb;">
                 <strong>G. MENSTRUAL HISTORY</strong><br/>
                 Menstrual Cycle:
@@ -240,7 +253,7 @@ const classRec = {
                 </span>
                 <br/>LMP and Duration: <strong>{{ vitals?.lmp || 'N/A' }}</strong>
             </div>
-            <!-- H -->
+            <!-- H — female only -->
             <div style="padding:4px 7px;border-bottom:1px solid #bbb;">
                 <strong>H. OB HISTORY</strong><br/>
                 <span style="display:inline-flex;align-items:center;gap:4px;margin-right:8px;">
@@ -255,45 +268,46 @@ const classRec = {
             <!-- I -->
             <div style="padding:4px 7px;">
                 <strong>I. PERSONAL/SOCIAL HISTORY</strong>
-                <div style="display:flex;align-items:center;gap:6px;margin-top:2px;flex-wrap:wrap;">
-                    <strong>TOBACCO USE:</strong>
+                <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
+                    <strong style="display:inline-block;min-width:85px;flex-shrink:0;">TOBACCO USE:</strong>
                     <span v-for="opt in [{v:'current',l:'Current'},{v:'former',l:'Former'},{v:'never',l:'Never'}]" :key="opt.v"
-                        style="display:inline-flex;align-items:center;gap:4px;margin-right:5px;">
+                        style="display:inline-flex;align-items:center;gap:4px;margin-right:5px;flex-shrink:0;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" style="display:inline-block;vertical-align:middle;flex-shrink:0;">
                             <rect x="1" y="1" width="11" height="11" :fill="vitals?.tobacco_use===opt.v?'#111':'none'" :stroke="vitals?.tobacco_use===opt.v?'#111':'#555'" stroke-width="1.5"/>
                             <text v-if="vitals?.tobacco_use===opt.v" x="6.5" y="10" text-anchor="middle" font-size="9" fill="white" font-weight="bold" font-family="Arial">✓</text>
                         </svg>{{ opt.l }}
                     </span>
+                    <span style="flex:1;border-bottom:1px solid #444;min-width:40px;display:inline-block;font-size:11px;padding-bottom:1px;">{{ vitals?.tobacco_use_details || '' }}</span>
                 </div>
-                <div style="display:flex;align-items:center;gap:6px;margin-top:2px;flex-wrap:wrap;">
-                    <strong>ALCOHOL:</strong>
+                <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
+                    <strong style="display:inline-block;min-width:85px;flex-shrink:0;">ALCOHOL:</strong>
                     <span v-for="opt in [{v:'current',l:'Current'},{v:'former',l:'Former'},{v:'never',l:'Never'}]" :key="opt.v"
-                        style="display:inline-flex;align-items:center;gap:4px;margin-right:5px;">
+                        style="display:inline-flex;align-items:center;gap:4px;margin-right:5px;flex-shrink:0;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" style="display:inline-block;vertical-align:middle;flex-shrink:0;">
                             <rect x="1" y="1" width="11" height="11" :fill="vitals?.alcohol_use===opt.v?'#111':'none'" :stroke="vitals?.alcohol_use===opt.v?'#111':'#555'" stroke-width="1.5"/>
                             <text v-if="vitals?.alcohol_use===opt.v" x="6.5" y="10" text-anchor="middle" font-size="9" fill="white" font-weight="bold" font-family="Arial">✓</text>
                         </svg>{{ opt.l }}
                     </span>
+                    <span style="flex:1;border-bottom:1px solid #444;min-width:40px;display:inline-block;font-size:11px;padding-bottom:1px;">{{ vitals?.alcohol_use_details || '' }}</span>
                 </div>
             </div>
         </div>
-        <!-- RIGHT: Doctor's Remarks — spans full F-I height -->
+        <!-- RIGHT: Nurse Remarks — spans full F-I height -->
         <div style="padding:6px 8px;display:flex;flex-direction:column;">
             <strong style="font-size:12px;">Remarks:</strong>
-            <div style="flex:1;font-size:12px;line-height:1.7;white-space:pre-wrap;padding-top:5px;">{{ consultation?.pe_recommendation || '' }}</div>
+            <div style="flex:1;font-size:12px;line-height:1.7;white-space:pre-wrap;padding-top:5px;">{{ vitals?.pe_remarks || '' }}</div>
         </div>
     </div>
 
-    <!-- II Physical Examination -->
-    <div style="border-top:2px solid #111;padding-top:2px;margin-bottom:3px;">
-        <div style="font-weight:900;font-size:13px;">II. PHYSICAL EXAMINATION</div>
-    </div>
-
     <!-- 2-col flex area fills remaining height -->
-    <div style="display:grid;grid-template-columns:50% 50%;gap:0 5px;flex:1;min-height:0;overflow:hidden;">
+    <div style="display:grid;grid-template-columns:300px 1fr;gap:0 5px;flex:1;min-height:0;overflow:hidden;">
 
-        <!-- LEFT — Vitals & Visual Acuity -->
+        <!-- LEFT — Vitals & Visual Acuity (fixed 300px) -->
+        <!-- II. PHYSICAL EXAMINATION header is inside left column so right column gains the freed height -->
         <div style="font-size:12px;">
+            <div style="border-top:2px solid #111;padding-top:2px;margin-bottom:3px;">
+                <div style="font-weight:900;font-size:13px;">II. PHYSICAL EXAMINATION</div>
+            </div>
             <div v-for="row in [
                 {label:'A. Weight (kg.)',          val:vitals?.weight_kg},
                 {label:'B. Height (m)',            val:vitals?.height_cm?(vitals.height_cm/100).toFixed(2):''},
@@ -322,57 +336,79 @@ const classRec = {
             </div>
             <!-- G. Visual Acuity -->
             <div style="border:1px solid #bbb;">
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 7px;border-bottom:1px solid #ccc;">
+                <!-- Header uses same grid as data rows so columns align exactly -->
+                <div style="display:grid;grid-template-columns:1fr 28px 52px 52px;align-items:center;padding:3px 7px;border-bottom:1px solid #ccc;">
                     <span style="font-size:12px;font-weight:700;">G. Visual Acuity</span>
-                    <span style="color:#555;font-size:11px;">Uncorrected &nbsp;&nbsp;&nbsp; Corrected</span>
+                    <span></span>
+                    <span style="font-size:10px;color:#555;text-align:center;">Uncorrected</span>
+                    <span style="font-size:10px;color:#555;text-align:center;border-left:1.5px solid #aaa;padding-left:4px;">Corrected</span>
                 </div>
                 <div style="padding:4px 7px;font-size:12px;">
-                    <div style="display:grid;grid-template-columns:115px 26px 1fr;line-height:1.85;">
-                        <span>1. Distant Vision</span><span>OD</span><strong>{{ vitals?.visual_acuity_right||'' }}</strong>
+                    <div style="display:grid;grid-template-columns:1fr 28px 52px 52px;align-items:end;margin-bottom:2px;">
+                        <span>1. Distant Vision</span>
+                        <span style="text-align:right;padding-right:4px;">OD</span>
+                        <strong style="text-align:center;border-bottom:1px solid #666;display:block;padding:0 4px;">{{ vitals?.visual_acuity_right||'' }}</strong>
+                        <strong style="text-align:center;border-bottom:1px solid #666;border-left:1.5px solid #aaa;display:block;padding:0 4px;">{{ vitals?.visual_acuity_right_corrected||'' }}</strong>
                     </div>
-                    <div style="display:grid;grid-template-columns:115px 26px 1fr;line-height:1.85;">
-                        <span></span><span>OS</span><strong>{{ vitals?.visual_acuity_left||'' }}</strong>
+                    <div style="display:grid;grid-template-columns:1fr 28px 52px 52px;align-items:end;margin-bottom:4px;">
+                        <span></span>
+                        <span style="text-align:right;padding-right:4px;">OS</span>
+                        <strong style="text-align:center;border-bottom:1px solid #666;display:block;padding:0 4px;">{{ vitals?.visual_acuity_left||'' }}</strong>
+                        <strong style="text-align:center;border-bottom:1px solid #666;border-left:1.5px solid #aaa;display:block;padding:0 4px;">{{ vitals?.visual_acuity_left_corrected||'' }}</strong>
                     </div>
-                    <div style="display:grid;grid-template-columns:115px 26px 1fr;line-height:1.85;">
-                        <span>2. Near Vision</span><span>OD</span><strong>{{ vitals?.visual_acuity_near_right||'' }}</strong>
+                    <div style="display:grid;grid-template-columns:1fr 28px 52px 52px;align-items:end;margin-bottom:2px;">
+                        <span>2. Near Vision</span>
+                        <span style="text-align:right;padding-right:4px;">OD</span>
+                        <strong style="text-align:center;border-bottom:1px solid #666;display:block;padding:0 4px;">{{ vitals?.visual_acuity_near_right||'' }}</strong>
+                        <strong style="text-align:center;border-bottom:1px solid #666;border-left:1.5px solid #aaa;display:block;padding:0 4px;">{{ vitals?.visual_acuity_near_right_corrected||'' }}</strong>
                     </div>
-                    <div style="display:grid;grid-template-columns:115px 26px 1fr;line-height:1.85;">
-                        <span></span><span>OS</span><strong>{{ vitals?.visual_acuity_near_left||'' }}</strong>
+                    <div style="display:grid;grid-template-columns:1fr 28px 52px 52px;align-items:end;margin-bottom:4px;">
+                        <span></span>
+                        <span style="text-align:right;padding-right:4px;">OS</span>
+                        <strong style="text-align:center;border-bottom:1px solid #666;display:block;padding:0 4px;">{{ vitals?.visual_acuity_near_left||'' }}</strong>
+                        <strong style="text-align:center;border-bottom:1px solid #666;border-left:1.5px solid #aaa;display:block;padding:0 4px;">{{ vitals?.visual_acuity_near_left_corrected||'' }}</strong>
                     </div>
-                    <div style="display:grid;grid-template-columns:115px 26px 1fr;line-height:1.85;">
-                        <span>3. Color Vision</span><span></span><strong>{{ vitals?.color_vision_result||'' }}</strong>
+                    <div style="display:grid;grid-template-columns:1fr 28px 52px 52px;align-items:end;margin-bottom:2px;">
+                        <span>3. Ishihara Test</span>
+                        <span></span>
+                        <strong style="text-align:center;border-bottom:1px solid #666;display:block;padding:0 4px;grid-column:3/5;">{{ vitals?.ishihara_result||'' }}</strong>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 28px 52px 52px;align-items:end;">
+                        <span>4. Color Vision Result</span>
+                        <span></span>
+                        <strong style="text-align:center;border-bottom:1px solid #666;display:block;padding:0 4px;grid-column:3/5;">{{ vitals?.color_vision_result||'' }}</strong>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- RIGHT — Photo, Consent, Signature, PE Table -->
-        <div style="display:flex;flex-direction:column;min-height:0;overflow:hidden;">
+        <!-- RIGHT — Photo, Consent, Signature, PE Table (expands to fill remaining width) -->
+        <div style="display:flex;flex-direction:column;min-height:0;overflow:hidden;border-top:2px solid #111;padding-top:2px;">
             <!-- Photo + consent text -->
-            <div style="display:flex;gap:5px;margin-bottom:3px;">
-                <div style="width:106px;height:100px;border:1.5px solid #888;flex-shrink:0;overflow:hidden;background:#ddd;display:flex;align-items:center;justify-content:center;">
+            <div style="display:flex;gap:6px;margin-bottom:2px;">
+                <div style="width:110px;height:110px;border:1.5px solid #888;flex-shrink:0;overflow:hidden;background:#ddd;display:flex;align-items:center;justify-content:center;">
                     <img v-if="patient?.photo_path" :src="patient.photo_path"
                         style="width:100%;height:100%;object-fit:cover;display:block;"
                         crossorigin="anonymous"/>
-                    <span v-else style="font-size:8px;color:#888;text-align:center;line-height:1.5;">2x2<br/>Photo</span>
+                    <span v-else style="font-size:9px;color:#888;text-align:center;line-height:1.6;">2x2<br/>Photo</span>
                 </div>
-                <div style="flex:1;border:1px solid #888;padding:6px;font-size:8px;font-style:italic;color:#333;line-height:1.7;">
+                <div style="flex:1;border:1px solid #888;padding:8px;font-size:10px;font-style:italic;color:#333;line-height:1.75;display:flex;align-items:center;">
                     "I certify that all information I have given in my medical history is true and that any false statement will disqualify me from my employment application, benefits and claims. Furthermore, I authorize the medical examiner to release results of my medical examination to my employer/prospective employer."
                 </div>
             </div>
             <!-- Signature block — 2 cols matching photo/consent layout above -->
-            <div style="display:flex;gap:5px;margin-bottom:2px;">
+            <div style="display:flex;gap:6px;margin-bottom:2px;">
                 <!-- LEFT: under photo — blank signing space + name line -->
-                <div style="width:106px;flex-shrink:0;text-align:center;">
-                    <div style="height:10mm;"></div>
-                    <div style="border-top:1.5px solid #222;padding-top:2px;font-weight:700;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                <div style="width:110px;flex-shrink:0;text-align:center;">
+                    <div style="height:7mm;"></div>
+                    <div style="border-top:1.5px solid #222;padding-top:2px;font-weight:700;font-size:11px;word-break:break-word;overflow-wrap:anywhere;line-height:1.3;">
                         {{ patient.full_name?.toUpperCase() }}
                     </div>
-                    <div style="font-size:9.5px;color:#555;">Signature Over Printed Name</div>
+                    <div style="font-size:10px;color:#555;">Signature Over Printed Name</div>
                 </div>
                 <!-- RIGHT: under consent text -->
                 <div style="flex:1;display:flex;align-items:center;justify-content:center;">
-                    <div style="font-weight:900;font-size:11px;text-align:center;">NOT VALID WITHOUT SEAL</div>
+                    <div style="font-weight:900;font-size:14px;text-align:center;letter-spacing:0.5px;">NOT VALID WITHOUT SEAL</div>
                 </div>
             </div>
             <!-- PE Findings table — 2 columns -->
@@ -391,7 +427,7 @@ const classRec = {
                                 <text v-if="peNormal(sys.key)" x="6" y="9.5" text-anchor="middle" font-size="8" fill="white" font-weight="bold" font-family="Arial">✓</text>
                             </svg>
                             <span style="font-size:11px;">{{ sys.label }}</span>
-                            <span style="color:#c00;font-size:10px;font-weight:700;">{{ peAbnormal(sys.key)?(vitals?.pe_findings_remarks||'Abnormal'):'' }}</span>
+                            <span style="color:#c00;font-size:10px;font-weight:700;">{{ peAbnormal(sys.key)?(vitals?.pe_findings_details?.[sys.key]||'Abnormal'):'' }}</span>
                         </div>
                     </div>
                     <!-- Right column: items 8–13 -->
@@ -406,13 +442,13 @@ const classRec = {
                                 <text v-if="peNormal(sys.key)" x="6" y="9.5" text-anchor="middle" font-size="8" fill="white" font-weight="bold" font-family="Arial">✓</text>
                             </svg>
                             <span style="font-size:11px;">{{ sys.label }}</span>
-                            <span style="color:#c00;font-size:10px;font-weight:700;">{{ peAbnormal(sys.key)?(vitals?.pe_findings_remarks||'Abnormal'):'' }}</span>
+                            <span style="color:#c00;font-size:10px;font-weight:700;">{{ peAbnormal(sys.key)?(vitals?.pe_findings_details?.[sys.key]||'Abnormal'):'' }}</span>
                         </div>
                     </div>
                 </div>
                 <!-- Other PE Findings — full width at bottom -->
                 <div style="padding:4px 6px;font-size:11px;border-top:1px solid #ddd;flex-shrink:0;">
-                    <strong>Other PE Findings:</strong> {{ vitals?.other_pe_findings || '' }}
+                    <strong>Other PE Findings:</strong> {{ vitals?.pe_findings_remarks || '' }}
                 </div>
             </div>
         </div>
@@ -427,7 +463,7 @@ const classRec = {
 </div>
 
 <!-- ═══════════ PAGE 2 — LAB RESULTS ═══════════ -->
-<div v-if="printPage !== '1'" style="width:210mm;height:297mm;padding:6mm 7mm 8mm;box-sizing:border-box;position:relative;overflow:hidden;">
+<div v-if="printPage !== '1'" style="width:210mm;height:297mm;padding:6mm 7mm 8mm;box-sizing:border-box;position:relative;overflow:hidden;display:flex;flex-direction:column;">
 
     <!-- HEADER -->
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:3px;">
@@ -489,7 +525,7 @@ const classRec = {
                         {code:'SEG',name:'Segmenters',    range:'50-70%'},
                         {code:'LYM',name:'Lymphocytes',   range:'26-46%'},
                         {code:'MID',name:'Mid',           range:'2-10%'},
-                    ]" :key="row.code" style="border-bottom:1px solid #eee;">
+                    ]" :key="row.code" style="border-bottom:1px solid #333;">
                         <td style="padding:4px 3px;border-right:1px solid #ddd;">{{ row.name }}</td>
                         <td style="padding:4px 3px;border-right:1px solid #ddd;" :style="rs(row.code)">{{ r(row.code) }}</td>
                         <td style="padding:4px 3px;color:#555;font-size:9.5px;">{{ row.range }}</td>
@@ -517,7 +553,7 @@ const classRec = {
                         {code:'HDL',    name:'HDL',                 range:'>35 mg/dL'},
                         {code:'LDL',    name:'LDL',                 range:'<110 mg/dL'},
                         {code:'VLDL',   name:'VLDL',                range:'<5-40 mg/dL'},
-                    ]" :key="row.code" style="border-bottom:1px solid #eee;">
+                    ]" :key="row.code" style="border-bottom:1px solid #333;">
                         <td style="padding:4px 3px;border-right:1px solid #ddd;">{{ row.name }}</td>
                         <td style="padding:4px 3px;border-right:1px solid #ddd;" :style="rs(row.code)">{{ r(row.code) }}</td>
                         <td style="padding:4px 3px;color:#555;font-size:9.5px;">{{ row.range }}</td>
@@ -548,7 +584,7 @@ const classRec = {
                         {code:'UA_BAC',  name:'Bacteria',          range:'None'},
                         {code:'UA_CRY',  name:'Crystals',          range:'None'},
                         {code:'UA_OTH',  name:'Others',            range:''},
-                    ]" :key="row.code" style="border-bottom:1px solid #eee;">
+                    ]" :key="row.code" style="border-bottom:1px solid #333;">
                         <td style="padding:4px 3px;border-right:1px solid #ddd;">{{ row.name }}</td>
                         <td style="padding:4px 3px;border-right:1px solid #ddd;" :style="rs(row.code)">{{ r(row.code) }}</td>
                         <td style="padding:4px 3px;color:#555;font-size:9.5px;">{{ row.range }}</td>
@@ -574,24 +610,25 @@ const classRec = {
                         {code:'ST_PUS',name:'Pus Cells',      range:'0-2/hpf'},
                         {code:'ST_RBC',name:'Red Blood Cells',range:'None'},
                         {code:'ST_OVA',name:'Ova/Parasites',  range:'None seen'},
-                    ]" :key="row.code" style="border-bottom:1px solid #eee;">
+                    ]" :key="row.code" style="border-bottom:1px solid #333;">
                         <td style="padding:4px 3px;border-right:1px solid #ddd;">{{ row.name }}</td>
                         <td style="padding:4px 3px;border-right:1px solid #ddd;" :style="rs(row.code)">{{ r(row.code) }}</td>
                         <td style="padding:4px 3px;color:#555;font-size:9.5px;">{{ row.range }}</td>
                     </tr>
                 </table>
                 <!-- Med Tech signature pushed to bottom of Stool column -->
-                <div style="margin-top:auto;padding-top:5px;border-top:1px solid #aaa;text-align:center;">
-                    <div style="height:36px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:2px;">
+                <div style="margin-top:auto;padding-top:4px;border-top:1px solid #aaa;text-align:center;">
+                    <div style="height:28px;display:flex;align-items:flex-end;justify-content:center;overflow:visible;margin-bottom:1px;">
                         <img v-if="labRequest?.examined_by_signature"
                             :src="labRequest.examined_by_signature"
-                            style="height:32px;width:120px;object-fit:contain;display:block;"
+                            :style="{maxHeight:Math.round(24*(labRequest.examined_by_sig_scale||1))+'px',maxWidth:'110px'}"
+                            style="object-fit:contain;display:block;"
                             crossorigin="anonymous"/>
                     </div>
                     <div style="border-top:1.5px solid #333;padding-top:2px;">
-                        <div style="font-weight:700;font-size:10.5px;">{{ labRequest?.examined_by_name||'VAN VINCE G. DIVES, RMT' }}</div>
-                        <div style="font-size:9.5px;">License no. {{ labRequest?.examined_by_license||'0128116' }}</div>
-                        <div style="font-size:9.5px;">Medical Technologist</div>
+                        <div style="font-weight:700;font-size:10px;">{{ labRequest?.examined_by_name||'—' }}</div>
+                        <div style="font-size:9px;">License no. {{ labRequest?.examined_by_license||'' }}</div>
+                        <div style="font-size:9px;">Medical Technologist</div>
                     </div>
                 </div>
             </div>
@@ -609,31 +646,31 @@ const classRec = {
                         {code:'PREG', name:'Pregnancy Test'},
                         {code:'BTYPE',name:'Blood Type'},
                         {code:'PSA',  name:'Prostatic Specific Antigen (PSA)'},
-                    ]" :key="row.code" style="border-bottom:1px solid #eee;">
+                    ]" :key="row.code" style="border-bottom:1px solid #333;">
                         <td style="padding:4px 3px;border-right:1px solid #ddd;">{{ row.name }}</td>
                         <td style="padding:4px 3px;" :style="rs(row.code)">{{ r(row.code) }}</td>
                     </tr>
                 </table>
                 <!-- Pathologist signature pushed to bottom of Others column -->
-                <div style="margin-top:auto;padding-top:5px;border-top:1px solid #aaa;text-align:center;">
-                    <div style="height:36px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:2px;">
+                <div style="margin-top:auto;padding-top:4px;border-top:1px solid #aaa;text-align:center;">
+                    <div style="height:28px;display:flex;align-items:flex-end;justify-content:center;overflow:visible;margin-bottom:1px;">
                         <img v-if="labRequest?.noted_by_signature"
                             :src="labRequest.noted_by_signature"
-                            style="height:32px;width:120px;object-fit:contain;display:block;"
+                            :style="{maxHeight:Math.round(24*(labRequest.noted_by_sig_scale||1))+'px',maxWidth:'110px'}"
+                            style="object-fit:contain;display:block;"
                             crossorigin="anonymous"/>
                     </div>
                     <div style="border-top:1.5px solid #333;padding-top:2px;">
-                        <div style="font-weight:700;font-size:10.5px;">{{ labRequest?.noted_by_name||'PONCIANO S. LIMCANGCO, MD, FPSP' }}</div>
-                        <div style="font-size:9.5px;">License No.: {{ labRequest?.noted_by_license||'0058646' }}</div>
-                        <div style="font-size:9.5px;">Pathologist</div>
+                        <div style="font-weight:700;font-size:10px;">{{ labRequest?.noted_by_name||'—' }}</div>
+                        <div style="font-size:9px;">License No.: {{ labRequest?.noted_by_license||'' }}</div>
+                        <div style="font-size:9px;">Pathologist</div>
                     </div>
                 </div>
             </div>
-            <!-- CXR + ECG stacked vertically -->
-            <div style="border-left:2px solid #111;padding-left:8px;">
-                <div style="font-weight:900;font-size:12px;margin-bottom:3px;">CHEST XRAY + ECG</div>
-                <!-- Chest X-Ray -->
-                <div style="margin-bottom:5px;">
+            <!-- CXR + ECG — equal fixed sizes on right side -->
+            <div style="border-left:2px solid #111;padding-left:8px;display:flex;flex-direction:column;">
+                <!-- Chest X-Ray — top half, equal size -->
+                <div style="flex:1;display:flex;flex-direction:column;padding-bottom:5px;overflow:hidden;">
                     <div style="font-weight:900;font-size:11px;margin-bottom:3px;">
                         CHEST XRAY RESULT
                         <span style="font-size:8px;font-weight:400;margin-left:3px;">({{ imaging?.is_provisional ? 'Provisional Reading' : 'Official Reading' }})</span>
@@ -646,53 +683,67 @@ const classRec = {
                             <span style="color:#555;">Impression: </span>
                             <strong>{{ imaging.impression || '—' }}</strong>
                         </div>
-                        <div style="font-size:10.5px;min-height:28px;white-space:pre-line;border:1px solid #e0e0e0;padding:3px 4px;background:#fafafa;">{{ imaging.radiographic_findings || '' }}</div>
+                        <div style="font-size:10.5px;flex:1;min-height:20px;white-space:pre-line;border:1px solid #e0e0e0;padding:3px 4px;background:#fafafa;overflow:hidden;">{{ imaging.radiographic_findings || '' }}</div>
                         <div style="font-size:8.5px;color:#444;margin-top:3px;font-style:italic;">
                             NOTE: X-ray films submitted for official reading will be available one week after submission.
                         </div>
                         <div style="margin-top:5px;font-size:10.5px;display:flex;align-items:flex-end;gap:6px;">
                             <span style="color:#555;white-space:nowrap;">Noted By:</span>
                             <div style="text-align:center;flex:1;">
-                                <img v-if="imaging.radiologist_signature"
-                                    :src="imaging.radiologist_signature"
-                                    style="max-height:24px;max-width:90px;object-fit:contain;display:block;margin:0 auto 2px;"
-                                    crossorigin="anonymous"/>
-                                <div style="font-weight:700;font-size:10px;">{{ imaging.radiologist_name || '' }}</div>
-                                <div style="border-top:1px solid #333;padding-top:2px;font-size:8.5px;color:#555;">
-                                    {{ imaging.radiologist_license ? 'Lic. No.: ' + imaging.radiologist_license : 'Radiologist' }}
+                                <div>
+                                    <div style="height:20px;display:flex;align-items:flex-end;justify-content:center;overflow:visible;margin-bottom:1px;">
+                                        <img v-if="imaging.radiologist_signature"
+                                            :src="imaging.radiologist_signature"
+                                            :style="{maxHeight:Math.round(18*(imaging.radiologist_sig_scale||1))+'px',maxWidth:'90px'}"
+                                            style="object-fit:contain;display:block;"
+                                            crossorigin="anonymous"/>
+                                    </div>
+                                    <div style="border-top:1px solid #333;padding-top:2px;">
+                                        <div style="font-weight:700;font-size:10px;">{{ imaging.radiologist_name || '' }}</div>
+                                        <div style="font-size:8.5px;color:#555;">
+                                            {{ imaging.radiologist_license ? 'Lic. No.: ' + imaging.radiologist_license : 'Radiologist' }}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </template>
                     <template v-else>
                         <div style="font-size:8px;color:#aaa;font-style:italic;padding:4px 0;">No X-Ray on file for this visit.</div>
-                        <div style="margin-top:20px;text-align:center;">
+                        <div style="margin-top:auto;text-align:center;">
                             <div style="border-top:1px solid #333;display:inline-block;min-width:120px;padding-top:2px;font-size:7.5px;color:#555;">Radiologist / Rad Tech</div>
                         </div>
                     </template>
                 </div>
-                <!-- ECG -->
-                <div style="border-top:2px solid #111;padding-top:5px;margin-top:2px;">
+                <!-- ECG — bottom half, equal size -->
+                <div style="flex:1;display:flex;flex-direction:column;border-top:2px solid #111;padding-top:5px;overflow:hidden;">
                     <div style="font-weight:900;font-size:11px;margin-bottom:3px;">ELECTROCARDIOGRAPHY (ECG)</div>
                     <template v-if="consultation?.ecg_impression || consultation?.ecg_findings">
                         <div style="font-size:11px;margin-bottom:3px;">
                             <span style="color:#555;">Impression: </span>
                             <strong>{{ consultation.ecg_impression || '—' }}</strong>
                         </div>
-                        <div style="font-size:10.5px;min-height:28px;white-space:pre-line;border:1px solid #e0e0e0;padding:3px 4px;background:#fafafa;">{{ consultation.ecg_findings || '' }}</div>
+                        <div style="font-size:10.5px;flex:1;min-height:20px;white-space:pre-line;border:1px solid #e0e0e0;padding:3px 4px;background:#fafafa;overflow:hidden;">{{ consultation.ecg_findings || '' }}</div>
                         <div style="font-size:8.5px;color:#444;margin-top:3px;font-style:italic;">
                             NOTE: ECG is required for persons with hypertension, heart disease, and related illnesses.
                         </div>
                         <div style="margin-top:5px;font-size:10.5px;display:flex;align-items:flex-end;gap:6px;">
                             <span style="color:#555;">Noted By:</span>
                             <div style="text-align:center;flex:1;">
-                                <img v-if="consultation.ecg_noted_by_signature"
-                                    :src="consultation.ecg_noted_by_signature"
-                                    style="max-height:24px;max-width:90px;object-fit:contain;display:block;margin:0 auto 2px;"
-                                    crossorigin="anonymous"/>
-                                <div style="font-weight:700;font-size:10px;">{{ consultation.ecg_noted_by_name || '' }}</div>
-                                <div style="border-top:1px solid #333;padding-top:2px;font-size:8.5px;color:#555;">
-                                    {{ consultation.ecg_noted_by_license ? 'Lic. No.: ' + consultation.ecg_noted_by_license : '' }}
+                                <div>
+                                    <div style="height:20px;display:flex;align-items:flex-end;justify-content:center;overflow:visible;margin-bottom:1px;">
+                                        <img v-if="consultation.ecg_noted_by_signature"
+                                            :src="consultation.ecg_noted_by_signature"
+                                            :style="{maxHeight:Math.round(18*(consultation.ecg_noted_by_sig_scale||1))+'px',maxWidth:'90px'}"
+                                            style="object-fit:contain;display:block;"
+                                            crossorigin="anonymous"/>
+                                    </div>
+                                    <div style="border-top:1px solid #333;padding-top:2px;">
+                                        <div style="font-weight:700;font-size:10px;">{{ consultation.ecg_noted_by_name || '' }}</div>
+                                        <div style="font-size:8.5px;color:#555;">
+                                            {{ consultation.ecg_noted_by_license ? 'Lic. No.: ' + consultation.ecg_noted_by_license : '' }}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -702,7 +753,7 @@ const classRec = {
                         <div style="font-size:8.5px;color:#444;margin-top:3px;font-style:italic;">
                             NOTE: ECG is required for persons with hypertension, heart disease, and related illnesses.
                         </div>
-                        <div style="margin-top:20px;border-top:1px solid #333;text-align:center;padding-top:2px;font-size:7.5px;color:#555;">Noted By</div>
+                        <div style="margin-top:auto;border-top:1px solid #333;text-align:center;padding-top:2px;font-size:7.5px;color:#555;">Noted By</div>
                     </template>
                 </div>
             </div>
@@ -711,125 +762,149 @@ const classRec = {
 
     <!-- ── ANNUAL PE / OPD ── -->
     <template v-else>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px;margin-bottom:5px;">
-            <div>
-                <div style="font-weight:900;font-size:12px;text-align:center;margin-bottom:3px;">COMPLETE BLOOD COUNT</div>
-                <table style="width:100%;border-collapse:collapse;font-size:10.5px;border:1px solid #333;">
-                    <tr style="border-bottom:1px solid #333;background:#f5f5f5;">
-                        <th style="text-align:left;padding:3px 4px;border-right:1px solid #333;">EXAMINATION</th>
-                        <th style="text-align:left;padding:2px 3px;width:16%;border-right:1px solid #333;">RESULT</th>
-                        <th style="text-align:left;padding:2px 3px;">REFERENCE RANGE</th>
-                    </tr>
-                    <tr v-for="row in [
-                        {code:'HGB',name:'Hemoglobin',    range:'M=135-175/F=115-155 g/L'},
-                        {code:'HCT',name:'Hematocrit',    range:'M=40-52/F=35-48%'},
-                        {code:'RBC',name:'RBC Count',     range:'M=4.5-5.2/F=3.9-5.6 x10 g/L'},
-                        {code:'PLT',name:'Platelet Count',range:'150-400 x10 g/L'},
-                        {code:'WBC',name:'WBC Count',     range:'4.0-11.0 x10 g/L'},
-                        {code:'SEG',name:'Segmenters',    range:'50-70%'},
-                        {code:'LYM',name:'Lymphocytes',   range:'26-46%'},
-                        {code:'MID',name:'Mid',           range:'2-10%'},
-                    ]" :key="row.code" style="border-bottom:1px solid #eee;">
-                        <td style="padding:4px 3px;border-right:1px solid #ddd;">{{ row.name }}</td>
-                        <td style="padding:4px 3px;border-right:1px solid #ddd;" :style="rs(row.code)">{{ r(row.code) }}</td>
-                        <td style="padding:4px 3px;color:#555;font-size:9.5px;">{{ row.range }}</td>
-                    </tr>
-                </table>
-            </div>
-            <div>
-                <div style="font-weight:900;font-size:12px;text-align:center;margin-bottom:3px;">URINALYSIS</div>
-                <table style="width:100%;border-collapse:collapse;font-size:10.5px;border:1px solid #333;">
-                    <tr style="border-bottom:1px solid #333;background:#f5f5f5;">
-                        <th style="text-align:left;padding:3px 4px;border-right:1px solid #333;">EXAMINATION</th>
-                        <th style="text-align:right;padding:2px 3px;width:20%;border-right:1px solid #333;">RESULT</th>
-                        <th style="text-align:left;padding:2px 3px;">REFERENCE RANGE</th>
-                    </tr>
-                    <tr v-for="row in [
-                        {code:'UA_COLOR',name:'Urine Color',        range:'Yellow'},
-                        {code:'UA_TRANS',name:'Transparency',       range:'Clear'},
-                        {code:'UA_PH',   name:'pH',                 range:'4.5-8.0'},
-                        {code:'UA_SG',   name:'Specific Gravity',   range:'1.010-1.025'},
-                        {code:'UA_SUGAR',name:'Sugar',              range:'Negative'},
-                        {code:'UA_PRO',  name:'Protein',            range:'Negative'},
-                        {code:'UA_PUS',  name:'Pus Cells',          range:'0-5/hpf'},
-                        {code:'UA_RBC',  name:'RBC',                range:'0-3/hpf'},
-                        {code:'UA_EPI',  name:'Epithelial Cells',   range:'Few'},
-                        {code:'UA_MUC',  name:'Mucus Threads',      range:'Few'},
-                        {code:'UA_AMO',  name:'Amorphous Substance',range:'Few'},
-                        {code:'UA_BAC',  name:'Bacteria',           range:'None'},
-                        {code:'UA_CRY',  name:'Crystals',           range:'None'},
-                        {code:'UA_OTH',  name:'Others',             range:''},
-                    ]" :key="row.code" style="border-bottom:1px solid #eee;">
-                        <td style="padding:4px 3px;border-right:1px solid #ddd;">{{ row.name }}</td>
-                        <td style="padding:3px 3px;text-align:right;border-right:1px solid #ddd;" :style="rs(row.code)">{{ r(row.code) }}</td>
-                        <td style="padding:4px 3px;color:#555;font-size:9.5px;">{{ row.range }}</td>
-                    </tr>
-                </table>
-            </div>
-        </div>
-        <!-- STOOL + Lab sigs -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px;margin-bottom:5px;">
-            <div>
-                <div style="font-weight:900;font-size:12px;text-align:center;margin-bottom:3px;">STOOL EXAM</div>
-                <table style="width:100%;border-collapse:collapse;font-size:10.5px;border:1px solid #333;">
-                    <tr style="border-bottom:1px solid #333;background:#f5f5f5;">
-                        <th style="text-align:left;padding:3px 4px;border-right:1px solid #333;">EXAMINATION</th>
-                        <th style="text-align:left;padding:2px 3px;width:28%;border-right:1px solid #333;">RESULT</th>
-                        <th style="text-align:left;padding:2px 3px;">REFERENCE RANGE</th>
-                    </tr>
-                    <tr v-for="row in [
-                        {code:'ST_COL',name:'Color',          range:'Brown'},
-                        {code:'ST_CON',name:'Consistency',    range:'Formed'},
-                        {code:'ST_PUS',name:'Pus Cells',      range:'0-2/hpf'},
-                        {code:'ST_RBC',name:'Red Blood Cells',range:'None'},
-                        {code:'ST_OVA',name:'Ova/Parasites',  range:'None seen'},
-                    ]" :key="row.code" style="border-bottom:1px solid #eee;">
-                        <td style="padding:4px 3px;border-right:1px solid #ddd;">{{ row.name }}</td>
-                        <td style="padding:4px 3px;border-right:1px solid #ddd;" :style="rs(row.code)">{{ r(row.code) }}</td>
-                        <td style="padding:4px 3px;color:#555;font-size:9.5px;">{{ row.range }}</td>
-                    </tr>
-                </table>
-            </div>
-            <div style="font-size:10px;display:flex;justify-content:space-between;align-items:flex-end;">
-                <div style="text-align:center;">
-                    <div style="color:#555;margin-bottom:16px;">Examined By:</div>
-                    <div style="border-top:1px solid #333;padding-top:2px;">
-                        <div style="font-weight:700;">{{ labRequest?.examined_by_name || 'VAN VINCE G. DIVES, RMT' }}</div>
-                        <div>License no. {{ labRequest?.examined_by_license || '0128116' }}</div>
-                        <div>Medical Technologist</div>
-                    </div>
+        <!-- Single 2-col layout: Left = CBC + Stool stacked | Right = Urinalysis + signatures -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px;margin-bottom:5px;align-items:start;">
+            <!-- LEFT: CBC on top, Stool below -->
+            <div style="display:flex;flex-direction:column;gap:5px;">
+                <!-- CBC -->
+                <div>
+                    <div style="font-weight:900;font-size:12px;text-align:center;margin-bottom:3px;">COMPLETE BLOOD COUNT</div>
+                    <table style="width:100%;border-collapse:collapse;font-size:10.5px;border:1px solid #333;">
+                        <tr style="border-bottom:1px solid #333;background:#f5f5f5;">
+                            <th style="text-align:left;padding:3px 4px;border-right:1px solid #333;">EXAMINATION</th>
+                            <th style="text-align:left;padding:2px 3px;width:16%;border-right:1px solid #333;">RESULT</th>
+                            <th style="text-align:left;padding:2px 3px;">REFERENCE RANGE</th>
+                        </tr>
+                        <tr v-for="row in [
+                            {code:'HGB',name:'Hemoglobin',    range:'M=135-175/F=115-155 g/L'},
+                            {code:'HCT',name:'Hematocrit',    range:'M=40-52/F=35-48%'},
+                            {code:'RBC',name:'RBC Count',     range:'M=4.5-5.2/F=3.9-5.6 x10 g/L'},
+                            {code:'PLT',name:'Platelet Count',range:'150-400 x10 g/L'},
+                            {code:'WBC',name:'WBC Count',     range:'4.0-11.0 x10 g/L'},
+                            {code:'SEG',name:'Segmenters',    range:'50-70%'},
+                            {code:'LYM',name:'Lymphocytes',   range:'26-46%'},
+                            {code:'MID',name:'Mid',           range:'2-10%'},
+                        ]" :key="row.code" style="border-bottom:1px solid #333;">
+                            <td style="padding:4px 3px;border-right:1px solid #ddd;">{{ row.name }}</td>
+                            <td style="padding:4px 3px;border-right:1px solid #ddd;" :style="rs(row.code)">{{ r(row.code) }}</td>
+                            <td style="padding:4px 3px;color:#555;font-size:9.5px;">{{ row.range }}</td>
+                        </tr>
+                    </table>
                 </div>
-                <div style="text-align:center;">
-                    <div style="margin-bottom:2px;">Noted By:</div>
-                    <div style="min-height:16px;"></div>
-                    <div style="border-top:1px solid #333;padding-top:2px;">
-                        <div style="font-weight:700;">{{ labRequest?.noted_by_name || 'PONCIANO S. LIMCANGCO, MD, FPSP' }}</div>
-                        <div>License No.: {{ labRequest?.noted_by_license || '0058646' }}</div>
-                        <div>Pathologist</div>
+                <!-- Stool Exam — below CBC -->
+                <div>
+                    <div style="font-weight:900;font-size:12px;text-align:center;margin-bottom:3px;">STOOL EXAM</div>
+                    <table style="width:100%;border-collapse:collapse;font-size:10.5px;border:1px solid #333;">
+                        <tr style="border-bottom:1px solid #333;background:#f5f5f5;">
+                            <th style="text-align:left;padding:3px 4px;border-right:1px solid #333;">EXAMINATION</th>
+                            <th style="text-align:left;padding:2px 3px;width:28%;border-right:1px solid #333;">RESULT</th>
+                            <th style="text-align:left;padding:2px 3px;">REFERENCE RANGE</th>
+                        </tr>
+                        <tr v-for="row in [
+                            {code:'ST_COL',name:'Color',          range:'Brown'},
+                            {code:'ST_CON',name:'Consistency',    range:'Formed'},
+                            {code:'ST_PUS',name:'Pus Cells',      range:'0-2/hpf'},
+                            {code:'ST_RBC',name:'Red Blood Cells',range:'None'},
+                            {code:'ST_OVA',name:'Ova/Parasites',  range:'None seen'},
+                        ]" :key="row.code" style="border-bottom:1px solid #333;">
+                            <td style="padding:4px 3px;border-right:1px solid #ddd;">{{ row.name }}</td>
+                            <td style="padding:4px 3px;border-right:1px solid #ddd;" :style="rs(row.code)">{{ r(row.code) }}</td>
+                            <td style="padding:4px 3px;color:#555;font-size:9.5px;">{{ row.range }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- RIGHT: Urinalysis + signatures below -->
+            <div style="display:flex;flex-direction:column;">
+                <!-- Urinalysis -->
+                <div>
+                    <div style="font-weight:900;font-size:12px;text-align:center;margin-bottom:3px;">URINALYSIS</div>
+                    <table style="width:100%;border-collapse:collapse;font-size:10.5px;border:1px solid #333;">
+                        <tr style="border-bottom:1px solid #333;background:#f5f5f5;">
+                            <th style="text-align:left;padding:3px 4px;border-right:1px solid #333;">EXAMINATION</th>
+                            <th style="text-align:right;padding:2px 3px;width:20%;border-right:1px solid #333;">RESULT</th>
+                            <th style="text-align:left;padding:2px 3px;">REFERENCE RANGE</th>
+                        </tr>
+                        <tr v-for="row in [
+                            {code:'UA_COLOR',name:'Urine Color',        range:'Yellow'},
+                            {code:'UA_TRANS',name:'Transparency',       range:'Clear'},
+                            {code:'UA_PH',   name:'pH',                 range:'4.5-8.0'},
+                            {code:'UA_SG',   name:'Specific Gravity',   range:'1.010-1.025'},
+                            {code:'UA_SUGAR',name:'Sugar',              range:'Negative'},
+                            {code:'UA_PRO',  name:'Protein',            range:'Negative'},
+                            {code:'UA_PUS',  name:'Pus Cells',          range:'0-5/hpf'},
+                            {code:'UA_RBC',  name:'RBC',                range:'0-3/hpf'},
+                            {code:'UA_EPI',  name:'Epithelial Cells',   range:'Few'},
+                            {code:'UA_MUC',  name:'Mucus Threads',      range:'Few'},
+                            {code:'UA_AMO',  name:'Amorphous Substance',range:'Few'},
+                            {code:'UA_BAC',  name:'Bacteria',           range:'None'},
+                            {code:'UA_CRY',  name:'Crystals',           range:'None'},
+                            {code:'UA_OTH',  name:'Others',             range:''},
+                        ]" :key="row.code" style="border-bottom:1px solid #333;">
+                            <td style="padding:4px 3px;border-right:1px solid #ddd;">{{ row.name }}</td>
+                            <td style="padding:3px 3px;text-align:right;border-right:1px solid #ddd;" :style="rs(row.code)">{{ r(row.code) }}</td>
+                            <td style="padding:4px 3px;color:#555;font-size:9.5px;">{{ row.range }}</td>
+                        </tr>
+                    </table>
+                </div>
+                <!-- Signatures below Urinalysis with space for physical signatures -->
+                <div style="margin-top:8px;padding-top:6px;border-top:1px solid #aaa;font-size:10px;display:flex;justify-content:space-between;align-items:flex-end;">
+                    <div style="text-align:center;">
+                        <div style="font-size:9.5px;color:#555;margin-bottom:2px;">Examined By:</div>
+                        <div style="height:28px;display:flex;align-items:flex-end;justify-content:center;overflow:visible;margin-bottom:1px;">
+                            <img v-if="labRequest?.examined_by_signature"
+                                :src="labRequest.examined_by_signature"
+                                :style="{maxHeight:Math.round(24*(labRequest.examined_by_sig_scale||1))+'px',maxWidth:'110px'}"
+                                style="object-fit:contain;display:block;"
+                                crossorigin="anonymous"/>
+                        </div>
+                        <div style="border-top:1px solid #333;padding-top:2px;">
+                            <div style="font-weight:700;font-size:10px;">{{ labRequest?.examined_by_name || '—' }}</div>
+                            <div style="font-size:9px;">License no. {{ labRequest?.examined_by_license || '' }}</div>
+                            <div style="font-size:9px;">Medical Technologist</div>
+                        </div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="font-size:9.5px;color:#555;margin-bottom:2px;">Noted By:</div>
+                        <div style="height:28px;display:flex;align-items:flex-end;justify-content:center;overflow:visible;margin-bottom:1px;">
+                            <img v-if="labRequest?.noted_by_signature"
+                                :src="labRequest.noted_by_signature"
+                                :style="{maxHeight:Math.round(24*(labRequest.noted_by_sig_scale||1))+'px',maxWidth:'110px'}"
+                                style="object-fit:contain;display:block;"
+                                crossorigin="anonymous"/>
+                        </div>
+                        <div style="border-top:1px solid #333;padding-top:2px;">
+                            <div style="font-weight:700;font-size:10px;">{{ labRequest?.noted_by_name || '—' }}</div>
+                            <div style="font-size:9px;">License No.: {{ labRequest?.noted_by_license || '' }}</div>
+                            <div style="font-size:9px;">Pathologist</div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </template>
 
-    <!-- DIAGNOSIS + CLASSIFICATION -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 10px;border-top:1.5px solid #111;padding-top:4px;margin-bottom:3px;align-items:stretch;">
+    <!-- DIAGNOSIS + CLASSIFICATION + PHYSICIAN SIG — expands to fill remaining space -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 10px;border-top:1.5px solid #111;padding-top:4px;flex:1;min-height:0;margin-bottom:3px;">
+        <!-- Left: Diagnosis — expanded to fill height -->
         <div style="display:flex;flex-direction:column;">
             <div style="font-weight:900;font-size:12px;text-align:center;border-bottom:1.5px solid #111;padding-bottom:2px;margin-bottom:3px;">DIAGNOSIS/TREATMENT/PLAN</div>
-            <div style="border:1.5px solid #444;padding:5px 7px;flex:1;">
+            <div style="border:1.5px solid #444;padding:5px 7px;flex:1;overflow:hidden;">
                 <div v-if="consultation?.essentially_normal" style="font-weight:900;font-size:12px;">***ESSENTIALLY NORMAL FINDINGS***</div>
                 <div v-if="consultation?.pe_findings" style="font-size:12px;white-space:pre-line;line-height:1.5;">{{ consultation.pe_findings }}</div>
                 <div v-if="consultation?.soap_assessment && !consultation?.essentially_normal" style="font-size:12px;white-space:pre-line;line-height:1.5;">{{ consultation.soap_assessment }}</div>
             </div>
         </div>
-        <div>
+        <!-- Right: Classification + Examining Physician sig pushed to bottom, centered -->
+        <div style="display:flex;flex-direction:column;">
             <div style="font-weight:900;font-size:12px;text-align:center;border-bottom:1.5px solid #111;padding-bottom:2px;margin-bottom:3px;">CLASSIFICATION</div>
             <div v-for="cls in ['A','B','C','D','E']" :key="cls"
                 style="display:flex;align-items:flex-start;gap:5px;margin-bottom:5px;font-size:10.5px;line-height:1.4;">
-                <span style="display:inline-flex;align-items:center;justify-content:center;width:12px;height:12px;border:1.5px solid #333;font-size:8px;flex-shrink:0;margin-top:2px;"
-                    :style="consultation?.pe_classification===cls?'background:#000;color:#fff;':''">
-                    {{ consultation?.pe_classification===cls?'✓':'' }}
-                </span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" style="display:inline-block;vertical-align:middle;flex-shrink:0;margin-top:2px;">
+                    <rect x="1" y="1" width="10" height="10" :fill="consultation?.pe_classification===cls?'#111':'none'" :stroke="consultation?.pe_classification===cls?'#111':'#555'" stroke-width="1.5"/>
+                    <text v-if="consultation?.pe_classification===cls" x="6" y="9.5" text-anchor="middle" font-size="9" fill="white" font-weight="bold" font-family="Arial">✓</text>
+                </svg>
                 <span>
                     <strong style="font-size:11px;font-weight:900;">CLASS {{ cls }}</strong>
                     <span style="font-size:10.5px;"> {{ classDesc[cls] }}</span>
@@ -839,22 +914,23 @@ const classRec = {
                 <span style="color:#555;">Recommendation:</span>
                 <strong style="font-size:14px;letter-spacing:0.5px;">{{ classRec[consultation.pe_classification] }}</strong>
             </div>
-            <div style="margin-top:3px;font-size:10.5px;color:#444;">Remarks: {{ consultation?.pe_recommendation||'' }}</div>
-        </div>
-    </div>
-    <!-- Examining Physician signature — full width directly below Diagnosis and Classification -->
-    <div style="border-top:1.5px solid #111;padding-top:4px;display:flex;justify-content:center;">
-        <div style="text-align:center;min-width:250px;max-width:320px;">
-            <div style="height:42px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:0;">
-                <img v-if="consultation?.doctor_signature"
-                    :src="consultation.doctor_signature"
-                    style="max-height:38px;max-width:200px;object-fit:contain;"
-                    alt="Signature"/>
-            </div>
-            <div style="border-top:1.5px solid #333;padding-top:3px;">
-                <div style="font-size:11px;font-weight:700;">{{ (consultation?.doctor_name||'ROLAND E. MIRA')?.toUpperCase() }}, MD</div>
-                <div style="font-size:10px;">Examining Physician</div>
-                <div style="font-size:9.5px;color:#555;">License No.: {{ consultation?.doctor_prc||'0089780' }} / PTR {{ consultation?.doctor_ptr||'1474446' }}</div>
+            <div style="margin-top:2px;font-size:9.5px;color:#444;max-height:28px;overflow:hidden;">Remarks: {{ consultation?.pe_recommendation||'' }}</div>
+            <!-- Examining Physician — right side, centered, pushed to bottom -->
+            <div style="margin-top:auto;border-top:1.5px solid #111;padding-top:4px;display:flex;justify-content:center;">
+                <div style="text-align:center;min-width:200px;max-width:260px;">
+                    <div style="height:36px;display:flex;align-items:flex-end;justify-content:center;overflow:visible;margin-bottom:0;">
+                        <img v-if="consultation?.doctor_signature"
+                            :src="consultation.doctor_signature"
+                            :style="{maxHeight:Math.round(32*(consultation.doctor_sig_scale||1))+'px',maxWidth:'200px'}"
+                            style="object-fit:contain;display:block;"
+                            alt="Signature" crossorigin="anonymous"/>
+                    </div>
+                    <div style="border-top:1.5px solid #333;padding-top:3px;">
+                        <div style="font-size:11px;font-weight:700;">{{ (consultation?.doctor_name||'—')?.toUpperCase() }}, MD</div>
+                        <div style="font-size:10px;">Examining Physician</div>
+                        <div style="font-size:9.5px;color:#555;">License No.: {{ consultation?.doctor_prc||'' }} / PTR {{ consultation?.doctor_ptr||'' }}</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

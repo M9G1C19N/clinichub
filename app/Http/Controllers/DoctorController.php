@@ -27,7 +27,7 @@ class DoctorController extends Controller
             'ticket.visit.vitals',
             'ticket.visit.consultation',
         ])
-        ->today()
+        ->activeOrToday()
         ->forRoom('interview_room')
         ->whereIn('status', ['waiting', 'calling', 'serving'])
         ->orderByRaw("FIELD(status, 'serving', 'calling', 'waiting')")
@@ -347,6 +347,7 @@ class DoctorController extends Controller
                 'visit_date'       => $visit->visit_date->format('M d, Y h:i A'),
                 'employer_company' => $visit->employer_company,
                 'chief_complaint'  => $visit->chief_complaint,
+                'position_applied' => $visit->position_applied,
                 'services'         => $services,
             ],
             'prescriptions' => $visit->prescriptions->map(fn($rx) => [
@@ -399,11 +400,11 @@ class DoctorController extends Controller
             'icd10_code'           => $existing->icd10_code,
             'icd10_description'    => $existing->icd10_description,
             'diagnosis_type'       => $existing->diagnosis_type,
-            'pe_classification'    => $existing->pe_classification,
-            'pe_findings'          => $existing->pe_findings,
-            'pe_recommendation'    => $existing->pe_recommendation,
-            'position_applied'     => $existing->position_applied,
-            'requesting_physician' => $existing->requesting_physician,
+            'pe_classification'           => $existing->pe_classification,
+            'pe_findings'                 => $existing->pe_findings,
+            'pe_recommendation'           => $existing->pe_recommendation,
+            'position_applied'            => $visit->position_applied ?? $existing->position_applied,
+            'examining_physician_user_id' => $existing->examining_physician_user_id,
             // Physical Exam
             'pe_heent'         => $existing->pe_heent,
             'pe_chest_lungs'   => $existing->pe_chest_lungs,
@@ -438,16 +439,18 @@ class DoctorController extends Controller
                 'prc_number' => $doctor->prc_number ?? '',
                 'ptr_number' => $doctor->ptr_number ?? '',
             ],
-            // Users with e-signatures for ECG / CXR "Noted by" dropdown
+            // Users with e-signatures for ECG / CXR "Noted by" and Examining Physician dropdowns
             'signatories' => Esignature::with('user')
                 ->where('is_active', true)
                 ->get()
                 ->map(fn($sig) => [
-                    'user_id'        => $sig->user_id,
-                    'name'           => $sig->user?->name ?? '',
-                    'title'          => $sig->title ?? '',
-                    'license_number' => $sig->license_number ?? '',
-                    'signature_url'  => $sig->signature_url,
+                    'user_id'         => $sig->user_id,
+                    'name'            => $sig->user?->name ?? '',
+                    'title'           => $sig->title ?? '',
+                    'license_number'  => $sig->license_number ?? '',
+                    'ptr_number'      => $sig->ptr_number ?? '',
+                    'signature_url'   => $sig->signature_url,
+                    'signature_scale' => (float) ($sig->signature_scale ?? 1.0),
                 ]),
         ]);
     }
@@ -470,8 +473,8 @@ class DoctorController extends Controller
             'pe_classification'    => ['nullable', 'in:A,B,C,D,E'],
             'pe_findings'          => ['nullable', 'string'],
             'pe_recommendation'    => ['nullable', 'string'],
-            'position_applied'     => ['nullable', 'string', 'max:150'],
-            'requesting_physician' => ['nullable', 'string', 'max:150'],
+            'position_applied'              => ['nullable', 'string', 'max:150'],
+            'examining_physician_user_id'   => ['nullable', 'integer', 'exists:users,id'],
             // Physical Exam
             'pe_heent'         => ['nullable', 'string'],
             'pe_chest_lungs'   => ['nullable', 'string'],
@@ -499,6 +502,12 @@ class DoctorController extends Controller
         ];
 
         $validated = $request->validate($rules);
+
+        // position_applied is stored on patient_visit (single source of truth)
+        if (array_key_exists('position_applied', $validated)) {
+            $visit->update(['position_applied' => $validated['position_applied']]);
+            unset($validated['position_applied']);
+        }
 
         // Resolve ECG signatory details for denormalized storage
         $ecgExtra = [];
@@ -551,6 +560,7 @@ class DoctorController extends Controller
             'patient',
             'vitals',
             'consultation.doctor.esignature',
+            'consultation.examiningPhysician.esignature',
             'labRequest.results.labTest',
             'imagingRequest',
             'drugTestRequest',
@@ -576,6 +586,9 @@ class DoctorController extends Controller
                 ];
             }
         }
+
+        // Resolve examining physician: use override if set, else default to doctor_id user
+        $examDoc = $consultation?->examiningPhysician ?? $consultation?->doctor;
 
         return inertia('Doctor/Print', [
             'visit' => [
@@ -625,58 +638,54 @@ class DoctorController extends Controller
                 'ob_gravida'              => $vitals->ob_gravida,
                 'ob_para'                 => $vitals->ob_para,
                 'ob_nulligravida'         => $vitals->ob_nulligravida,
-                'tobacco_use'             => $vitals->tobacco_use,
-                'alcohol_use'             => $vitals->alcohol_use,
-                'conversational_hearing'  => $vitals->conversational_hearing,
-                'visual_acuity_near_right'=> $vitals->visual_acuity_near_right,
-                'visual_acuity_near_left' => $vitals->visual_acuity_near_left,
-                'color_vision_result'     => $vitals->color_vision_result,
-                'pe_findings_normal'      => $vitals->pe_findings_normal ?? [],
-                'pe_findings_remarks'     => $vitals->pe_findings_remarks,
+                'tobacco_use'                        => $vitals->tobacco_use,
+                'tobacco_use_details'                => $vitals->tobacco_use_details,
+                'alcohol_use'                        => $vitals->alcohol_use,
+                'alcohol_use_details'                => $vitals->alcohol_use_details,
+                'pe_remarks'                         => $vitals->pe_remarks,
+                'conversational_hearing'             => $vitals->conversational_hearing,
+                'visual_acuity_right_corrected'      => $vitals->visual_acuity_right_corrected,
+                'visual_acuity_left_corrected'       => $vitals->visual_acuity_left_corrected,
+                'visual_acuity_near_right'           => $vitals->visual_acuity_near_right,
+                'visual_acuity_near_left'            => $vitals->visual_acuity_near_left,
+                'visual_acuity_near_right_corrected' => $vitals->visual_acuity_near_right_corrected,
+                'visual_acuity_near_left_corrected'  => $vitals->visual_acuity_near_left_corrected,
+                'color_vision_result'                => $vitals->color_vision_result,
+                'pe_findings_normal'                 => $vitals->pe_findings_normal ?? [],
+                'pe_findings_details'                => $vitals->pe_findings_details ?? [],
+                'pe_findings_remarks'                => $vitals->pe_findings_remarks,
             ] : null,
             'consultation' => $consultation ? [
-                'pe_classification'    => $consultation->pe_classification,
-                'pe_findings'          => $consultation->pe_findings,
-                'pe_recommendation'    => $consultation->pe_recommendation,
-                'position_applied'     => $consultation->position_applied,
-                'requesting_physician' => $consultation->requesting_physician,
-                'essentially_normal'   => $consultation->essentially_normal,
-                'pe_heent'             => $consultation->pe_heent,
-                'pe_chest_lungs'       => $consultation->pe_chest_lungs,
-                'pe_heart'             => $consultation->pe_heart,
-                'pe_abdomen'           => $consultation->pe_abdomen,
-                'pe_extremities'       => $consultation->pe_extremities,
-                'pe_neurological'      => $consultation->pe_neurological,
-                'pe_genitourinary'     => $consultation->pe_genitourinary,
-                'pe_skin'              => $consultation->pe_skin,
-                'pe_others'            => $consultation->pe_others,
-                'past_illnesses'       => $consultation->past_illnesses,
-                'surgical_history'     => $consultation->surgical_history,
-                'allergies'            => $consultation->allergies,
-                'current_medications'  => $consultation->current_medications,
-                'family_history'       => $consultation->family_history,
-                'doctor_notes'         => $consultation->doctor_notes,
-                'finalized_at'         => $consultation->finalized_at?->format('M d, Y'),
-                'doctor_name'            => $consultation->doctor?->name ?? Auth::user()->name,
-                'doctor_prc'             => $consultation->doctor?->prc_number ?? '',
-                'doctor_ptr'             => $consultation->doctor?->ptr_number ?? '',
-                'doctor_signature'       => $this->sigUrl($consultation->doctor?->esignature?->signature_path),
+                'pe_classification'  => $consultation->pe_classification,
+                'pe_findings'        => $consultation->pe_findings,
+                'pe_recommendation'  => $consultation->pe_recommendation,
+                'essentially_normal' => $consultation->essentially_normal,
+                'soap_assessment'    => $consultation->soap_assessment,
+                // Examining physician — resolved from override or default doctor
+                'doctor_name'        => $examDoc?->name ?? Auth::user()->name,
+                'doctor_prc'         => $examDoc?->prc_number ?? '',
+                'doctor_ptr'         => $examDoc?->ptr_number ?? '',
+                'doctor_signature'   => $this->sigUrl($examDoc?->esignature?->signature_path),
+                'doctor_sig_scale'   => $this->sigScale($examDoc?->esignature?->signature_path ?? ''),
                 // ECG
-                'ecg_impression'         => $consultation->ecg_impression,
-                'ecg_findings'           => $consultation->ecg_findings,
-                'ecg_noted_by_name'      => $consultation->ecg_noted_by_name,
-                'ecg_noted_by_license'   => $consultation->ecg_noted_by_license,
-                'ecg_noted_by_signature' => $this->sigUrl($consultation->ecg_noted_by_signature),
+                'ecg_impression'           => $consultation->ecg_impression,
+                'ecg_findings'             => $consultation->ecg_findings,
+                'ecg_noted_by_name'        => $consultation->ecg_noted_by_name,
+                'ecg_noted_by_license'     => $consultation->ecg_noted_by_license,
+                'ecg_noted_by_signature'   => $this->sigUrl($consultation->ecg_noted_by_signature),
+                'ecg_noted_by_sig_scale'   => $this->sigScale($consultation->ecg_noted_by_signature ?? ''),
             ] : null,
             'labResults' => $labResultMap,
             'labRequest' => $labRequest ? [
-                'status'               => $labRequest->status,
-                'examined_by_name'     => $labRequest->examined_by_name,
-                'examined_by_license'  => $labRequest->examined_by_license,
-                'examined_by_signature'=> $this->sigUrl($labRequest->examined_by_signature),
-                'noted_by_name'        => $labRequest->noted_by_name,
-                'noted_by_license'     => $labRequest->noted_by_license,
-                'noted_by_signature'   => $this->sigUrl($labRequest->noted_by_signature),
+                'status'                 => $labRequest->status,
+                'examined_by_name'       => $labRequest->examined_by_name,
+                'examined_by_license'    => $labRequest->examined_by_license,
+                'examined_by_signature'  => $this->sigUrl($labRequest->examined_by_signature),
+                'examined_by_sig_scale'  => $this->sigScale($labRequest->examined_by_signature),
+                'noted_by_name'          => $labRequest->noted_by_name,
+                'noted_by_license'       => $labRequest->noted_by_license,
+                'noted_by_signature'     => $this->sigUrl($labRequest->noted_by_signature),
+                'noted_by_sig_scale'     => $this->sigScale($labRequest->noted_by_signature),
             ] : null,
             // CXR fields remapped to match what the print template expects
             'imaging' => $imaging ? [
@@ -691,6 +700,7 @@ class DoctorController extends Controller
                 'radiologist_signature'   => $imaging->radiologist_signature
                     ? $this->sigUrl($imaging->radiologist_signature)
                     : null,
+                'radiologist_sig_scale'   => $this->sigScale($imaging->radiologist_signature ?? ''),
             ] : null,
             'drugTest' => $drugTest ? [
                 'result'      => $drugTest->result,
@@ -785,5 +795,15 @@ private function sigUrl(?string $val): ?string
         return $val;
     }
     return asset('storage/' . $val);
+}
+
+private function sigScale(?string $val): float
+{
+    if (!$val) return 1.0;
+    $path = str_starts_with($val, 'http')
+        ? (preg_match('#/storage/(.+)$#', $val, $m) ? $m[1] : null)
+        : $val;
+    if (!$path) return 1.0;
+    return (float) (\App\Models\Esignature::where('signature_path', $path)->value('signature_scale') ?? 1.0);
 }
 }

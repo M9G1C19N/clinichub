@@ -20,13 +20,36 @@ class DrugTestController extends Controller
         $date         = $request->get('date', '');
         $statusFilter = $request->get('status', 'all');
 
+        // ── SAFETY NET — auto-create missing DrugTestRequests ──
+        $drugCodes = array_keys(array_filter(
+            RoomRoutingEngine::SERVICE_ROOM_MAP, fn($r) => $r === 'drug_test'
+        ));
+        PatientVisit::whereDoesntHave('drugTestRequest')
+            ->where('status', '!=', 'cancelled')
+            ->where('visit_date', '>=', now()->subDays(60))
+            ->where(function ($q) use ($drugCodes) {
+                foreach ($drugCodes as $code) {
+                    $q->orWhereJsonContains('services_selected', $code)
+                      ->orWhereJsonContains('services_selected', strtolower($code));
+                }
+            })
+            ->each(function ($visit) {
+                DrugTestRequest::firstOrCreate(
+                    ['patient_visit_id' => $visit->id],
+                    [
+                        'patient_id' => $visit->patient_id,
+                        'status'     => 'pending',
+                    ]
+                );
+            });
+
         // Today's drug test queue — include completed
         $queue = QueueRoomAssignment::with([
             'ticket.patient',
             'ticket.visit.drugTestRequest',
             'ticket.visit.invoice.items',
         ])
-        ->today()
+        ->activeOrToday()
         ->forRoom('drug_test')
         ->whereNotIn('status', ['no_show','skipped','cancelled'])
         ->orderByRaw("FIELD(status, 'serving','calling','waiting','completed')")

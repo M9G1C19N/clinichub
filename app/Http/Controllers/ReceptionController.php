@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DrugTestRequest;
+use App\Models\ImagingRequest;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\KioskCheckIn;
+use App\Models\LaboratoryRequest;
 use App\Models\PackageDiscount;
 use App\Models\Patient;
 use App\Models\PatientVisit;
@@ -338,6 +341,7 @@ class ReceptionController extends Controller
             'visit_type'         => ['required', 'in:opd,pre_employment,annual_pe,exit_pe,follow_up,lab_only'],
             'is_field_visit'     => ['boolean'],
             'employer_company'   => ['nullable', 'string', 'max:150'],
+            'position_applied'   => ['nullable', 'string', 'max:150'],
             'chief_complaint'    => ['nullable', 'string'],
             'referral_validated' => ['boolean'],
             'services'           => ['required', 'array', 'min:1'],
@@ -356,6 +360,7 @@ class ReceptionController extends Controller
                     'patient_id'         => $validated['patient_id'],
                     'visit_type'         => $validated['visit_type'],
                     'employer_company'   => $validated['employer_company'] ?? null,
+                    'position_applied'   => $validated['position_applied'] ?? null,
                     'services_selected'  => $validated['services'],
                     'visit_date'         => now(),
                     'is_field_visit'     => $validated['is_field_visit'] ?? false,
@@ -423,6 +428,47 @@ class ReceptionController extends Controller
                 // 6. Route ticket
                 app(RoomRoutingEngine::class)->route($ticket);
 
+                // 7. Auto-create pending diagnostic request records so patients
+                //    always appear in the lab/xray/drug-test modules immediately,
+                //    even if staff never clicks "collect" on the day of registration.
+                $upperServices = array_map('strtoupper', $validated['services']);
+                $roomMap       = RoomRoutingEngine::SERVICE_ROOM_MAP;
+                $rooms         = array_unique(array_filter(
+                    array_map(fn($code) => $roomMap[$code] ?? null, $upperServices)
+                ));
+
+                if (in_array('laboratory', $rooms)) {
+                    LaboratoryRequest::firstOrCreate(
+                        ['patient_visit_id' => $visit->id],
+                        [
+                            'patient_id'   => $visit->patient_id,
+                            'requested_by' => Auth::id(),
+                            'request_date' => today(),
+                            'status'       => 'pending',
+                        ]
+                    );
+                }
+
+                if (in_array('xray_utz', $rooms)) {
+                    ImagingRequest::firstOrCreate(
+                        ['patient_visit_id' => $visit->id],
+                        [
+                            'patient_id'  => $visit->patient_id,
+                            'status'      => 'pending',
+                        ]
+                    );
+                }
+
+                if (in_array('drug_test', $rooms)) {
+                    DrugTestRequest::firstOrCreate(
+                        ['patient_visit_id' => $visit->id],
+                        [
+                            'patient_id' => $visit->patient_id,
+                            'status'     => 'pending',
+                        ]
+                    );
+                }
+
                 return [$visit, $invoice, $ticket];
             });
 
@@ -459,6 +505,8 @@ class ReceptionController extends Controller
                     'case_number'      => $visit->case_number,
                     'employer_company' => $visit->employer_company,
                     'chief_complaint'  => $visit->chief_complaint,
+                    'position_applied' => $visit->position_applied,
+                    'address'          => $visit->patient->address ?? '',
                 ]);
 
         } catch (\Throwable $e) {
@@ -540,6 +588,8 @@ class ReceptionController extends Controller
                 'case_number'      => $invoice->visit->case_number,
                 'employer_company' => $invoice->visit->employer_company,
                 'chief_complaint'  => $invoice->visit->chief_complaint,
+                'position_applied' => $invoice->visit->position_applied,
+                'address'          => $invoice->patient->address ?? '',
             ] : null,
         ]);
     }

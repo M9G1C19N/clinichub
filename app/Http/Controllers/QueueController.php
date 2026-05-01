@@ -58,7 +58,9 @@ class QueueController extends Controller
             'issued_at'        => $t->issued_at->format('M d, Y h:i A'),
             'services'         => $t->services_requested ?? [],
             'case_number'      => $t->visit?->case_number,
+            'address'          => $t->patient->address ?? '',
             'employer_company' => $t->visit?->employer_company,
+            'position_applied' => $t->visit?->position_applied,
             'chief_complaint'  => $t->visit?->chief_complaint,
             'rooms'              => $t->roomAssignments->map(fn($r) => [
                 'room'         => $r->room,
@@ -209,7 +211,9 @@ class QueueController extends Controller
                 'rooms'            => $rooms,
                 'issued_at'        => $ticket->issued_at->format('M d, Y h:i A'),
                 'case_number'      => $visit?->case_number,
+                'address'          => $patient->address ?? '',
                 'employer_company' => $visit?->employer_company,
+                'position_applied' => $visit?->position_applied,
                 'chief_complaint'  => $visit?->chief_complaint,
             ]);
     }

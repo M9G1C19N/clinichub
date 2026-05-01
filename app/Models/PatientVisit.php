@@ -25,6 +25,7 @@ class PatientVisit extends Model
         'patient_id',
         'visit_type',
         'employer_company',
+        'position_applied',
         'referral_validated',
         'services_selected',
         'visit_date',

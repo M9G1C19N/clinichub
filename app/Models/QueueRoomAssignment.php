@@ -53,6 +53,18 @@ class QueueRoomAssignment extends Model
         return $query->whereDate('created_at', today());
     }
 
+    // Today's new arrivals + any older assignments still not finished
+    public function scopeActiveOrToday($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereDate('created_at', today())
+              ->orWhere(function ($inner) {
+                  $inner->whereDate('created_at', '<', today())
+                        ->whereNotIn('status', ['completed', 'no_show', 'skipped', 'cancelled']);
+              });
+        });
+    }
+
     public function scopeForRoom($query, string $room)
     {
         return $query->where('room', $room);

@@ -46,7 +46,7 @@ class Consultation extends Model
         'ecg_noted_by_license', 'ecg_noted_by_signature',
         // Common
         'doctor_notes', 'is_finalized', 'finalized_at',
-        'doctor_id', 'consultation_date', 'follow_up_date',
+        'doctor_id', 'examining_physician_user_id', 'consultation_date', 'follow_up_date',
         'essentially_normal', 'status',
     ];
 
@@ -70,6 +70,11 @@ class Consultation extends Model
     public function doctor()
     {
         return $this->belongsTo(User::class, 'doctor_id');
+    }
+
+    public function examiningPhysician()
+    {
+        return $this->belongsTo(User::class, 'examining_physician_user_id');
     }
 
     // ── Accessors ──────────────────────────────────

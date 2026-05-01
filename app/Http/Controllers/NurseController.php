@@ -23,7 +23,7 @@ class NurseController extends Controller
             'ticket.patient',
             'ticket.visit.vitals',
         ])
-        ->today()
+        ->activeOrToday()
         ->forRoom('nurse_station')
         ->whereNotIn('status', ['no_show', 'skipped', 'cancelled'])
         ->orderByRaw("FIELD(status, 'serving', 'calling', 'waiting', 'completed')")
@@ -193,14 +193,22 @@ class NurseController extends Controller
                 'ob_gravida'              => $existing->ob_gravida,
                 'ob_para'                 => $existing->ob_para,
                 'ob_nulligravida'         => $existing->ob_nulligravida,
-                'tobacco_use'             => $existing->tobacco_use,
-                'alcohol_use'             => $existing->alcohol_use,
-                'conversational_hearing'  => $existing->conversational_hearing,
-                'visual_acuity_near_right'=> $existing->visual_acuity_near_right,
-                'visual_acuity_near_left' => $existing->visual_acuity_near_left,
-                'color_vision_result'     => $existing->color_vision_result,
-                'pe_findings_normal'      => $existing->pe_findings_normal ?? [],
-                'pe_findings_remarks'     => $existing->pe_findings_remarks,
+                'tobacco_use'                    => $existing->tobacco_use,
+                'tobacco_use_details'            => $existing->tobacco_use_details,
+                'alcohol_use'                    => $existing->alcohol_use,
+                'alcohol_use_details'            => $existing->alcohol_use_details,
+                'pe_remarks'                     => $existing->pe_remarks,
+                'conversational_hearing'         => $existing->conversational_hearing,
+                'visual_acuity_right_corrected'  => $existing->visual_acuity_right_corrected,
+                'visual_acuity_left_corrected'   => $existing->visual_acuity_left_corrected,
+                'visual_acuity_near_right'       => $existing->visual_acuity_near_right,
+                'visual_acuity_near_left'        => $existing->visual_acuity_near_left,
+                'visual_acuity_near_right_corrected' => $existing->visual_acuity_near_right_corrected,
+                'visual_acuity_near_left_corrected'  => $existing->visual_acuity_near_left_corrected,
+                'color_vision_result'            => $existing->color_vision_result,
+                'pe_findings_normal'             => $existing->pe_findings_normal ?? [],
+                'pe_findings_details'            => $existing->pe_findings_details ?? [],
+                'pe_findings_remarks'            => $existing->pe_findings_remarks,
             ] : null,
         ]);
     }
@@ -234,14 +242,22 @@ class NurseController extends Controller
             'ob_gravida'               => ['nullable', 'string', 'max:20'],
             'ob_para'                  => ['nullable', 'string', 'max:20'],
             'ob_nulligravida'          => ['boolean'],
-            'tobacco_use'              => ['nullable', 'in:current,former,never'],
-            'alcohol_use'              => ['nullable', 'in:current,former,never'],
-            'conversational_hearing'   => ['nullable', 'in:Normal,Defective'],
-            'visual_acuity_near_right' => ['nullable', 'string', 'max:20'],
-            'visual_acuity_near_left'  => ['nullable', 'string', 'max:20'],
-            'color_vision_result'      => ['nullable', 'string', 'max:50'],
-            'pe_findings_normal'       => ['nullable', 'array'],
-            'pe_findings_remarks'      => ['nullable', 'string'],
+            'tobacco_use'                        => ['nullable', 'in:current,former,never'],
+            'tobacco_use_details'                => ['nullable', 'string', 'max:255'],
+            'alcohol_use'                        => ['nullable', 'in:current,former,never'],
+            'alcohol_use_details'                => ['nullable', 'string', 'max:255'],
+            'pe_remarks'                         => ['nullable', 'string'],
+            'conversational_hearing'             => ['nullable', 'in:Normal,Defective'],
+            'visual_acuity_right_corrected'      => ['nullable', 'string', 'max:20'],
+            'visual_acuity_left_corrected'       => ['nullable', 'string', 'max:20'],
+            'visual_acuity_near_right'           => ['nullable', 'string', 'max:20'],
+            'visual_acuity_near_left'            => ['nullable', 'string', 'max:20'],
+            'visual_acuity_near_right_corrected' => ['nullable', 'string', 'max:20'],
+            'visual_acuity_near_left_corrected'  => ['nullable', 'string', 'max:20'],
+            'color_vision_result'                => ['nullable', 'string', 'max:50'],
+            'pe_findings_normal'                 => ['nullable', 'array'],
+            'pe_findings_details'                => ['nullable', 'array'],
+            'pe_findings_remarks'                => ['nullable', 'string'],
         ]);
 
         PatientVital::updateOrCreate(

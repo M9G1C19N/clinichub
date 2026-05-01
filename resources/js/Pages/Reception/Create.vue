@@ -31,6 +31,7 @@ const form = useForm({
     patient_id:         props.patient?.id ?? null,
     visit_type:         props.checkin?.visit_type ?? 'opd',
     employer_company:   props.checkin?.employer_company ?? '',
+    position_applied:   props.checkin?.position_applied ?? '',
     chief_complaint:    props.checkin?.chief_complaint ?? '',
     referral_validated: false,
     services:           props.checkin?.services ?? [],
@@ -379,6 +380,11 @@ function submit() {
                         <div v-if="['pre_employment','annual_pe','exit_pe'].includes(form.visit_type)" class="space-y-1.5">
                             <Label class="text-xs">Employer Company</Label>
                             <Input v-model="form.employer_company" placeholder="e.g. TMC, PGMC" class="h-8 text-xs"/>
+                        </div>
+
+                        <div v-if="['pre_employment','annual_pe','exit_pe'].includes(form.visit_type)" class="space-y-1.5">
+                            <Label class="text-xs">Position Applied</Label>
+                            <Input v-model="form.position_applied" placeholder="e.g. Security Guard, Driver" class="h-8 text-xs"/>
                         </div>
 
                         <div v-if="form.visit_type === 'opd'" class="space-y-1.5">

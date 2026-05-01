@@ -27,6 +27,32 @@ class LaboratoryController extends Controller
         $pickupClaimFilter = $request->get('pickup_claim', 'all');
         $pickupDateFilter = $request->get('pickup_date', '');
 
+        // ── SAFETY NET — auto-create missing LaboratoryRequests ──
+        // Catches visits registered before auto-create was added,
+        // or whose queue was dismissed without collecting the sample.
+        $labCodes = array_keys(array_filter(
+            RoomRoutingEngine::SERVICE_ROOM_MAP, fn($r) => $r === 'laboratory'
+        ));
+        PatientVisit::whereDoesntHave('labRequest')
+            ->where('status', '!=', 'cancelled')
+            ->where('visit_date', '>=', now()->subDays(60))
+            ->where(function ($q) use ($labCodes) {
+                foreach ($labCodes as $code) {
+                    $q->orWhereJsonContains('services_selected', $code)
+                      ->orWhereJsonContains('services_selected', strtolower($code));
+                }
+            })
+            ->each(function ($visit) {
+                LaboratoryRequest::firstOrCreate(
+                    ['patient_visit_id' => $visit->id],
+                    [
+                        'patient_id'   => $visit->patient_id,
+                        'request_date' => $visit->visit_date->toDateString(),
+                        'status'       => 'pending',
+                    ]
+                );
+            });
+
         // ── TODAY'S QUEUE ─────────────────────────────
         // Show patients whose queue assignment was for lab TODAY
         // regardless of queue status — they still need results entered
@@ -42,7 +68,7 @@ class LaboratoryController extends Controller
             'ticket.visit.labRequest',
             'ticket.visit.invoice.items',
         ])
-        ->today()
+        ->activeOrToday()
         ->forRoom('laboratory')
         ->whereNotIn('status', ['no_show', 'skipped', 'cancelled'])
         ->orderByRaw("FIELD(status, 'serving', 'calling', 'waiting', 'completed')")

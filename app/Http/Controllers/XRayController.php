@@ -21,6 +21,29 @@ class XRayController extends Controller
         $dateFilter   = $request->get('date', '');
         $statusFilter = $request->get('status', 'all');
 
+        // ── SAFETY NET — auto-create missing ImagingRequests ──
+        $xrayCodes = array_keys(array_filter(
+            RoomRoutingEngine::SERVICE_ROOM_MAP, fn($r) => $r === 'xray_utz'
+        ));
+        PatientVisit::whereDoesntHave('imagingRequest')
+            ->where('status', '!=', 'cancelled')
+            ->where('visit_date', '>=', now()->subDays(60))
+            ->where(function ($q) use ($xrayCodes) {
+                foreach ($xrayCodes as $code) {
+                    $q->orWhereJsonContains('services_selected', $code)
+                      ->orWhereJsonContains('services_selected', strtolower($code));
+                }
+            })
+            ->each(function ($visit) {
+                ImagingRequest::firstOrCreate(
+                    ['patient_visit_id' => $visit->id],
+                    [
+                        'patient_id' => $visit->patient_id,
+                        'status'     => 'pending',
+                    ]
+                );
+            });
+
         // Today's queue — include completed queue assignments
         // so patients don't disappear after queue is marked done
         $queue = QueueRoomAssignment::with([
@@ -28,7 +51,7 @@ class XRayController extends Controller
             'ticket.visit.imagingRequest',
             'ticket.visit.invoice.items',
         ])
-        ->today()
+        ->activeOrToday()
         ->forRoom('xray_utz')
         ->whereNotIn('status', ['no_show', 'skipped', 'cancelled'])
         ->orderByRaw("FIELD(status, 'serving', 'calling', 'waiting', 'completed')")

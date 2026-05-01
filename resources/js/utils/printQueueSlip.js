@@ -368,15 +368,15 @@ export function printQueueSlip(ticket) {
   .cc-patient {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    gap: 0.7mm 3mm;
+    gap: 0.5mm 3mm;
     margin-bottom: 1mm;
     flex-shrink: 0;
   }
-  .cc-field      { display: flex; flex-direction: column; border-bottom: 1px solid #cbd5e1; padding-bottom: 0.5mm; }
+  .cc-field      { display: flex; flex-direction: column; border-bottom: 1px solid #cbd5e1; padding-bottom: 0.3mm; }
   .cc-field-full { grid-column: 1 / -1; }
   .cc-field-two  { grid-column: span 2; }
   .cc-lbl        { font-size: 7.5px; color: #64748b; text-transform: uppercase; letter-spacing: 0.2px; line-height: 1.2; }
-  .cc-val        { font-size: 11px; font-weight: 700; color: #1e293b; line-height: 1.25; min-height: 3mm; }
+  .cc-val        { font-size: 11px; font-weight: 700; color: #1e293b; line-height: 1.25; min-height: 2mm; }
 
   /* Vital signs — 2-column compact grid */
   .vs-section {
@@ -517,9 +517,18 @@ export function printQueueSlip(ticket) {
         <span class="cc-lbl">${esc(extraLabel)}</span>
         <span class="cc-val">${esc(extraValue)}</span>
       </div>` : ''}
-      <div class="cc-field ${extraLabel ? '' : 'cc-field-full'}">
+      <div class="cc-field" style="grid-column:3">
         <span class="cc-lbl">Date / Time Issued</span>
         <span class="cc-val">${esc(ticket.issued_at ?? '—')}</span>
+      </div>
+      ${isPE ? `
+      <div class="cc-field cc-field-full">
+        <span class="cc-lbl">Position Applied</span>
+        <span class="cc-val">${esc(ticket.position_applied ?? '')}</span>
+      </div>` : ''}
+      <div class="cc-field cc-field-full">
+        <span class="cc-lbl">Address</span>
+        <span class="cc-val">${esc(ticket.address ?? '')}</span>
       </div>
     </div>
 

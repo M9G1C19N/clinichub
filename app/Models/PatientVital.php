@@ -28,11 +28,16 @@ class PatientVital extends Model
         'family_history', 'accidents_injuries', 'surgical_history_detail',
         'allergies_flags', 'allergies_others',
         'menstrual_cycle', 'lmp', 'ob_gravida', 'ob_para', 'ob_nulligravida',
-        'tobacco_use', 'alcohol_use',
+        'tobacco_use', 'tobacco_use_details',
+        'alcohol_use', 'alcohol_use_details',
+        'pe_remarks',
         // Additional vitals
         'conversational_hearing',
-        'visual_acuity_near_right', 'visual_acuity_near_left', 'color_vision_result',
-        'pe_findings_normal', 'pe_findings_remarks',
+        'visual_acuity_right_corrected', 'visual_acuity_left_corrected',
+        'visual_acuity_near_right', 'visual_acuity_near_left',
+        'visual_acuity_near_right_corrected', 'visual_acuity_near_left_corrected',
+        'color_vision_result',
+        'pe_findings_normal', 'pe_findings_details', 'pe_findings_remarks',
     ];
 
     protected $casts = [
@@ -43,6 +48,7 @@ class PatientVital extends Model
         'past_illnesses_flags' => 'array',
         'allergies_flags'      => 'array',
         'pe_findings_normal'   => 'array',
+        'pe_findings_details'  => 'array',
         'ob_nulligravida'      => 'boolean',
     ];
 

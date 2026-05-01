@@ -50,14 +50,26 @@ const form = useForm({
     ob_para:                 props.vitals?.ob_para                 ?? '',
     ob_nulligravida:         props.vitals?.ob_nulligravida         ?? false,
     tobacco_use:             props.vitals?.tobacco_use             ?? 'never',
+    tobacco_use_details:     props.vitals?.tobacco_use_details     ?? '',
     alcohol_use:             props.vitals?.alcohol_use             ?? 'never',
+    alcohol_use_details:     props.vitals?.alcohol_use_details     ?? '',
+    pe_remarks:              props.vitals?.pe_remarks              ?? '',
     // Additional vitals
-    conversational_hearing:   props.vitals?.conversational_hearing   ?? 'Normal',
-    visual_acuity_near_right: props.vitals?.visual_acuity_near_right ?? '',
-    visual_acuity_near_left:  props.vitals?.visual_acuity_near_left  ?? '',
-    color_vision_result:      props.vitals?.color_vision_result      ?? '',
-    pe_findings_normal:       props.vitals?.pe_findings_normal       ?? {},
-    pe_findings_remarks:      props.vitals?.pe_findings_remarks      ?? '',
+    conversational_hearing:              props.vitals?.conversational_hearing              ?? 'Normal',
+    visual_acuity_right_corrected:       props.vitals?.visual_acuity_right_corrected       ?? '',
+    visual_acuity_left_corrected:        props.vitals?.visual_acuity_left_corrected        ?? '',
+    visual_acuity_near_right:            props.vitals?.visual_acuity_near_right            ?? '',
+    visual_acuity_near_left:             props.vitals?.visual_acuity_near_left             ?? '',
+    visual_acuity_near_right_corrected:  props.vitals?.visual_acuity_near_right_corrected  ?? '',
+    visual_acuity_near_left_corrected:   props.vitals?.visual_acuity_near_left_corrected   ?? '',
+    color_vision_result:                 props.vitals?.color_vision_result                 ?? '',
+    pe_findings_normal:  props.vitals?.pe_findings_normal  ?? {},
+    pe_findings_details: Object.fromEntries(
+        ['eyes','nose_sinuses','neck_thyroid','mouth_throat','chest_breast','lungs',
+         'heart','abdomen','back','anus','genitals','extremities','skin']
+        .map(k => [k, props.vitals?.pe_findings_details?.[k] ?? ''])
+    ),
+    pe_findings_remarks: props.vitals?.pe_findings_remarks ?? '',
 })
 
 // Live BMI calculation
@@ -145,13 +157,21 @@ function markAllPeNormal() {
     form.pe_findings_normal = all
 }
 
+function setPeDetail(key, val) {
+    form.pe_findings_details[key] = val
+}
+
 const isPeNormal = (key) => form.pe_findings_normal[key] === true
 const isPeAbnormal = (key) => form.pe_findings_normal[key] === false
 
 const isPreEmployment = IS_PE_TYPE(props.visit.visit_type)
 
 function submit() {
-    form.post(route('nurse.vitals.store', props.visit.id))
+    form.transform(data => ({
+        ...data,
+        pe_findings_normal:  { ...data.pe_findings_normal },
+        pe_findings_details: { ...data.pe_findings_details },
+    })).post(route('nurse.vitals.store', props.visit.id))
 }
 </script>
 
@@ -372,47 +392,75 @@ function submit() {
                             <span v-if="!isPreEmployment"
                                 class="text-xs text-muted-foreground">(Pre-Employment)</span>
                         </div>
-                        <div class="p-5 grid grid-cols-3 gap-4">
-
-                            <div class="space-y-1.5">
-                                <Label class="text-xs">Right Eye (OD)</Label>
-                                <Select v-model="form.visual_acuity_right">
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select"/>
-                                    </SelectTrigger>
+                        <div class="p-5 space-y-4">
+                            <!-- Column headers -->
+                            <div class="grid grid-cols-3 gap-4 text-xs font-semibold text-muted-foreground">
+                                <div></div>
+                                <div>Uncorrected</div>
+                                <div>Corrected</div>
+                            </div>
+                            <!-- Distant Vision OD -->
+                            <div class="grid grid-cols-3 gap-4 items-center">
+                                <Label class="text-xs">1. Distant OD (Right)</Label>
+                                <Select v-model="form.visual_acuity_right" class="w-full">
+                                    <SelectTrigger class="w-full"><SelectValue placeholder="Select"/></SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem v-for="v in ['20/20','20/25','20/30','20/40','20/50','20/60','20/80','20/100','20/200','CF','HM','LP','NLP']"
-                                            :key="v" :value="v">{{ v }}</SelectItem>
+                                        <SelectItem v-for="v in ['20/20','20/25','20/30','20/40','20/50','20/60','20/80','20/100','20/200','CF','HM','LP','NLP']" :key="v" :value="v">{{ v }}</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Select v-model="form.visual_acuity_right_corrected" class="w-full">
+                                    <SelectTrigger class="w-full"><SelectValue placeholder="Select"/></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem v-for="v in ['20/20','20/25','20/30','20/40','20/50','20/60','20/80','20/100','20/200','CF','HM','LP','NLP']" :key="v" :value="v">{{ v }}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
-
-                            <div class="space-y-1.5">
-                                <Label class="text-xs">Left Eye (OS)</Label>
-                                <Select v-model="form.visual_acuity_left">
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select"/>
-                                    </SelectTrigger>
+                            <!-- Distant Vision OS -->
+                            <div class="grid grid-cols-3 gap-4 items-center">
+                                <Label class="text-xs">1. Distant OS (Left)</Label>
+                                <Select v-model="form.visual_acuity_left" class="w-full">
+                                    <SelectTrigger class="w-full"><SelectValue placeholder="Select"/></SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem v-for="v in ['20/20','20/25','20/30','20/40','20/50','20/60','20/80','20/100','20/200','CF','HM','LP','NLP']"
-                                            :key="v" :value="v">{{ v }}</SelectItem>
+                                        <SelectItem v-for="v in ['20/20','20/25','20/30','20/40','20/50','20/60','20/80','20/100','20/200','CF','HM','LP','NLP']" :key="v" :value="v">{{ v }}</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Select v-model="form.visual_acuity_left_corrected" class="w-full">
+                                    <SelectTrigger class="w-full"><SelectValue placeholder="Select"/></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem v-for="v in ['20/20','20/25','20/30','20/40','20/50','20/60','20/80','20/100','20/200','CF','HM','LP','NLP']" :key="v" :value="v">{{ v }}</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
-
-                            <div class="space-y-1.5">
-                                <Label class="text-xs">Ishihara Test</Label>
-                                <Select v-model="form.ishihara_result">
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select result"/>
-                                    </SelectTrigger>
+                            <!-- Near Vision OD -->
+                            <div class="grid grid-cols-3 gap-4 items-center">
+                                <Label class="text-xs">2. Near OD (Right)</Label>
+                                <Input v-model="form.visual_acuity_near_right" class="h-8 text-xs" placeholder="e.g. 20/20"/>
+                                <Input v-model="form.visual_acuity_near_right_corrected" class="h-8 text-xs" placeholder="e.g. 20/20"/>
+                            </div>
+                            <!-- Near Vision OS -->
+                            <div class="grid grid-cols-3 gap-4 items-center">
+                                <Label class="text-xs">2. Near OS (Left)</Label>
+                                <Input v-model="form.visual_acuity_near_left" class="h-8 text-xs" placeholder="e.g. 20/20"/>
+                                <Input v-model="form.visual_acuity_near_left_corrected" class="h-8 text-xs" placeholder="e.g. 20/20"/>
+                            </div>
+                            <!-- Ishihara Test -->
+                            <div class="grid grid-cols-3 gap-4 items-center">
+                                <Label class="text-xs">3. Ishihara Test</Label>
+                                <Select v-model="form.ishihara_result" class="w-full">
+                                    <SelectTrigger class="w-full"><SelectValue placeholder="Select result"/></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="Normal">Normal</SelectItem>
                                         <SelectItem value="Color Deficiency">Color Deficiency</SelectItem>
                                     </SelectContent>
                                 </Select>
+                                <div></div>
                             </div>
-
+                            <!-- Color Vision Result -->
+                            <div class="grid grid-cols-3 gap-4 items-center">
+                                <Label class="text-xs">4. Color Vision Result</Label>
+                                <Input v-model="form.color_vision_result" class="h-8 text-xs" placeholder="e.g. Normal, Defective"/>
+                                <div></div>
+                            </div>
                         </div>
                     </div>
 
@@ -509,7 +557,7 @@ function submit() {
                             </div>
 
                             <!-- G. Menstrual + H. OB History — for female -->
-                            <div v-if="patient.sex === 'F' || patient.sex === 'Female'" class="grid grid-cols-2 gap-4">
+                            <div v-if="patient.sex === 'female'" class="grid grid-cols-2 gap-4">
                                 <div class="space-y-2">
                                     <Label class="text-xs font-bold">G. Menstrual History</Label>
                                     <div class="flex flex-wrap gap-3">
@@ -557,6 +605,8 @@ function submit() {
                                             <span class="text-xs text-slate-600">{{ opt.label }}</span>
                                         </label>
                                     </div>
+                                    <Input v-model="form.tobacco_use_details" class="h-7 text-xs"
+                                        placeholder="Details (e.g. 1 pack/day for 5 years)"/>
                                 </div>
                                 <div class="space-y-2">
                                     <Label class="text-xs font-bold">Alcohol Use</Label>
@@ -568,6 +618,8 @@ function submit() {
                                             <span class="text-xs text-slate-600">{{ opt.label }}</span>
                                         </label>
                                     </div>
+                                    <Input v-model="form.alcohol_use_details" class="h-7 text-xs"
+                                        placeholder="Details (e.g. occasional, socially)"/>
                                 </div>
                             </div>
 
@@ -593,44 +645,51 @@ function submit() {
                         <div class="p-5">
                             <div class="grid grid-cols-2 gap-2 mb-4">
                                 <div v-for="sys in peSystems" :key="sys.key"
-                                    class="flex items-center justify-between p-2 rounded-lg border text-xs transition-colors"
+                                    class="flex flex-col gap-1.5 p-2 rounded-lg border text-xs transition-colors"
                                     :class="isPeNormal(sys.key) ? 'bg-emerald-50 border-emerald-200'
                                         : isPeAbnormal(sys.key) ? 'bg-red-50 border-red-200'
                                         : 'bg-slate-50 border-slate-200'">
-                                    <span class="font-semibold text-slate-700">{{ sys.label }}</span>
-                                    <div class="flex items-center gap-2">
-                                        <label class="flex items-center gap-1 cursor-pointer">
-                                            <input type="radio"
-                                                :checked="isPeNormal(sys.key)"
-                                                @change="() => setPeNormal(sys.key, true)"
-                                                class="w-3 h-3 text-emerald-600 border-slate-300"/>
-                                            <span :class="isPeNormal(sys.key) ? 'text-emerald-700 font-bold' : 'text-slate-500'">
-                                                Normal
-                                            </span>
-                                        </label>
-                                        <label class="flex items-center gap-1 cursor-pointer">
-                                            <input type="radio"
-                                                :checked="isPeAbnormal(sys.key)"
-                                                @change="() => setPeNormal(sys.key, false)"
-                                                class="w-3 h-3 text-red-600 border-slate-300"/>
-                                            <span :class="isPeAbnormal(sys.key) ? 'text-red-700 font-bold' : 'text-slate-500'">
-                                                Abnormal
-                                            </span>
-                                        </label>
+                                    <div class="flex items-center justify-between">
+                                        <span class="font-semibold text-slate-700">{{ sys.label }}</span>
+                                        <div class="flex items-center gap-2">
+                                            <label class="flex items-center gap-1 cursor-pointer">
+                                                <input type="radio"
+                                                    :checked="isPeNormal(sys.key)"
+                                                    @change="() => setPeNormal(sys.key, true)"
+                                                    class="w-3 h-3 text-emerald-600 border-slate-300"/>
+                                                <span :class="isPeNormal(sys.key) ? 'text-emerald-700 font-bold' : 'text-slate-500'">
+                                                    Normal
+                                                </span>
+                                            </label>
+                                            <label class="flex items-center gap-1 cursor-pointer">
+                                                <input type="radio"
+                                                    :checked="isPeAbnormal(sys.key)"
+                                                    @change="() => setPeNormal(sys.key, false)"
+                                                    class="w-3 h-3 text-red-600 border-slate-300"/>
+                                                <span :class="isPeAbnormal(sys.key) ? 'text-red-700 font-bold' : 'text-slate-500'">
+                                                    Abnormal
+                                                </span>
+                                            </label>
+                                        </div>
                                     </div>
+                                    <!-- Per-system text shown when abnormal -->
+                                    <Input v-if="isPeAbnormal(sys.key)"
+                                        v-model="form.pe_findings_details[sys.key]"
+                                        class="h-7 text-xs border-red-300 bg-white"
+                                        placeholder="Describe specific findings..."/>
                                 </div>
                             </div>
                             <div class="space-y-1.5">
                                 <Label class="text-xs">Other PE Findings</Label>
                                 <Textarea v-model="form.pe_findings_remarks" :rows="2"
                                     class="resize-none text-xs"
-                                    placeholder="Describe any abnormal findings..."/>
+                                    placeholder="Other findings not listed above..."/>
                             </div>
                         </div>
                     </div>
 
                     <!-- Additional vitals for the form -->
-                    <div class="bg-card rounded-xl border shadow-sm p-5 grid grid-cols-2 gap-4">
+                    <div class="bg-card rounded-xl border shadow-sm p-5">
                         <div class="space-y-1.5">
                             <Label class="text-xs font-semibold">Conversational Hearing</Label>
                             <div class="flex gap-4">
@@ -642,18 +701,18 @@ function submit() {
                                 </label>
                             </div>
                         </div>
-                        <div class="space-y-1.5">
-                            <Label class="text-xs font-semibold">Color Vision</Label>
-                            <Input v-model="form.color_vision_result" class="h-8 text-xs"
-                                placeholder="e.g. Normal, Defective"/>
+                    </div>
+
+                    <!-- ── Remarks (Nurse) ──────────────────────── -->
+                    <div class="bg-card rounded-xl border shadow-sm">
+                        <div class="px-5 py-3.5 border-b flex items-center gap-2">
+                            <span class="w-1 h-4 rounded-full inline-block bg-sky-500"></span>
+                            <h3 class="text-xs font-bold text-muted-foreground uppercase tracking-widest">Remarks</h3>
                         </div>
-                        <div class="space-y-1.5">
-                            <Label class="text-xs font-semibold">Near Vision — OD (Right)</Label>
-                            <Input v-model="form.visual_acuity_near_right" class="h-8 text-xs" placeholder="e.g. 20/20"/>
-                        </div>
-                        <div class="space-y-1.5">
-                            <Label class="text-xs font-semibold">Near Vision — OS (Left)</Label>
-                            <Input v-model="form.visual_acuity_near_left" class="h-8 text-xs" placeholder="e.g. 20/20"/>
+                        <div class="p-5">
+                            <Textarea v-model="form.pe_remarks" :rows="3"
+                                class="resize-none text-xs"
+                                placeholder="General remarks to be printed on the medical exam report..."/>
                         </div>
                     </div>
 

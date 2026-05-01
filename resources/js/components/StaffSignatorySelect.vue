@@ -51,7 +51,11 @@ const selectedStaff = computed(() => fullList.value.find(s => s.id === selectedI
 onMounted(() => {
     if (props.modelName) {
         const match = fullList.value.find(s => s.name === props.modelName)
-        if (match) selectedId.value = match.id
+        if (match) {
+            selectedId.value = match.id
+            // If signature path not yet saved, fill it from the matched staff record
+            if (!props.modelSig) applySelection(match.id)
+        }
     } else if (props.currentUser) {
         selectedId.value = props.currentUser.id
         applySelection(props.currentUser.id)
