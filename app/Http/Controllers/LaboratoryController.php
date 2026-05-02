@@ -47,6 +47,7 @@ class LaboratoryController extends Controller
                     ['patient_visit_id' => $visit->id],
                     [
                         'patient_id'   => $visit->patient_id,
+                        'requested_by' => Auth::id(),
                         'request_date' => $visit->visit_date->toDateString(),
                         'status'       => 'pending',
                     ]

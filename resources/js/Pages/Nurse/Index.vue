@@ -110,7 +110,7 @@ const priorityConfig = {
             <button v-for="tab in [
                 { key: 'today',   label: 'Today\'s Queue', count: summary.today         },
                 { key: 'pending', label: 'No Vitals Yet',  count: summary.pending       },
-                { key: 'history', label: 'History',         count: summary.done_today   },
+                { key: 'history', label: 'History',         count: history.total        },
             ]" :key="tab.key"
                 @click="activeTab = tab.key"
                 :class="[

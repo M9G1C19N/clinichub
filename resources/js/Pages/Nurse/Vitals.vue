@@ -38,6 +38,7 @@ const form = useForm({
     // Medical History
     present_symptoms:        props.vitals?.present_symptoms        ?? '',
     past_illnesses_flags:    props.vitals?.past_illnesses_flags    ?? [],
+    past_illnesses_others:   props.vitals?.past_illnesses_others   ?? '',
     past_illnesses_remarks:  props.vitals?.past_illnesses_remarks  ?? '',
     family_history:          props.vitals?.family_history          ?? '',
     accidents_injuries:      props.vitals?.accidents_injuries      ?? 'UNREMARKABLE',
@@ -510,10 +511,10 @@ function submit() {
                                         </span>
                                     </label>
                                 </div>
-                                <div class="space-y-1.5">
-                                    <Label class="text-xs text-muted-foreground">Remarks</Label>
-                                    <Input v-model="form.past_illnesses_remarks" class="h-8 text-xs"
-                                        placeholder="Additional remarks on past illnesses..."/>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="text-xs text-slate-600 whitespace-nowrap">16. Others:</span>
+                                    <Input v-model="form.past_illnesses_others" class="h-7 text-xs flex-1"
+                                        placeholder="Specify other illnesses..."/>
                                 </div>
                             </div>
 
@@ -626,6 +627,19 @@ function submit() {
                         </div>
                     </div>
 
+                    <!-- ── Remarks (Nurse) ──────────────────────── -->
+                    <div class="bg-card rounded-xl border shadow-sm">
+                        <div class="px-5 py-3.5 border-b flex items-center gap-2">
+                            <span class="w-1 h-4 rounded-full inline-block bg-sky-500"></span>
+                            <h3 class="text-xs font-bold text-muted-foreground uppercase tracking-widest">Remarks</h3>
+                        </div>
+                        <div class="p-5">
+                            <Textarea v-model="form.pe_remarks" :rows="3"
+                                class="resize-none text-xs"
+                                placeholder="General remarks to be printed on the medical exam report..."/>
+                        </div>
+                    </div>
+
                     <!-- ── II. PHYSICAL EXAMINATION FINDINGS ──── -->
                     <div class="bg-card rounded-xl border shadow-sm">
                         <div class="px-5 py-3.5 border-b flex items-center justify-between">
@@ -700,19 +714,6 @@ function submit() {
                                     <span class="text-xs">{{ opt }}</span>
                                 </label>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- ── Remarks (Nurse) ──────────────────────── -->
-                    <div class="bg-card rounded-xl border shadow-sm">
-                        <div class="px-5 py-3.5 border-b flex items-center gap-2">
-                            <span class="w-1 h-4 rounded-full inline-block bg-sky-500"></span>
-                            <h3 class="text-xs font-bold text-muted-foreground uppercase tracking-widest">Remarks</h3>
-                        </div>
-                        <div class="p-5">
-                            <Textarea v-model="form.pe_remarks" :rows="3"
-                                class="resize-none text-xs"
-                                placeholder="General remarks to be printed on the medical exam report..."/>
                         </div>
                     </div>
 

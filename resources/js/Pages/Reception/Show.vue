@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import PrintableInvoice from '@/Components/Invoice/PrintableInvoice.vue'
 import PrintableReceipt from '@/Components/Invoice/PrintableReceipt.vue'
+import PrintableInvoiceForm from '@/Components/Invoice/PrintableInvoiceForm.vue'
 import {
     Select, SelectContent, SelectItem,
     SelectTrigger, SelectValue,
@@ -33,6 +34,30 @@ function printBillingInvoice() {
         * { box-sizing:border-box; margin:0; padding:0; }
         @page { size: 210mm 148mm landscape; margin: 0; }
         body { background:white; }
+        img { max-width:100%; }
+    </style></head>
+    <body>${content.innerHTML}</body></html>`)
+    doc.close()
+    iframe.onload = () => {
+        iframe.contentWindow.focus()
+        iframe.contentWindow.print()
+        setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe) }, 2000)
+    }
+}
+
+function printFormData() {
+    const content = document.getElementById('billing-form-data-area')
+    if (!content) return
+    const iframe = document.createElement('iframe')
+    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:200mm;height:130mm;border:none;'
+    document.body.appendChild(iframe)
+    const doc = iframe.contentDocument || iframe.contentWindow.document
+    doc.open()
+    doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+    <style>
+        * { box-sizing:border-box; margin:0; padding:0; }
+        @page { size: 200mm 130mm; margin: 0; }
+        body { background:transparent; }
         img { max-width:100%; }
     </style></head>
     <body>${content.innerHTML}</body></html>`)
@@ -174,6 +199,11 @@ const visitTypeLabel = {
                     <Button variant="outline" size="sm" class="gap-2 no-print" @click="printBillingInvoice">
                         <Printer class="w-4 h-4"/>
                         BIR Invoice
+                    </Button>
+                    <Button variant="outline" size="sm" class="gap-2 no-print" @click="printFormData"
+                        style="border-color:#1B4F9B;color:#1B4F9B;">
+                        <Printer class="w-4 h-4"/>
+                        Form Data
                     </Button>
                     <Button variant="outline" size="sm" class="gap-2 no-print" @click="printSystemReceipt">
                         <Printer class="w-4 h-4"/>
@@ -408,6 +438,16 @@ const visitTypeLabel = {
      <!-- Printable Invoice — hidden on screen, visible only on print -->
 <div id="billing-invoice-area" style="display:none;">
     <PrintableInvoice
+        :invoice="invoice"
+        :patient="patient"
+        :visit="visit"
+        :items="items"
+        :payments="payments"
+    />
+</div>
+
+<div id="billing-form-data-area" style="display:none;">
+    <PrintableInvoiceForm
         :invoice="invoice"
         :patient="patient"
         :visit="visit"

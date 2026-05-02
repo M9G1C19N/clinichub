@@ -74,6 +74,15 @@ const hasIllness = (key) =>
     Array.isArray(props.vitals?.past_illnesses_flags)
         ? props.vitals.past_illnesses_flags.includes(key) : false
 
+const bmiPrintColor = computed(() => {
+    const b = parseFloat(props.vitals?.bmi)
+    if (!b) return ''
+    if (b < 18.5) return '#2563eb'
+    if (b < 25.0) return '#059669'
+    if (b < 30.0) return '#d97706'
+    return '#dc2626'
+})
+
 const peNormal   = (key) => props.vitals?.pe_findings_normal?.[key] === true
 const peAbnormal = (key) => props.vitals?.pe_findings_normal?.[key] === false
 
@@ -94,7 +103,7 @@ const classRec = {
 </script>
 
 <template>
-<div style="font-family:Arial,sans-serif;font-size:9.5px;color:#111;background:white;line-height:1.35;">
+<div class="mer-root" style="font-family:'Candara','Calibri Light','Calibri',sans-serif;font-size:9.5px;color:#111;background:white;line-height:1.35;">
 
 <!-- ═══════════ PAGE 1 — MEDICAL HISTORY ═══════════ -->
 <div v-if="printPage !== '2'" style="width:210mm;height:297mm;padding:5mm 6mm 7mm;box-sizing:border-box;position:relative;overflow:hidden;display:flex;flex-direction:column;">
@@ -117,7 +126,7 @@ const classRec = {
 
     <!-- TITLE -->
     <div style="border:2.5px solid #B8860B;text-align:center;padding:5px 0;margin-bottom:4px;">
-        <span style="font-size:16px;font-weight:900;letter-spacing:2px;">MEDICAL EXAMINATION REPORT</span>
+        <span style="font-size:16px;font-weight:900;letter-spacing:2px;font-family:'Candara','Calibri',sans-serif;">MEDICAL EXAMINATION REPORT</span>
     </div>
 
     <!-- PATIENT INFO -->
@@ -167,156 +176,194 @@ const classRec = {
         <span style="flex:1;border-bottom:1px solid #444;min-height:14px;display:inline-block;padding-bottom:1px;">{{ vitals?.present_symptoms || '' }}</span>
     </div>
 
-    <!-- B — 3 illness cols only (no remarks column) -->
-    <div style="margin-bottom:4px;">
-        <div style="font-weight:700;font-size:12px;margin-bottom:2px;border-bottom:1.5px solid #222;padding-bottom:1px;">B. PAST ILLNESSES/HOSPITALIZATIONS</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;border:1px solid #bbb;">
-            <div style="border-right:1px solid #bbb;padding:5px 6px;">
-                <div v-for="ill in illnessCols[0]" :key="ill.key"
-                    style="display:flex;align-items:center;gap:4px;margin-bottom:4px;font-size:11px;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" style="display:inline-block;vertical-align:middle;flex-shrink:0;">
-                        <rect x="1" y="1" width="10" height="10" :fill="hasIllness(ill.key)?'#111':'none'" :stroke="hasIllness(ill.key)?'#111':'#555'" stroke-width="1.5"/>
-                        <text v-if="hasIllness(ill.key)" x="6" y="9.5" text-anchor="middle" font-size="9" fill="white" font-weight="bold" font-family="Arial">✓</text>
-                    </svg>{{ ill.label }}
-                </div>
-            </div>
-            <div style="border-right:1px solid #bbb;padding:5px 6px;">
-                <div v-for="ill in illnessCols[1]" :key="ill.key"
-                    style="display:flex;align-items:center;gap:4px;margin-bottom:4px;font-size:11px;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" style="display:inline-block;vertical-align:middle;flex-shrink:0;">
-                        <rect x="1" y="1" width="10" height="10" :fill="hasIllness(ill.key)?'#111':'none'" :stroke="hasIllness(ill.key)?'#111':'#555'" stroke-width="1.5"/>
-                        <text v-if="hasIllness(ill.key)" x="6" y="9.5" text-anchor="middle" font-size="9" fill="white" font-weight="bold" font-family="Arial">✓</text>
-                    </svg>{{ ill.label }}
-                </div>
-            </div>
-            <div style="padding:5px 6px;">
-                <div v-for="ill in illnessCols[2]" :key="ill.key"
-                    style="display:flex;align-items:center;gap:4px;margin-bottom:4px;font-size:11px;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" style="display:inline-block;vertical-align:middle;flex-shrink:0;">
-                        <rect x="1" y="1" width="10" height="10" :fill="hasIllness(ill.key)?'#111':'none'" :stroke="hasIllness(ill.key)?'#111':'#555'" stroke-width="1.5"/>
-                        <text v-if="hasIllness(ill.key)" x="6" y="9.5" text-anchor="middle" font-size="9" fill="white" font-weight="bold" font-family="Arial">✓</text>
-                    </svg>{{ ill.label }}
-                </div>
-                <div style="display:flex;align-items:center;gap:4px;font-size:11px;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><rect x="1" y="1" width="10" height="10" fill="none" stroke="#555" stroke-width="1.5"/></svg>
-                    <span>Others: <span style="display:inline-block;width:24px;border-bottom:1px solid #555;"></span></span>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- ── TWO-COLUMN: Medical History B-I (445px) | Photo + Remarks + Sig (right) ── -->
+    <div style="display:grid;grid-template-columns:445px 1fr;gap:0 6px;margin-bottom:4px;flex-shrink:0;">
 
-    <!-- C, D, E -->
-    <div style="display:flex;flex-direction:column;gap:3px;margin-bottom:4px;font-size:12px;">
-        <div style="padding:4px 7px;border:1px solid #bbb;display:flex;align-items:baseline;gap:4px;">
-            <strong style="white-space:nowrap;">C. FAMILY MEDICAL HISTORY</strong>
-            <span style="flex:1;border-bottom:1px solid #444;min-height:14px;display:inline-block;padding-bottom:1px;">{{ vitals?.family_history || '' }}</span>
-        </div>
-        <div style="padding:4px 7px;border:1px solid #bbb;display:flex;align-items:baseline;gap:4px;">
-            <strong style="white-space:nowrap;">D. ACCIDENTS/INJURIES</strong>
-            <span style="flex:1;border-bottom:1px solid #444;min-height:14px;display:inline-block;padding-bottom:1px;">{{ vitals?.accidents_injuries || '' }}</span>
-        </div>
-        <div style="padding:4px 7px;border:1px solid #bbb;display:flex;align-items:baseline;gap:4px;">
-            <strong style="white-space:nowrap;">E. SURGICAL HISTORY</strong>
-            <span style="flex:1;border-bottom:1px solid #444;min-height:14px;display:inline-block;padding-bottom:1px;">{{ vitals?.surgical_history_detail || '' }}</span>
-        </div>
-    </div>
+        <!-- LEFT: B through I -->
+        <div style="display:flex;flex-direction:column;gap:3px;">
 
-    <!-- F through I (left) + Remarks (right) — single tall container -->
-    <div style="display:grid;grid-template-columns:3fr 2fr;gap:0;margin-bottom:4px;border:1px solid #bbb;">
-        <!-- LEFT: F, G, H, I stacked -->
-        <div style="border-right:1px solid #bbb;font-size:12px;">
-            <!-- F -->
-            <div style="padding:4px 7px;border-bottom:1px solid #bbb;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                <strong>F. ALLERGIES</strong>
-                <span v-for="opt in [{v:'none',l:'None'},{v:'food',l:'Food'},{v:'drug',l:'Drug'},{v:'others',l:'Others'}]" :key="opt.v"
-                    style="display:inline-flex;align-items:center;gap:4px;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" style="display:inline-block;vertical-align:middle;flex-shrink:0;">
-                        <rect x="1" y="1" width="11" height="11" :fill="vitals?.allergies_flags?.includes(opt.v)?'#111':'none'" :stroke="vitals?.allergies_flags?.includes(opt.v)?'#111':'#555'" stroke-width="1.5"/>
-                        <text v-if="vitals?.allergies_flags?.includes(opt.v)" x="6.5" y="10" text-anchor="middle" font-size="9" fill="white" font-weight="bold" font-family="Arial">✓</text>
-                    </svg>{{ opt.l }}
-                </span>
-                <span style="display:inline-flex;align-items:baseline;gap:3px;flex:1;">
-                    <span style="font-size:11px;color:#555;">Specify:</span>
-                    <span style="flex:1;border-bottom:1px solid #555;min-width:60px;display:inline-block;font-size:11px;padding-bottom:1px;">{{ vitals?.allergies_others || '' }}</span>
-                </span>
+            <!-- B. Past Illnesses -->
+            <div>
+                <div style="font-weight:700;font-size:12px;margin-bottom:2px;border-bottom:1.5px solid #222;padding-bottom:1px;">B. PAST ILLNESSES/HOSPITALIZATIONS</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;border:1px solid #bbb;">
+                    <div style="border-right:1px solid #bbb;padding:5px 6px;">
+                        <div v-for="ill in illnessCols[0]" :key="ill.key"
+                            style="display:flex;align-items:center;gap:4px;margin-bottom:4px;font-size:11px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" style="display:inline-block;vertical-align:middle;flex-shrink:0;">
+                                <rect x="1" y="1" width="10" height="10" :fill="hasIllness(ill.key)?'#111':'none'" :stroke="hasIllness(ill.key)?'#111':'#555'" stroke-width="1.5"/>
+                                <text v-if="hasIllness(ill.key)" x="6" y="9.5" text-anchor="middle" font-size="9" fill="white" font-weight="bold" font-family="Arial">✓</text>
+                            </svg>{{ ill.label }}
+                        </div>
+                    </div>
+                    <div style="border-right:1px solid #bbb;padding:5px 6px;">
+                        <div v-for="ill in illnessCols[1]" :key="ill.key"
+                            style="display:flex;align-items:center;gap:4px;margin-bottom:4px;font-size:11px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" style="display:inline-block;vertical-align:middle;flex-shrink:0;">
+                                <rect x="1" y="1" width="10" height="10" :fill="hasIllness(ill.key)?'#111':'none'" :stroke="hasIllness(ill.key)?'#111':'#555'" stroke-width="1.5"/>
+                                <text v-if="hasIllness(ill.key)" x="6" y="9.5" text-anchor="middle" font-size="9" fill="white" font-weight="bold" font-family="Arial">✓</text>
+                            </svg>{{ ill.label }}
+                        </div>
+                    </div>
+                    <div style="padding:5px 6px;">
+                        <div v-for="ill in illnessCols[2]" :key="ill.key"
+                            style="display:flex;align-items:center;gap:4px;margin-bottom:4px;font-size:11px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" style="display:inline-block;vertical-align:middle;flex-shrink:0;">
+                                <rect x="1" y="1" width="10" height="10" :fill="hasIllness(ill.key)?'#111':'none'" :stroke="hasIllness(ill.key)?'#111':'#555'" stroke-width="1.5"/>
+                                <text v-if="hasIllness(ill.key)" x="6" y="9.5" text-anchor="middle" font-size="9" fill="white" font-weight="bold" font-family="Arial">✓</text>
+                            </svg>{{ ill.label }}
+                        </div>
+                        <div style="display:flex;align-items:center;gap:4px;font-size:11px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" style="display:inline-block;vertical-align:middle;flex-shrink:0;">
+                                <rect x="1" y="1" width="10" height="10" :fill="vitals?.past_illnesses_others?'#111':'none'" :stroke="vitals?.past_illnesses_others?'#111':'#555'" stroke-width="1.5"/>
+                                <text v-if="vitals?.past_illnesses_others" x="6" y="9.5" text-anchor="middle" font-size="9" fill="white" font-weight="bold" font-family="Arial">✓</text>
+                            </svg>
+                            <span>16. Others: <span style="border-bottom:1px solid #555;min-width:40px;display:inline-block;padding-bottom:1px;">{{ vitals?.past_illnesses_others || '' }}</span></span>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <!-- G — female only -->
-            <div style="padding:4px 7px;border-bottom:1px solid #bbb;">
-                <strong>G. MENSTRUAL HISTORY</strong><br/>
-                Menstrual Cycle:
-                <span v-for="opt in [{v:'regular',l:'Regular'},{v:'irregular',l:'Irregular'},{v:'menopause',l:'Menopause'},{v:'postmenopausal',l:'Postmenopausal'}]" :key="opt.v"
-                    style="display:inline-flex;align-items:center;gap:3px;margin-right:5px;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" style="display:inline-block;vertical-align:middle;flex-shrink:0;">
-                        <rect x="1" y="1" width="11" height="11" :fill="vitals?.menstrual_cycle===opt.v?'#111':'none'" :stroke="vitals?.menstrual_cycle===opt.v?'#111':'#555'" stroke-width="1.5"/>
-                        <text v-if="vitals?.menstrual_cycle===opt.v" x="6.5" y="10" text-anchor="middle" font-size="9" fill="white" font-weight="bold" font-family="Arial">✓</text>
-                    </svg>{{ opt.l }}
-                </span>
-                <br/>LMP and Duration: <strong>{{ vitals?.lmp || 'N/A' }}</strong>
+
+            <!-- C, D, E -->
+            <div style="display:flex;flex-direction:column;gap:3px;font-size:12px;">
+                <div style="padding:4px 7px;border:1px solid #bbb;display:flex;align-items:baseline;gap:4px;">
+                    <strong style="white-space:nowrap;">C. FAMILY MEDICAL HISTORY</strong>
+                    <span style="flex:1;border-bottom:1px solid #444;min-height:14px;display:inline-block;padding-bottom:1px;">{{ vitals?.family_history || '' }}</span>
+                </div>
+                <div style="padding:4px 7px;border:1px solid #bbb;display:flex;align-items:baseline;gap:4px;">
+                    <strong style="white-space:nowrap;">D. ACCIDENTS/INJURIES</strong>
+                    <span style="flex:1;border-bottom:1px solid #444;min-height:14px;display:inline-block;padding-bottom:1px;">{{ vitals?.accidents_injuries || '' }}</span>
+                </div>
+                <div style="padding:4px 7px;border:1px solid #bbb;display:flex;align-items:baseline;gap:4px;">
+                    <strong style="white-space:nowrap;">E. SURGICAL HISTORY</strong>
+                    <span style="flex:1;border-bottom:1px solid #444;min-height:14px;display:inline-block;padding-bottom:1px;">{{ vitals?.surgical_history_detail || '' }}</span>
+                </div>
             </div>
-            <!-- H — female only -->
-            <div style="padding:4px 7px;border-bottom:1px solid #bbb;">
-                <strong>H. OB HISTORY</strong><br/>
-                <span style="display:inline-flex;align-items:center;gap:4px;margin-right:8px;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" style="display:inline-block;vertical-align:middle;flex-shrink:0;">
-                        <rect x="1" y="1" width="11" height="11" :fill="vitals?.ob_nulligravida?'#111':'none'" :stroke="vitals?.ob_nulligravida?'#111':'#555'" stroke-width="1.5"/>
-                        <text v-if="vitals?.ob_nulligravida" x="6.5" y="10" text-anchor="middle" font-size="9" fill="white" font-weight="bold" font-family="Arial">✓</text>
-                    </svg>Nulligravida
-                </span>
-                Gravida: <strong>{{ vitals?.ob_gravida || 'N/A' }}</strong>
-                &nbsp; Para: <strong>{{ vitals?.ob_para || 'N/A' }}</strong>
-            </div>
-            <!-- I -->
-            <div style="padding:4px 7px;">
-                <strong>I. PERSONAL/SOCIAL HISTORY</strong>
-                <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
-                    <strong style="display:inline-block;min-width:85px;flex-shrink:0;">TOBACCO USE:</strong>
-                    <span v-for="opt in [{v:'current',l:'Current'},{v:'former',l:'Former'},{v:'never',l:'Never'}]" :key="opt.v"
-                        style="display:inline-flex;align-items:center;gap:4px;margin-right:5px;flex-shrink:0;">
+
+            <!-- F through I — no remarks column, full width of left col -->
+            <div style="border:1px solid #bbb;font-size:12px;">
+                <!-- F -->
+                <div style="padding:4px 7px;border-bottom:1px solid #bbb;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                    <strong>F. ALLERGIES</strong>
+                    <span v-for="opt in [{v:'none',l:'None'},{v:'food',l:'Food'},{v:'drug',l:'Drug'},{v:'others',l:'Others'}]" :key="opt.v"
+                        style="display:inline-flex;align-items:center;gap:4px;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" style="display:inline-block;vertical-align:middle;flex-shrink:0;">
-                            <rect x="1" y="1" width="11" height="11" :fill="vitals?.tobacco_use===opt.v?'#111':'none'" :stroke="vitals?.tobacco_use===opt.v?'#111':'#555'" stroke-width="1.5"/>
-                            <text v-if="vitals?.tobacco_use===opt.v" x="6.5" y="10" text-anchor="middle" font-size="9" fill="white" font-weight="bold" font-family="Arial">✓</text>
+                            <rect x="1" y="1" width="11" height="11" :fill="vitals?.allergies_flags?.includes(opt.v)?'#111':'none'" :stroke="vitals?.allergies_flags?.includes(opt.v)?'#111':'#555'" stroke-width="1.5"/>
+                            <text v-if="vitals?.allergies_flags?.includes(opt.v)" x="6.5" y="10" text-anchor="middle" font-size="9" fill="white" font-weight="bold" font-family="Arial">✓</text>
                         </svg>{{ opt.l }}
                     </span>
-                    <span style="flex:1;border-bottom:1px solid #444;min-width:40px;display:inline-block;font-size:11px;padding-bottom:1px;">{{ vitals?.tobacco_use_details || '' }}</span>
+                    <span style="display:inline-flex;align-items:baseline;gap:3px;flex:1;">
+                        <span style="font-size:11px;color:#555;">Specify:</span>
+                        <span style="flex:1;border-bottom:1px solid #555;min-width:40px;display:inline-block;font-size:11px;padding-bottom:1px;">{{ vitals?.allergies_others || '' }}</span>
+                    </span>
                 </div>
-                <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
-                    <strong style="display:inline-block;min-width:85px;flex-shrink:0;">ALCOHOL:</strong>
-                    <span v-for="opt in [{v:'current',l:'Current'},{v:'former',l:'Former'},{v:'never',l:'Never'}]" :key="opt.v"
-                        style="display:inline-flex;align-items:center;gap:4px;margin-right:5px;flex-shrink:0;">
+                <!-- G -->
+                <div style="padding:4px 7px;border-bottom:1px solid #bbb;">
+                    <strong>G. MENSTRUAL HISTORY</strong><br/>
+                    Menstrual Cycle:
+                    <span v-for="opt in [{v:'regular',l:'Regular'},{v:'irregular',l:'Irregular'},{v:'menopause',l:'Menopause'},{v:'postmenopausal',l:'Postmenopausal'}]" :key="opt.v"
+                        style="display:inline-flex;align-items:center;gap:3px;margin-right:5px;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" style="display:inline-block;vertical-align:middle;flex-shrink:0;">
-                            <rect x="1" y="1" width="11" height="11" :fill="vitals?.alcohol_use===opt.v?'#111':'none'" :stroke="vitals?.alcohol_use===opt.v?'#111':'#555'" stroke-width="1.5"/>
-                            <text v-if="vitals?.alcohol_use===opt.v" x="6.5" y="10" text-anchor="middle" font-size="9" fill="white" font-weight="bold" font-family="Arial">✓</text>
+                            <rect x="1" y="1" width="11" height="11" :fill="vitals?.menstrual_cycle===opt.v?'#111':'none'" :stroke="vitals?.menstrual_cycle===opt.v?'#111':'#555'" stroke-width="1.5"/>
+                            <text v-if="vitals?.menstrual_cycle===opt.v" x="6.5" y="10" text-anchor="middle" font-size="9" fill="white" font-weight="bold" font-family="Arial">✓</text>
                         </svg>{{ opt.l }}
                     </span>
-                    <span style="flex:1;border-bottom:1px solid #444;min-width:40px;display:inline-block;font-size:11px;padding-bottom:1px;">{{ vitals?.alcohol_use_details || '' }}</span>
+                    <br/>LMP and Duration: <strong>{{ vitals?.lmp || 'N/A' }}</strong>
+                </div>
+                <!-- H -->
+                <div style="padding:4px 7px;border-bottom:1px solid #bbb;">
+                    <strong>H. OB HISTORY</strong><br/>
+                    <span style="display:inline-flex;align-items:center;gap:4px;margin-right:8px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" style="display:inline-block;vertical-align:middle;flex-shrink:0;">
+                            <rect x="1" y="1" width="11" height="11" :fill="vitals?.ob_nulligravida?'#111':'none'" :stroke="vitals?.ob_nulligravida?'#111':'#555'" stroke-width="1.5"/>
+                            <text v-if="vitals?.ob_nulligravida" x="6.5" y="10" text-anchor="middle" font-size="9" fill="white" font-weight="bold" font-family="Arial">✓</text>
+                        </svg>Nulligravida
+                    </span>
+                    Gravida: <strong>{{ vitals?.ob_gravida || 'N/A' }}</strong>
+                    &nbsp; Para: <strong>{{ vitals?.ob_para || 'N/A' }}</strong>
+                </div>
+                <!-- I -->
+                <div style="padding:4px 7px;">
+                    <strong>I. PERSONAL/SOCIAL HISTORY</strong>
+                    <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
+                        <strong style="display:inline-block;min-width:85px;flex-shrink:0;">TOBACCO USE:</strong>
+                        <span v-for="opt in [{v:'current',l:'Current'},{v:'former',l:'Former'},{v:'never',l:'Never'}]" :key="opt.v"
+                            style="display:inline-flex;align-items:center;gap:4px;margin-right:5px;flex-shrink:0;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" style="display:inline-block;vertical-align:middle;flex-shrink:0;">
+                                <rect x="1" y="1" width="11" height="11" :fill="vitals?.tobacco_use===opt.v?'#111':'none'" :stroke="vitals?.tobacco_use===opt.v?'#111':'#555'" stroke-width="1.5"/>
+                                <text v-if="vitals?.tobacco_use===opt.v" x="6.5" y="10" text-anchor="middle" font-size="9" fill="white" font-weight="bold" font-family="Arial">✓</text>
+                            </svg>{{ opt.l }}
+                        </span>
+                        <span style="flex:1;border-bottom:1px solid #444;min-width:40px;display:inline-block;font-size:11px;padding-bottom:1px;">{{ vitals?.tobacco_use_details || '' }}</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
+                        <strong style="display:inline-block;min-width:85px;flex-shrink:0;">ALCOHOL:</strong>
+                        <span v-for="opt in [{v:'current',l:'Current'},{v:'former',l:'Former'},{v:'never',l:'Never'}]" :key="opt.v"
+                            style="display:inline-flex;align-items:center;gap:4px;margin-right:5px;flex-shrink:0;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" style="display:inline-block;vertical-align:middle;flex-shrink:0;">
+                                <rect x="1" y="1" width="11" height="11" :fill="vitals?.alcohol_use===opt.v?'#111':'none'" :stroke="vitals?.alcohol_use===opt.v?'#111':'#555'" stroke-width="1.5"/>
+                                <text v-if="vitals?.alcohol_use===opt.v" x="6.5" y="10" text-anchor="middle" font-size="9" fill="white" font-weight="bold" font-family="Arial">✓</text>
+                            </svg>{{ opt.l }}
+                        </span>
+                        <span style="flex:1;border-bottom:1px solid #444;min-width:40px;display:inline-block;font-size:11px;padding-bottom:1px;">{{ vitals?.alcohol_use_details || '' }}</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- RIGHT: Remarks (flex:1) → Photo + I Certify → Signature + NOT VALID -->
+        <div style="display:flex;flex-direction:column;gap:3px;">
+            <!-- Remarks — fills top space -->
+            <div style="flex:1;border:1px solid #bbb;padding:5px 7px;display:flex;flex-direction:column;min-height:0;">
+                <strong style="font-size:12px;flex-shrink:0;">Remarks:</strong>
+                <div style="flex:1;font-size:10.5px;line-height:1.65;white-space:pre-wrap;padding-top:3px;">{{ vitals?.pe_remarks || '' }}</div>
+            </div>
+            <!-- Photo + I Certify -->
+            <div style="display:flex;gap:5px;flex-shrink:0;">
+                <div style="width:88px;height:88px;border:1.5px solid #888;flex-shrink:0;overflow:hidden;background:#ddd;display:flex;align-items:center;justify-content:center;">
+                    <img v-if="patient?.photo_path" :src="patient.photo_path"
+                        style="width:100%;height:100%;object-fit:cover;display:block;"
+                        crossorigin="anonymous"/>
+                    <span v-else style="font-size:9px;color:#888;text-align:center;line-height:1.6;">2x2<br/>Photo</span>
+                </div>
+                <div style="flex:1;border:1px solid #888;padding:6px;font-size:7.5px;font-style:italic;color:#333;line-height:1.6;display:flex;align-items:center;">
+                    "I certify that all information I have given in my medical history is true and that any false statement will disqualify me from my employment application, benefits and claims. Furthermore, I authorize the medical examiner to release results of my medical examination to my employer/prospective employer."
+                </div>
+            </div>
+            <!-- Signature + NOT VALID WITHOUT SEAL -->
+            <div style="display:flex;gap:5px;flex-shrink:0;align-items:flex-end;">
+                <div style="text-align:center;flex-shrink:0;overflow:visible;">
+                    <div style="height:6mm;"></div>
+                    <div style="border-top:1.5px solid #222;padding-top:2px;font-weight:700;font-size:9.5px;white-space:nowrap;overflow:visible;">
+                        {{ patient.full_name?.toUpperCase() }}
+                    </div>
+                    <div style="font-size:10px;color:#555;">Signature Over Printed Name</div>
+                </div>
+                <div style="flex:1;display:flex;align-items:center;justify-content:center;padding-bottom:4px;">
+                    <div style="font-weight:800;font-size:11px;text-align:center;letter-spacing:0.5px;">NOT VALID WITHOUT SEAL</div>
                 </div>
             </div>
         </div>
-        <!-- RIGHT: Nurse Remarks — spans full F-I height -->
-        <div style="padding:6px 8px;display:flex;flex-direction:column;">
-            <strong style="font-size:12px;">Remarks:</strong>
-            <div style="flex:1;font-size:12px;line-height:1.7;white-space:pre-wrap;padding-top:5px;">{{ vitals?.pe_remarks || '' }}</div>
-        </div>
+
     </div>
 
-    <!-- 2-col flex area fills remaining height -->
-    <div style="display:grid;grid-template-columns:300px 1fr;gap:0 5px;flex:1;min-height:0;overflow:hidden;">
+    <!-- ── TWO-COLUMN: Vitals (300px) | PE Findings single column (right, flex:1) ── -->
+    <div style="display:grid;grid-template-columns:300px 1fr;gap:0 5px;flex:1;min-height:0;overflow:hidden;margin-bottom:6mm;">
 
-        <!-- LEFT — Vitals & Visual Acuity (fixed 300px) -->
-        <!-- II. PHYSICAL EXAMINATION header is inside left column so right column gains the freed height -->
+        <!-- LEFT — Vitals & Visual Acuity -->
         <div style="font-size:12px;">
             <div style="border-top:2px solid #111;padding-top:2px;margin-bottom:3px;">
                 <div style="font-weight:900;font-size:13px;">II. PHYSICAL EXAMINATION</div>
             </div>
             <div v-for="row in [
-                {label:'A. Weight (kg.)',          val:vitals?.weight_kg},
-                {label:'B. Height (m)',            val:vitals?.height_cm?(vitals.height_cm/100).toFixed(2):''},
-                {label:'C. BMI (Body Mass Index)', val:vitals?.bmi},
-                {label:'D. Pulse (beats/min)',     val:vitals?.pulse_rate},
+                {label:'A. Weight (kg.)',          val:vitals?.weight_kg,  color:''},
+                {label:'B. Height (m)',            val:vitals?.height_cm?(vitals.height_cm/100).toFixed(2):'', color:''},
+                {label:'C. BMI (Body Mass Index)', val:vitals?.bmi,        color:bmiPrintColor},
+                {label:'D. Pulse (beats/min)',     val:vitals?.pulse_rate, color:''},
             ]" :key="row.label"
                 style="display:flex;justify-content:space-between;align-items:center;padding:5px 7px;border-bottom:1px solid #bbb;border-left:1px solid #bbb;border-right:1px solid #bbb;">
                 <span>{{ row.label }}</span>
-                <strong style="min-width:55px;text-align:right;">{{ row.val??'' }}</strong>
+                <strong :style="row.color?'min-width:55px;text-align:right;color:'+row.color:'min-width:55px;text-align:right;'">{{ row.val??'' }}</strong>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 7px;border-bottom:1px solid #bbb;border-left:1px solid #bbb;border-right:1px solid #bbb;">
                 <span>E. BP (Systolic/Diastolic)</span>
@@ -336,7 +383,6 @@ const classRec = {
             </div>
             <!-- G. Visual Acuity -->
             <div style="border:1px solid #bbb;">
-                <!-- Header uses same grid as data rows so columns align exactly -->
                 <div style="display:grid;grid-template-columns:1fr 28px 52px 52px;align-items:center;padding:3px 7px;border-bottom:1px solid #ccc;">
                     <span style="font-size:12px;font-weight:700;">G. Visual Acuity</span>
                     <span></span>
@@ -382,76 +428,27 @@ const classRec = {
             </div>
         </div>
 
-        <!-- RIGHT — Photo, Consent, Signature, PE Table (expands to fill remaining width) -->
-        <div style="display:flex;flex-direction:column;min-height:0;overflow:hidden;border-top:2px solid #111;padding-top:2px;">
-            <!-- Photo + consent text -->
-            <div style="display:flex;gap:6px;margin-bottom:2px;">
-                <div style="width:110px;height:110px;border:1.5px solid #888;flex-shrink:0;overflow:hidden;background:#ddd;display:flex;align-items:center;justify-content:center;">
-                    <img v-if="patient?.photo_path" :src="patient.photo_path"
-                        style="width:100%;height:100%;object-fit:cover;display:block;"
-                        crossorigin="anonymous"/>
-                    <span v-else style="font-size:9px;color:#888;text-align:center;line-height:1.6;">2x2<br/>Photo</span>
+        <!-- RIGHT — PE Findings SINGLE COLUMN -->
+        <div style="display:flex;flex-direction:column;border-top:2px solid #111;padding-top:2px;min-height:0;">
+            <div style="flex:1;border:1px solid #bbb;overflow:hidden;display:flex;flex-direction:column;">
+                <div style="display:grid;grid-template-columns:14px 1fr 1fr;border-bottom:1.5px solid #222;padding:3px 4px;font-weight:700;font-size:10px;flex-shrink:0;">
+                    <div></div><div>Normal &nbsp; Exam</div><div>P.E. Findings</div>
                 </div>
-                <div style="flex:1;border:1px solid #888;padding:8px;font-size:10px;font-style:italic;color:#333;line-height:1.75;display:flex;align-items:center;">
-                    "I certify that all information I have given in my medical history is true and that any false statement will disqualify me from my employment application, benefits and claims. Furthermore, I authorize the medical examiner to release results of my medical examination to my employer/prospective employer."
+                <div v-for="sys in peSystems" :key="sys.key"
+                    style="display:grid;grid-template-columns:14px 1fr 1fr;align-items:center;border-bottom:1px solid #ddd;padding:2.5px 4px;flex-shrink:0;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" style="display:inline-block;vertical-align:middle;flex-shrink:0;">
+                        <rect x="1" y="1" width="10" height="10" :fill="peNormal(sys.key)?'#111':'none'" :stroke="peNormal(sys.key)?'#111':'#555'" stroke-width="1.5"/>
+                        <text v-if="peNormal(sys.key)" x="6" y="9.5" text-anchor="middle" font-size="8" fill="white" font-weight="bold" font-family="Arial">✓</text>
+                    </svg>
+                    <span style="font-size:11px;">{{ sys.label }}</span>
+                    <span style="color:#c00;font-size:10px;font-weight:700;">{{ peAbnormal(sys.key)?(vitals?.pe_findings_details?.[sys.key]||'Abnormal'):'' }}</span>
                 </div>
-            </div>
-            <!-- Signature block — 2 cols matching photo/consent layout above -->
-            <div style="display:flex;gap:6px;margin-bottom:2px;">
-                <!-- LEFT: under photo — blank signing space + name line -->
-                <div style="width:110px;flex-shrink:0;text-align:center;">
-                    <div style="height:7mm;"></div>
-                    <div style="border-top:1.5px solid #222;padding-top:2px;font-weight:700;font-size:11px;word-break:break-word;overflow-wrap:anywhere;line-height:1.3;">
-                        {{ patient.full_name?.toUpperCase() }}
-                    </div>
-                    <div style="font-size:10px;color:#555;">Signature Over Printed Name</div>
-                </div>
-                <!-- RIGHT: under consent text -->
-                <div style="flex:1;display:flex;align-items:center;justify-content:center;">
-                    <div style="font-weight:900;font-size:14px;text-align:center;letter-spacing:0.5px;">NOT VALID WITHOUT SEAL</div>
-                </div>
-            </div>
-            <!-- PE Findings table — 2 columns -->
-            <div style="flex-shrink:0;display:flex;flex-direction:column;border:1px solid #bbb;overflow:hidden;">
-                <!-- 2-col body -->
-                <div style="display:grid;grid-template-columns:1fr 1fr;flex-shrink:0;overflow:hidden;">
-                    <!-- Left column: items 1–7 -->
-                    <div style="border-right:1px solid #bbb;display:flex;flex-direction:column;">
-                        <div style="display:grid;grid-template-columns:14px 1fr 1fr;border-bottom:1.5px solid #222;padding:3px 4px;font-weight:700;font-size:10px;flex-shrink:0;">
-                            <div></div><div>Normal &nbsp; Exam</div><div>P.E. Findings</div>
-                        </div>
-                        <div v-for="sys in peSystems.slice(0,7)" :key="sys.key"
-                            style="display:grid;grid-template-columns:14px 1fr 1fr;align-items:center;border-bottom:1px solid #ddd;padding:2.5px 4px;flex-shrink:0;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" style="display:inline-block;vertical-align:middle;flex-shrink:0;">
-                                <rect x="1" y="1" width="10" height="10" :fill="peNormal(sys.key)?'#111':'none'" :stroke="peNormal(sys.key)?'#111':'#555'" stroke-width="1.5"/>
-                                <text v-if="peNormal(sys.key)" x="6" y="9.5" text-anchor="middle" font-size="8" fill="white" font-weight="bold" font-family="Arial">✓</text>
-                            </svg>
-                            <span style="font-size:11px;">{{ sys.label }}</span>
-                            <span style="color:#c00;font-size:10px;font-weight:700;">{{ peAbnormal(sys.key)?(vitals?.pe_findings_details?.[sys.key]||'Abnormal'):'' }}</span>
-                        </div>
-                    </div>
-                    <!-- Right column: items 8–13 -->
-                    <div style="display:flex;flex-direction:column;">
-                        <div style="display:grid;grid-template-columns:14px 1fr 1fr;border-bottom:1.5px solid #222;padding:3px 4px;font-weight:700;font-size:10px;flex-shrink:0;">
-                            <div></div><div>Normal &nbsp; Exam</div><div>P.E. Findings</div>
-                        </div>
-                        <div v-for="sys in peSystems.slice(7)" :key="sys.key"
-                            style="display:grid;grid-template-columns:14px 1fr 1fr;align-items:center;border-bottom:1px solid #ddd;padding:2.5px 4px;flex-shrink:0;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" style="display:inline-block;vertical-align:middle;flex-shrink:0;">
-                                <rect x="1" y="1" width="10" height="10" :fill="peNormal(sys.key)?'#111':'none'" :stroke="peNormal(sys.key)?'#111':'#555'" stroke-width="1.5"/>
-                                <text v-if="peNormal(sys.key)" x="6" y="9.5" text-anchor="middle" font-size="8" fill="white" font-weight="bold" font-family="Arial">✓</text>
-                            </svg>
-                            <span style="font-size:11px;">{{ sys.label }}</span>
-                            <span style="color:#c00;font-size:10px;font-weight:700;">{{ peAbnormal(sys.key)?(vitals?.pe_findings_details?.[sys.key]||'Abnormal'):'' }}</span>
-                        </div>
-                    </div>
-                </div>
-                <!-- Other PE Findings — full width at bottom -->
                 <div style="padding:4px 6px;font-size:11px;border-top:1px solid #ddd;flex-shrink:0;">
                     <strong>Other PE Findings:</strong> {{ vitals?.pe_findings_remarks || '' }}
                 </div>
             </div>
         </div>
+
     </div>
 
     <!-- P1 FOOTER -->
@@ -510,7 +507,7 @@ const classRec = {
             <!-- CBC -->
             <div>
                 <div style="font-weight:900;font-size:12px;text-align:center;margin-bottom:3px;">COMPLETE BLOOD COUNT</div>
-                <table style="width:100%;border-collapse:collapse;font-size:10.5px;border:1px solid #333;">
+                <table class="mer-table" style="width:100%;border-collapse:collapse;font-size:10.5px;border:1px solid #333;">
                     <tr style="border-bottom:1px solid #333;background:#f5f5f5;">
                         <th style="text-align:left;padding:3px 4px;border-right:1px solid #333;">EXAMINATION</th>
                         <th style="text-align:left;padding:3px 4px;width:18%;border-right:1px solid #333;">RESULT</th>
@@ -527,7 +524,7 @@ const classRec = {
                         {code:'MID',name:'Mid',           range:'2-10%'},
                     ]" :key="row.code" style="border-bottom:1px solid #333;">
                         <td style="padding:4px 3px;border-right:1px solid #ddd;">{{ row.name }}</td>
-                        <td style="padding:4px 3px;border-right:1px solid #ddd;" :style="rs(row.code)">{{ r(row.code) }}</td>
+                        <td style="padding:4px 3px;border-right:1px solid #ddd;text-align:center;" :style="rs(row.code)">{{ r(row.code) }}</td>
                         <td style="padding:4px 3px;color:#555;font-size:9.5px;">{{ row.range }}</td>
                     </tr>
                 </table>
@@ -535,7 +532,7 @@ const classRec = {
             <!-- Blood Chemistry -->
             <div>
                 <div style="font-weight:900;font-size:12px;text-align:center;margin-bottom:3px;">BLOOD CHEMISTRY</div>
-                <table style="width:100%;border-collapse:collapse;font-size:10.5px;border:1px solid #333;">
+                <table class="mer-table" style="width:100%;border-collapse:collapse;font-size:10.5px;border:1px solid #333;">
                     <tr style="border-bottom:1px solid #333;background:#f5f5f5;">
                         <th style="text-align:left;padding:3px 4px;border-right:1px solid #333;">EXAMINATION</th>
                         <th style="text-align:left;padding:3px 4px;width:18%;border-right:1px solid #333;">RESULT</th>
@@ -555,7 +552,7 @@ const classRec = {
                         {code:'VLDL',   name:'VLDL',                range:'<5-40 mg/dL'},
                     ]" :key="row.code" style="border-bottom:1px solid #333;">
                         <td style="padding:4px 3px;border-right:1px solid #ddd;">{{ row.name }}</td>
-                        <td style="padding:4px 3px;border-right:1px solid #ddd;" :style="rs(row.code)">{{ r(row.code) }}</td>
+                        <td style="padding:4px 3px;border-right:1px solid #ddd;text-align:center;" :style="rs(row.code)">{{ r(row.code) }}</td>
                         <td style="padding:4px 3px;color:#555;font-size:9.5px;">{{ row.range }}</td>
                     </tr>
                 </table>
@@ -563,7 +560,7 @@ const classRec = {
             <!-- Urinalysis -->
             <div>
                 <div style="font-weight:900;font-size:12px;text-align:center;margin-bottom:3px;">URINALYSIS</div>
-                <table style="width:100%;border-collapse:collapse;font-size:10.5px;border:1px solid #333;">
+                <table class="mer-table" style="width:100%;border-collapse:collapse;font-size:10.5px;border:1px solid #333;">
                     <tr style="border-bottom:1px solid #333;background:#f5f5f5;">
                         <th style="text-align:left;padding:3px 4px;border-right:1px solid #333;">EXAMINATION</th>
                         <th style="text-align:left;padding:3px 4px;width:22%;border-right:1px solid #333;">RESULT</th>
@@ -586,7 +583,7 @@ const classRec = {
                         {code:'UA_OTH',  name:'Others',            range:''},
                     ]" :key="row.code" style="border-bottom:1px solid #333;">
                         <td style="padding:4px 3px;border-right:1px solid #ddd;">{{ row.name }}</td>
-                        <td style="padding:4px 3px;border-right:1px solid #ddd;" :style="rs(row.code)">{{ r(row.code) }}</td>
+                        <td style="padding:4px 3px;border-right:1px solid #ddd;text-align:center;" :style="rs(row.code)">{{ r(row.code) }}</td>
                         <td style="padding:4px 3px;color:#555;font-size:9.5px;">{{ row.range }}</td>
                     </tr>
                 </table>
@@ -598,7 +595,7 @@ const classRec = {
             <!-- Stool Exam -->
             <div style="display:flex;flex-direction:column;">
                 <div style="font-weight:900;font-size:12px;text-align:center;margin-bottom:3px;">STOOL EXAM</div>
-                <table style="width:100%;border-collapse:collapse;font-size:10.5px;border:1px solid #333;">
+                <table class="mer-table" style="width:100%;border-collapse:collapse;font-size:10.5px;border:1px solid #333;">
                     <tr style="border-bottom:1px solid #333;background:#f5f5f5;">
                         <th style="text-align:left;padding:3px 4px;border-right:1px solid #333;">EXAMINATION</th>
                         <th style="text-align:left;padding:3px 4px;width:28%;border-right:1px solid #333;">RESULT</th>
@@ -612,7 +609,7 @@ const classRec = {
                         {code:'ST_OVA',name:'Ova/Parasites',  range:'None seen'},
                     ]" :key="row.code" style="border-bottom:1px solid #333;">
                         <td style="padding:4px 3px;border-right:1px solid #ddd;">{{ row.name }}</td>
-                        <td style="padding:4px 3px;border-right:1px solid #ddd;" :style="rs(row.code)">{{ r(row.code) }}</td>
+                        <td style="padding:4px 3px;border-right:1px solid #ddd;text-align:center;" :style="rs(row.code)">{{ r(row.code) }}</td>
                         <td style="padding:4px 3px;color:#555;font-size:9.5px;">{{ row.range }}</td>
                     </tr>
                 </table>
@@ -635,7 +632,7 @@ const classRec = {
             <!-- Others table -->
             <div style="display:flex;flex-direction:column;">
                 <div style="font-weight:900;font-size:12px;text-align:center;margin-bottom:3px;">OTHERS</div>
-                <table style="width:100%;border-collapse:collapse;font-size:10.5px;border:1px solid #333;">
+                <table class="mer-table" style="width:100%;border-collapse:collapse;font-size:10.5px;border:1px solid #333;">
                     <tr style="border-bottom:1px solid #333;background:#f5f5f5;">
                         <th style="text-align:left;padding:3px 4px;border-right:1px solid #333;">EXAMINATION</th>
                         <th style="text-align:left;padding:3px 4px;">RESULT</th>
@@ -648,7 +645,7 @@ const classRec = {
                         {code:'PSA',  name:'Prostatic Specific Antigen (PSA)'},
                     ]" :key="row.code" style="border-bottom:1px solid #333;">
                         <td style="padding:4px 3px;border-right:1px solid #ddd;">{{ row.name }}</td>
-                        <td style="padding:4px 3px;" :style="rs(row.code)">{{ r(row.code) }}</td>
+                        <td style="padding:4px 3px;text-align:center;" :style="rs(row.code)">{{ r(row.code) }}</td>
                     </tr>
                 </table>
                 <!-- Pathologist signature pushed to bottom of Others column -->
@@ -684,9 +681,6 @@ const classRec = {
                             <strong>{{ imaging.impression || '—' }}</strong>
                         </div>
                         <div style="font-size:10.5px;flex:1;min-height:20px;white-space:pre-line;border:1px solid #e0e0e0;padding:3px 4px;background:#fafafa;overflow:hidden;">{{ imaging.radiographic_findings || '' }}</div>
-                        <div style="font-size:8.5px;color:#444;margin-top:3px;font-style:italic;">
-                            NOTE: X-ray films submitted for official reading will be available one week after submission.
-                        </div>
                         <div style="margin-top:5px;font-size:10.5px;display:flex;align-items:flex-end;gap:6px;">
                             <span style="color:#555;white-space:nowrap;">Noted By:</span>
                             <div style="text-align:center;flex:1;">
@@ -724,9 +718,6 @@ const classRec = {
                             <strong>{{ consultation.ecg_impression || '—' }}</strong>
                         </div>
                         <div style="font-size:10.5px;flex:1;min-height:20px;white-space:pre-line;border:1px solid #e0e0e0;padding:3px 4px;background:#fafafa;overflow:hidden;">{{ consultation.ecg_findings || '' }}</div>
-                        <div style="font-size:8.5px;color:#444;margin-top:3px;font-style:italic;">
-                            NOTE: ECG is required for persons with hypertension, heart disease, and related illnesses.
-                        </div>
                         <div style="margin-top:5px;font-size:10.5px;display:flex;align-items:flex-end;gap:6px;">
                             <span style="color:#555;">Noted By:</span>
                             <div style="text-align:center;flex:1;">
@@ -750,9 +741,6 @@ const classRec = {
                     </template>
                     <template v-else>
                         <div style="font-size:8px;color:#aaa;font-style:italic;padding:4px 0;">No ECG data on file.</div>
-                        <div style="font-size:8.5px;color:#444;margin-top:3px;font-style:italic;">
-                            NOTE: ECG is required for persons with hypertension, heart disease, and related illnesses.
-                        </div>
                         <div style="margin-top:auto;border-top:1px solid #333;text-align:center;padding-top:2px;font-size:7.5px;color:#555;">Noted By</div>
                     </template>
                 </div>
@@ -769,7 +757,7 @@ const classRec = {
                 <!-- CBC -->
                 <div>
                     <div style="font-weight:900;font-size:12px;text-align:center;margin-bottom:3px;">COMPLETE BLOOD COUNT</div>
-                    <table style="width:100%;border-collapse:collapse;font-size:10.5px;border:1px solid #333;">
+                    <table class="mer-table" style="width:100%;border-collapse:collapse;font-size:10.5px;border:1px solid #333;">
                         <tr style="border-bottom:1px solid #333;background:#f5f5f5;">
                             <th style="text-align:left;padding:3px 4px;border-right:1px solid #333;">EXAMINATION</th>
                             <th style="text-align:left;padding:2px 3px;width:16%;border-right:1px solid #333;">RESULT</th>
@@ -786,7 +774,7 @@ const classRec = {
                             {code:'MID',name:'Mid',           range:'2-10%'},
                         ]" :key="row.code" style="border-bottom:1px solid #333;">
                             <td style="padding:4px 3px;border-right:1px solid #ddd;">{{ row.name }}</td>
-                            <td style="padding:4px 3px;border-right:1px solid #ddd;" :style="rs(row.code)">{{ r(row.code) }}</td>
+                            <td style="padding:4px 3px;border-right:1px solid #ddd;text-align:center;" :style="rs(row.code)">{{ r(row.code) }}</td>
                             <td style="padding:4px 3px;color:#555;font-size:9.5px;">{{ row.range }}</td>
                         </tr>
                     </table>
@@ -794,7 +782,7 @@ const classRec = {
                 <!-- Stool Exam — below CBC -->
                 <div>
                     <div style="font-weight:900;font-size:12px;text-align:center;margin-bottom:3px;">STOOL EXAM</div>
-                    <table style="width:100%;border-collapse:collapse;font-size:10.5px;border:1px solid #333;">
+                    <table class="mer-table" style="width:100%;border-collapse:collapse;font-size:10.5px;border:1px solid #333;">
                         <tr style="border-bottom:1px solid #333;background:#f5f5f5;">
                             <th style="text-align:left;padding:3px 4px;border-right:1px solid #333;">EXAMINATION</th>
                             <th style="text-align:left;padding:2px 3px;width:28%;border-right:1px solid #333;">RESULT</th>
@@ -808,7 +796,7 @@ const classRec = {
                             {code:'ST_OVA',name:'Ova/Parasites',  range:'None seen'},
                         ]" :key="row.code" style="border-bottom:1px solid #333;">
                             <td style="padding:4px 3px;border-right:1px solid #ddd;">{{ row.name }}</td>
-                            <td style="padding:4px 3px;border-right:1px solid #ddd;" :style="rs(row.code)">{{ r(row.code) }}</td>
+                            <td style="padding:4px 3px;border-right:1px solid #ddd;text-align:center;" :style="rs(row.code)">{{ r(row.code) }}</td>
                             <td style="padding:4px 3px;color:#555;font-size:9.5px;">{{ row.range }}</td>
                         </tr>
                     </table>
@@ -820,7 +808,7 @@ const classRec = {
                 <!-- Urinalysis -->
                 <div>
                     <div style="font-weight:900;font-size:12px;text-align:center;margin-bottom:3px;">URINALYSIS</div>
-                    <table style="width:100%;border-collapse:collapse;font-size:10.5px;border:1px solid #333;">
+                    <table class="mer-table" style="width:100%;border-collapse:collapse;font-size:10.5px;border:1px solid #333;">
                         <tr style="border-bottom:1px solid #333;background:#f5f5f5;">
                             <th style="text-align:left;padding:3px 4px;border-right:1px solid #333;">EXAMINATION</th>
                             <th style="text-align:right;padding:2px 3px;width:20%;border-right:1px solid #333;">RESULT</th>
@@ -843,7 +831,7 @@ const classRec = {
                             {code:'UA_OTH',  name:'Others',             range:''},
                         ]" :key="row.code" style="border-bottom:1px solid #333;">
                             <td style="padding:4px 3px;border-right:1px solid #ddd;">{{ row.name }}</td>
-                            <td style="padding:3px 3px;text-align:right;border-right:1px solid #ddd;" :style="rs(row.code)">{{ r(row.code) }}</td>
+                            <td style="padding:3px 3px;text-align:center;border-right:1px solid #ddd;" :style="rs(row.code)">{{ r(row.code) }}</td>
                             <td style="padding:4px 3px;color:#555;font-size:9.5px;">{{ row.range }}</td>
                         </tr>
                     </table>
@@ -891,9 +879,9 @@ const classRec = {
         <div style="display:flex;flex-direction:column;">
             <div style="font-weight:900;font-size:12px;text-align:center;border-bottom:1.5px solid #111;padding-bottom:2px;margin-bottom:3px;">DIAGNOSIS/TREATMENT/PLAN</div>
             <div style="border:1.5px solid #444;padding:5px 7px;flex:1;overflow:hidden;">
-                <div v-if="consultation?.essentially_normal" style="font-weight:900;font-size:12px;">***ESSENTIALLY NORMAL FINDINGS***</div>
-                <div v-if="consultation?.pe_findings" style="font-size:12px;white-space:pre-line;line-height:1.5;">{{ consultation.pe_findings }}</div>
-                <div v-if="consultation?.soap_assessment && !consultation?.essentially_normal" style="font-size:12px;white-space:pre-line;line-height:1.5;">{{ consultation.soap_assessment }}</div>
+                <div v-if="consultation?.essentially_normal" style="font-weight:900;font-size:10.5px;">***ESSENTIALLY NORMAL FINDINGS***</div>
+                <div v-if="consultation?.pe_findings" style="font-size:10.5px;white-space:pre-line;line-height:1.5;">{{ consultation.pe_findings }}</div>
+                <div v-if="consultation?.soap_assessment && !consultation?.essentially_normal" style="font-size:10.5px;white-space:pre-line;line-height:1.5;">{{ consultation.soap_assessment }}</div>
             </div>
         </div>
         <!-- Right: Classification + Examining Physician sig pushed to bottom, centered -->
@@ -914,7 +902,7 @@ const classRec = {
                 <span style="color:#555;">Recommendation:</span>
                 <strong style="font-size:14px;letter-spacing:0.5px;">{{ classRec[consultation.pe_classification] }}</strong>
             </div>
-            <div style="margin-top:2px;font-size:9.5px;color:#444;max-height:28px;overflow:hidden;">Remarks: {{ consultation?.pe_recommendation||'' }}</div>
+            <div style="margin-top:2px;font-size:10.5px;color:#444;max-height:28px;overflow:hidden;">Remarks: {{ consultation?.pe_recommendation||'' }}</div>
             <!-- Examining Physician — right side, centered, pushed to bottom -->
             <div style="margin-top:auto;border-top:1.5px solid #111;padding-top:4px;display:flex;justify-content:center;">
                 <div style="text-align:center;min-width:200px;max-width:260px;">
@@ -947,3 +935,18 @@ const classRec = {
 </div>
 </template>
 
+<style>
+/* Scoped to the MER root so this never leaks to other pages.
+   Barlow is loaded globally in app.blade.php for print-safe font availability. */
+.mer-root .mer-table td,
+.mer-root .mer-table th {
+    font-family: 'Candara','Calibri',Arial,sans-serif;
+}
+
+@media print {
+    .mer-root .mer-table td,
+    .mer-root .mer-table th {
+        font-family: 'Candara','Calibri',Arial,sans-serif;
+    }
+}
+</style>

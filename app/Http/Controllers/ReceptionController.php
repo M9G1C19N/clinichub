@@ -453,8 +453,9 @@ class ReceptionController extends Controller
                     ImagingRequest::firstOrCreate(
                         ['patient_visit_id' => $visit->id],
                         [
-                            'patient_id'  => $visit->patient_id,
-                            'status'      => 'pending',
+                            'patient_id'   => $visit->patient_id,
+                            'requested_by' => Auth::id(),
+                            'status'       => 'pending',
                         ]
                     );
                 }
@@ -463,8 +464,10 @@ class ReceptionController extends Controller
                     DrugTestRequest::firstOrCreate(
                         ['patient_visit_id' => $visit->id],
                         [
-                            'patient_id' => $visit->patient_id,
-                            'status'     => 'pending',
+                            'patient_id'    => $visit->patient_id,
+                            'requested_by'  => Auth::id(),
+                            'drugs_to_test' => [],
+                            'status'        => 'pending',
                         ]
                     );
                 }

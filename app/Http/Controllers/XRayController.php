@@ -38,8 +38,9 @@ class XRayController extends Controller
                 ImagingRequest::firstOrCreate(
                     ['patient_visit_id' => $visit->id],
                     [
-                        'patient_id' => $visit->patient_id,
-                        'status'     => 'pending',
+                        'patient_id'   => $visit->patient_id,
+                        'requested_by' => Auth::id(),
+                        'status'       => 'pending',
                     ]
                 );
             });

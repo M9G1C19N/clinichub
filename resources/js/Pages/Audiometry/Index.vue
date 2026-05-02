@@ -178,7 +178,7 @@ const pickupRows = computed(() => props.readyForPickup?.data ?? [])
                 { key: 'today',   label: 'Today\'s Queue',   count: summary.today,         icon: 'ear'     },
                 { key: 'pending', label: 'Pending Release',  count: summary.pending,        icon: 'pending' },
                 { key: 'pickup',  label: 'Ready for Pickup', count: (summary.waiting_pickup + summary.unclaimed), icon: 'pickup' },
-                { key: 'history', label: 'History',          count: summary.released_today, icon: 'history' },
+                { key: 'history', label: 'History',          count: history.total,          icon: 'history' },
             ]" :key="tab.key"
                 @click="activeTab = tab.key"
                 :class="[

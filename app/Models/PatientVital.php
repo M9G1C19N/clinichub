@@ -24,7 +24,7 @@ class PatientVital extends Model
         'nurse_notes',
         'recorded_by',
         // Medical History
-        'present_symptoms', 'past_illnesses_flags', 'past_illnesses_remarks',
+        'present_symptoms', 'past_illnesses_flags', 'past_illnesses_others', 'past_illnesses_remarks',
         'family_history', 'accidents_injuries', 'surgical_history_detail',
         'allergies_flags', 'allergies_others',
         'menstrual_cycle', 'lmp', 'ob_gravida', 'ob_para', 'ob_nulligravida',

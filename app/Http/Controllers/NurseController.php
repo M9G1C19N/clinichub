@@ -182,6 +182,7 @@ class NurseController extends Controller
                 'recorded_at'             => $existing->updated_at->format('M d, Y h:i A'),
                 'present_symptoms'        => $existing->present_symptoms,
                 'past_illnesses_flags'    => $existing->past_illnesses_flags ?? [],
+                'past_illnesses_others'   => $existing->past_illnesses_others,
                 'past_illnesses_remarks'  => $existing->past_illnesses_remarks,
                 'family_history'          => $existing->family_history,
                 'accidents_injuries'      => $existing->accidents_injuries,
@@ -231,6 +232,7 @@ class NurseController extends Controller
             // Medical History
             'present_symptoms'         => ['nullable', 'string'],
             'past_illnesses_flags'     => ['nullable', 'array'],
+            'past_illnesses_others'    => ['nullable', 'string', 'max:255'],
             'past_illnesses_remarks'   => ['nullable', 'string'],
             'family_history'           => ['nullable', 'string', 'max:255'],
             'accidents_injuries'       => ['nullable', 'string', 'max:255'],

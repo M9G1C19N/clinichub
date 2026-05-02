@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import PrintableInvoice from '@/Components/Invoice/PrintableInvoice.vue'
 import PrintableReceipt from '@/Components/Invoice/PrintableReceipt.vue'
+import PrintableInvoiceForm from '@/Components/Invoice/PrintableInvoiceForm.vue'
 import {
     Receipt, CheckCircle2, AlertTriangle, Clock,
     Banknote, CreditCard, Smartphone, DollarSign,
@@ -119,6 +120,30 @@ function printSystemReceipt() {
     }
 }
 
+function printFormData() {
+    const content = document.getElementById('billing-form-data-area')
+    if (!content) return
+    const iframe = document.createElement('iframe')
+    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:200mm;height:130mm;border:none;'
+    document.body.appendChild(iframe)
+    const doc = iframe.contentDocument || iframe.contentWindow.document
+    doc.open()
+    doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+    <style>
+        * { box-sizing:border-box; margin:0; padding:0; }
+        @page { size: 200mm 130mm; margin: 0; }
+        body { background:transparent; }
+        img { max-width:100%; }
+    </style></head>
+    <body>${content.innerHTML}</body></html>`)
+    doc.close()
+    iframe.onload = () => {
+        iframe.contentWindow.focus()
+        iframe.contentWindow.print()
+        setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe) }, 2000)
+    }
+}
+
 const statusConfig = {
     unpaid:    { label: 'Unpaid',  class: 'bg-red-100 text-red-700',        icon: AlertTriangle },
     partial:   { label: 'Partial', class: 'bg-amber-100 text-amber-700',    icon: Clock         },
@@ -174,6 +199,10 @@ const methodColor = {
                 <div class="flex items-center gap-2">
                     <Button variant="outline" size="sm" class="gap-2 text-xs" @click="printBillingInvoice">
                         <Printer class="w-3.5 h-3.5"/> BIR Invoice
+                    </Button>
+                    <Button variant="outline" size="sm" class="gap-2 text-xs" @click="printFormData"
+                        style="border-color:#1B4F9B;color:#1B4F9B;">
+                        <Printer class="w-3.5 h-3.5"/> Form Data
                     </Button>
                     <Button variant="outline" size="sm" class="gap-2 text-xs" @click="printSystemReceipt">
                         <Printer class="w-3.5 h-3.5"/> System Receipt
@@ -500,6 +529,16 @@ const methodColor = {
 
     <div id="billing-invoice-area" style="display:none;">
         <PrintableInvoice
+            :invoice="invoice"
+            :patient="patient"
+            :visit="visit"
+            :items="items"
+            :payments="payments"
+        />
+    </div>
+
+    <div id="billing-form-data-area" style="display:none;">
+        <PrintableInvoiceForm
             :invoice="invoice"
             :patient="patient"
             :visit="visit"

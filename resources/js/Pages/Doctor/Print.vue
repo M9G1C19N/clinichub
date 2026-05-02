@@ -25,24 +25,33 @@ function triggerPrint() {
     iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:210mm;height:594mm;border:none;'
     document.body.appendChild(iframe)
 
+    // Carry all parent stylesheets into the iframe so @font-face (Barlow) is available
+    const styleLinks = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+        .map(l => `<link rel="stylesheet" href="${l.href}">`)
+        .join('\n')
+
     const doc = iframe.contentDocument || iframe.contentWindow.document
     doc.open()
     doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+    ${styleLinks}
     <style>
         * { box-sizing:border-box; margin:0; padding:0; }
         @page { size:A4 portrait; margin:0; }
-        body { background:white; font-family:Arial,sans-serif; }
+        body { background:white; }
         img { max-width:100%; }
     </style></head>
-    <body>${content.innerHTML}</body></html>`)
+    <body><div id="medical-exam-print">${content.innerHTML}</div></body></html>`)
     doc.close()
 
     iframe.onload = () => {
-        iframe.contentWindow.focus()
-        iframe.contentWindow.print()
-        setTimeout(() => {
-            if (document.body.contains(iframe)) document.body.removeChild(iframe)
-        }, 2000)
+        // Wait for all fonts (including Barlow) to be fully loaded before printing
+        iframe.contentWindow.document.fonts.ready.then(() => {
+            iframe.contentWindow.focus()
+            iframe.contentWindow.print()
+            setTimeout(() => {
+                if (document.body.contains(iframe)) document.body.removeChild(iframe)
+            }, 2000)
+        })
     }
 }
 </script>

@@ -37,8 +37,9 @@ class DrugTestController extends Controller
                 DrugTestRequest::firstOrCreate(
                     ['patient_visit_id' => $visit->id],
                     [
-                        'patient_id' => $visit->patient_id,
-                        'status'     => 'pending',
+                        'patient_id'    => $visit->patient_id,
+                        'drugs_to_test' => [],
+                        'status'        => 'pending',
                     ]
                 );
             });
